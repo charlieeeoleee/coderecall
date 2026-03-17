@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Code: Recall - Login</title>
+<link rel="stylesheet" href="auth.css">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- LEFT SIDE -->
+  <div class="left">
+    <img src="assets/logo.png" class="main-logo">
+
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="themeIcon">🌙</span>
+    </button>
+
+  </div>
+
+
+  <!-- RIGHT SIDE -->
+  <div class="right">
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm" class="form-box active">
+      <h2>Login</h2>
+
+      <input type="email" id="loginEmail" placeholder="Email">
+      <div class="password-wrapper">
+  <input type="password" id="loginPassword" placeholder="Password">
+  <span class="toggle-password" onclick="togglePassword('loginPassword')">👁</span>
+</div>
+
+      <button class="primary-btn" onclick="login()">Login</button>
+
+      <div class="social-buttons">
+        <button class="google-btn" onclick="googleLogin()">Google</button>
+        <button class="facebook-btn" onclick="facebookLogin()">Facebook</button>
+      </div>
+
+      <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
+
+      <p class="switch-text">
+        Don't have account?
+        <span onclick="showRegister()">Register</span>
+      </p>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="registerForm" class="form-box">
+      <h2>Create Account</h2>
+
+      <input type="email" id="registerEmail" placeholder="Email">
+      <div class="password-wrapper">
+  <input type="password" id="registerPassword" placeholder="Password">
+  <span class="toggle-password" onclick="togglePassword('registerPassword')">👁</span>
+</div>
+
+      <button class="primary-btn" onclick="register()">Register</button>
+
+      <div class="social-buttons">
+        <button class="google-btn" onclick="googleLogin()">Google</button>
+        <button class="facebook-btn" onclick="facebookLogin()">Facebook</button>
+      </div>
+
+      <p class="switch-text">
+        Already have account?
+        <span onclick="showLogin()">Login</span>
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script type="module" src="auth.js"></script>
+</body>
+</html>

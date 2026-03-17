@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FAQ - Code Recall</title>
+<link rel="stylesheet" href="faq.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="logo">CODE: RECALL</div>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="index.html#about">About</a>
+    <a href="index.html#subjects">Subjects</a>
+    <a href="faq.html" class="faq-btn">FAQ</a>
+    <a href="auth.html" class="login-btn">Login</a>
+  </nav>
+</header>
+
+<!-- FAQ SECTION -->
+<section class="faq">
+
+<h1>Frequently Asked Questions</h1>
+
+<div class="faq-container">
+
+<!-- FAQ ITEM -->
+<div class="faq-item">
+<button class="faq-question">What is Code Recall?</button>
+<div class="faq-answer">
+<p>
+Code Recall is a gamified learning system designed for Computer System Servicing (CSS) students. It helps improve learning through interactive gameplay, quizzes, and progress tracking.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">What subjects are included in the system?</button>
+<div class="faq-answer">
+<p>
+The system focuses on two main subjects: Computer Hardware and Electrical Wiring & Electronics Circuit, based on a needs assessment conducted among students.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">How does the gamification work?</button>
+<div class="faq-answer">
+<p>
+Students earn experience points (XP), progress through levels, and receive feedback after answering questions. Interactive gameplay elements are used to enhance engagement.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">Do I need to create an account?</button>
+<div class="faq-answer">
+<p>
+Yes, creating an account allows you to save your progress, track your XP, and access all modules. However, guest mode is also available with limited features.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">Can I use Google or Facebook to log in?</button>
+<div class="faq-answer">
+<p>
+Yes, the system supports login using email/password, Google, and Facebook authentication through Firebase.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">What happens after I answer a question?</button>
+<div class="faq-answer">
+<p>
+The system provides immediate feedback with explanations (rationale) to help you understand the correct answer.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">How are levels structured?</button>
+<div class="faq-answer">
+<p>
+Each subject contains multiple levels. Each level includes lessons, quizzes, and interactive gameplay before progressing to the next stage.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">Can teachers manage the content?</button>
+<div class="faq-answer">
+<p>
+Yes, administrators can add lessons and quiz questions through the admin panel.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">Is this system available online?</button>
+<div class="faq-answer">
+<p>
+Yes, the system can be accessed through a web browser, making it convenient for students to use anytime.
+</p>
+</div>
+</div>
+
+<div class="faq-item">
+<button class="faq-question">What is the purpose of this system?</button>
+<div class="faq-answer">
+<p>
+The purpose is to enhance learning in CSS by making it interactive, engaging, and easier to understand through gamification.
+</p>
+</div>
+</div>
+
+</div>
+
+</section>
+
+<script>
+const questions = document.querySelectorAll(".faq-question");
+
+questions.forEach(q => {
+  q.addEventListener("click", () => {
+    const answer = q.nextElementSibling;
+
+    answer.style.display =
+      answer.style.display === "block" ? "none" : "block";
+  });
+});
+</script>
+
+</body>
+</html>

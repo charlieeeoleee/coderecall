@@ -1,0 +1,157 @@
+/* RESET */
+body{
+margin:0;
+font-family:Arial, sans-serif;
+background:linear-gradient(135deg,#0b0f2a,#2b1e5a);
+color:white;
+}
+
+/* NAVBAR */
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 60px;
+background:rgba(0,0,0,0.2);
+backdrop-filter:blur(10px);
+}
+
+.logo{
+font-weight:bold;
+font-size:20px;
+color:#f5a623;
+text-shadow:0 0 10px #ff2e97;
+}
+
+.navbar nav a{
+margin-left:25px;
+text-decoration:none;
+color:white;
+transition:0.3s;
+}
+
+.navbar nav a:hover{
+color:#00e5ff;
+}
+
+.login-btn{
+background:#ff2e97;
+padding:8px 18px;
+border-radius:8px;
+}
+
+/* HERO */
+.hero{
+display:flex;
+justify-content:center;
+align-items:center;
+height:90vh;
+text-align:center;
+padding:0 20px;
+}
+
+.hero-content{
+max-width:700px;
+}
+
+.hero h1{
+font-size:48px;
+margin-bottom:20px;
+text-shadow:0 0 20px #ff2e97;
+}
+
+.hero p{
+font-size:18px;
+line-height:1.6;
+margin-bottom:30px;
+}
+
+/* BUTTON */
+.start-btn{
+padding:14px 30px;
+background:#ff2e97;
+border:none;
+border-radius:10px;
+color:white;
+font-size:16px;
+cursor:pointer;
+box-shadow:0 0 20px #ff2e97;
+transition:0.3s;
+}
+
+.start-btn:hover{
+box-shadow:0 0 40px #ff2e97;
+}
+
+/* ABOUT */
+.about{
+padding:80px 20px;
+text-align:center;
+max-width:800px;
+margin:auto;
+}
+
+.about h2{
+margin-bottom:20px;
+}
+
+/* SUBJECTS */
+.subjects{
+padding:80px 20px;
+text-align:center;
+}
+
+.subject-container{
+display:flex;
+justify-content:center;
+gap:40px;
+flex-wrap:wrap;
+margin-top:40px;
+}
+
+.subject-card{
+background:#3a2575;
+padding:30px;
+border-radius:15px;
+width:300px;
+box-shadow:0 0 20px rgba(0,0,0,0.3);
+transition:0.3s;
+}
+
+.subject-card:hover{
+transform:translateY(-10px);
+box-shadow:0 0 30px #ff2e97;
+}
+
+.subject-card h3{
+margin-bottom:10px;
+}
+
+/* CTA */
+.cta{
+text-align:center;
+padding:80px 20px;
+}
+
+.login-main{
+padding:14px 30px;
+background:#00e5ff;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-size:16px;
+color:black;
+box-shadow:0 0 20px #00e5ff;
+}
+
+.login-main:hover{
+box-shadow:0 0 40px #00e5ff;
+}
+
+/* FOOTER */
+footer{
+text-align:center;
+padding:30px;
+background:#1a1140;
+margin-top:40px;
+}

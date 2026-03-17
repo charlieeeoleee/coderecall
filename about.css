@@ -1,0 +1,50 @@
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#0b0f2a,#2b1e5a);
+color:white;
+}
+
+/* NAVBAR */
+.navbar{
+display:flex;
+justify-content:space-between;
+padding:20px 60px;
+align-items:center;
+}
+
+.logo{
+color:#f5a623;
+font-weight:bold;
+text-shadow:0 0 10px #ff2e97;
+}
+
+.navbar a{
+margin-left:20px;
+text-decoration:none;
+color:white;
+}
+
+.login-btn{
+background:#ff2e97;
+padding:8px 18px;
+border-radius:8px;
+}
+
+/* ABOUT */
+.about{
+max-width:800px;
+margin:auto;
+padding:100px 20px;
+text-align:center;
+}
+
+.about h1{
+margin-bottom:20px;
+text-shadow:0 0 10px #ff2e97;
+}
+
+.about p{
+margin-bottom:20px;
+line-height:1.6;
+}

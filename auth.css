@@ -1,0 +1,264 @@
+/* ===============================
+   THEME VARIABLES
+=================================*/
+:root {
+  --bg-gradient: linear-gradient(135deg,#0b0f2a,#2b1e5a);
+  --container-bg: #3a2575;
+  --left-bg: linear-gradient(135deg,#1a1140,#3a2575);
+  --text-color: white;
+  --input-bg: #e6e6e6;
+  --primary: #ff2e97;
+  --accent: #00e5ff;
+}
+
+/* LIGHT MODE */
+.light-mode {
+  --bg-gradient: linear-gradient(135deg,#f4f6ff,#e6ecff);
+  --container-bg: #ffffff;
+  --left-bg: linear-gradient(135deg,#dbe4ff,#f4f6ff);
+  --text-color: #1a1140;
+  --input-bg: #f2f3f8;
+  --primary: #6c4cff;
+  --accent: #0077ff;
+}
+
+/* Smooth transition */
+body, .container, .left, .right, input, button {
+  transition: all .4s ease;
+}
+
+/* ===============================
+   BODY
+=================================*/
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background: var(--bg-gradient);
+  font-family:Arial, sans-serif;
+}
+
+/* ===============================
+   CONTAINER
+=================================*/
+.container{
+  width:900px;
+  height:520px;
+  background: var(--container-bg);
+  border-radius:20px;
+  box-shadow:0 0 60px rgba(255,46,151,.4);
+  display:flex;
+  overflow:hidden;
+}
+
+/* ===============================
+   LEFT SIDE
+=================================*/
+.left{
+  width:50%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  background: var(--left-bg);
+  color: var(--text-color);
+  padding:40px;
+  position:relative;
+}
+
+.main-logo{
+  width:800px;
+  max-width:150%;
+  margin-bottom:20px;
+}
+
+/* Theme Toggle Button */
+.theme-toggle{
+  position:absolute;
+  top:20px;
+  right:20px;
+  background:var(--accent);
+  border:none;
+  border-radius:50%;
+  width:40px;
+  height:40px;
+  cursor:pointer;
+  font-size:18px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+/* ===============================
+   RIGHT SIDE
+=================================*/
+.right{
+  width:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+}
+
+/* ===============================
+   FORM BOX
+=================================*/
+.form-box{
+  width:75%;
+  max-width:320px;
+  position:absolute;
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+
+  opacity:0;
+  transform:translateX(20px);
+  transition:.4s ease;
+  pointer-events:none;
+}
+
+.form-box.active{
+  opacity:1;
+  transform:translateX(0);
+  pointer-events:auto;
+}
+
+h2{
+  text-align:center;
+  color: var(--text-color);
+}
+
+/* ===============================
+   INPUTS
+=================================*/
+input{
+  width:100%;
+  box-sizing:border-box;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.15);
+  outline:none;
+  background: var(--input-bg);
+  color:#111;
+  font-weight:500;
+}
+
+input::placeholder{
+  color:#777;
+  opacity:1;
+}
+
+/* Autofill Fix */
+input:-webkit-autofill{
+  -webkit-box-shadow:0 0 0 1000px var(--input-bg) inset;
+  -webkit-text-fill-color:#111;
+}
+
+/* ===============================
+   PASSWORD WRAPPER
+=================================*/
+.password-wrapper{
+  position:relative;
+  width:100%;
+}
+
+.password-wrapper input{
+  padding-right:40px;
+}
+
+.toggle-password{
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  cursor:pointer;
+  font-size:16px;
+  color:#555;
+}
+
+/* ===============================
+   BUTTONS
+=================================*/
+.primary-btn{
+  background: var(--primary);
+  color:white;
+  border:none;
+  padding:12px;
+  border-radius:8px;
+  cursor:pointer;
+  animation:pulseGlow 2.5s infinite;
+}
+
+@keyframes pulseGlow{
+  0%{ box-shadow:0 0 10px var(--primary); }
+  50%{ box-shadow:0 0 25px var(--primary); }
+  100%{ box-shadow:0 0 10px var(--primary); }
+}
+
+.social-buttons{
+  display:flex;
+  gap:12px;
+  width:100%;
+}
+
+.google-btn,
+.facebook-btn{
+  flex:1;
+  height:40px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.google-btn{
+  background:#ffffff;
+  border:1px solid rgba(0,0,0,0.2);
+  color:#333;
+}
+
+.facebook-btn{
+  background:#1877f2;
+  color:white;
+  border:none;
+}
+
+.google-btn:hover,
+.facebook-btn:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 20px rgba(0,0,0,0.2);
+}
+
+/* Guest Button */
+.guest-btn{
+  margin-top:5px;
+  background:none;
+  border:2px solid var(--accent);
+  color: var(--accent);
+  padding:10px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+/* Switch Text */
+.switch-text{
+  margin-top:10px;
+  text-align:center;
+  color: var(--text-color);
+}
+
+.switch-text span{
+  color: var(--accent);
+  cursor:pointer;
+  font-weight:bold;
+}
+
+/* ===============================
+   LIGHT MODE ENHANCEMENTS
+=================================*/
+.light-mode .container{
+  backdrop-filter:blur(12px);
+  background:rgba(255,255,255,0.85);
+}
+
