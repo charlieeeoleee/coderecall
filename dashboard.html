@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard - Code Recall</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="dashboard.css">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <h1>CODE: RECALL</h1>
+  <button onclick="logout()">Logout</button>
+</header>
+
+<!-- MAIN -->
+<div class="dashboard">
+
+  <!-- PROFILE -->
+  <div class="card profile">
+    <h2>Welcome, Player 👋</h2>
+    <p>Email: <span id="userEmail">Loading...</span></p>
+    <p>Role: <span id="userRole">Student</span></p>
+  </div>
+
+  <!-- XP / LEVEL -->
+  <div class="card stats">
+    <h2>Progress</h2>
+
+    <p>XP: <span id="xp">0</span></p>
+    <p>Level: <span id="level">1</span></p>
+
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+  </div>
+
+  <!-- SUBJECTS -->
+  <div class="card subjects">
+
+    <h2>Start Learning</h2>
+
+    <button onclick="startGame('hardware')">
+      🖥 Computer Hardware
+    </button>
+
+    <button onclick="startGame('circuits')">
+      ⚡ Electrical Circuits
+    </button>
+
+  </div>
+
+</div>
+
+<script src="dashboard.js" type="module"></script>
+
+</body>
+</html>
