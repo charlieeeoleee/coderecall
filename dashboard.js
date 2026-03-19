@@ -70,3 +70,46 @@ window.startGame = function(subject){
   localStorage.setItem("subject", subject);
   window.location.href = "game.html";
 }
+
+/* THEME SYSTEM */
+function detectSystemTheme(){
+  if(window.matchMedia('(prefers-color-scheme: light)').matches){
+    document.body.classList.add("light-mode");
+  }
+}
+
+function loadSavedTheme(){
+  const saved = localStorage.getItem("theme");
+
+  if(saved){
+    document.body.classList.toggle("light-mode", saved === "light");
+  } else {
+    detectSystemTheme();
+  }
+
+  updateIcon();
+}
+
+window.toggleTheme = function(){
+  document.body.classList.toggle("light-mode");
+
+  const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
+  localStorage.setItem("theme", mode);
+
+  updateIcon();
+}
+
+function updateIcon(){
+  const icon = document.getElementById("themeIcon");
+
+  if(!icon) return;
+
+  if(document.body.classList.contains("light-mode")){
+    icon.textContent = "☀️";
+  } else {
+    icon.textContent = "🌙";
+  }
+}
+
+/* RUN THEME */
+loadSavedTheme();
