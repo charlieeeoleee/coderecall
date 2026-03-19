@@ -14,9 +14,9 @@ import {
 
 /* YOUR CONFIG */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID"
+  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
+  authDomain: "gamifiedlearningsystem.firebaseapp.com",
+  projectId: "gamifiedlearningsystem"
 };
 
 const app = initializeApp(firebaseConfig);
