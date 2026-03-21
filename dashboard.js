@@ -1,96 +1,48 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-/* YOUR CONFIG */
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem"
+let user = {
+  username: "Charles",
+  email: "charles@email.com",
+  xp: 150
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+window.onload = function(){
+  loadUser();
+  loadSavedTheme();
+};
 
-/* CHECK USER */
-onAuthStateChanged(auth, async (user) => {
+function loadUser(){
+  document.getElementById("username").textContent = user.username;
+  document.getElementById("email").textContent = user.email;
+  document.getElementById("xp").textContent = user.xp;
 
-  if(!user){
-    window.location.href = "auth.html";
-    return;
-  }
+  let level = Math.floor(user.xp / 100) + 1;
+  document.getElementById("level").textContent = level;
 
-  document.getElementById("userEmail").textContent = user.email;
-
-  const userRef = doc(db, "users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  let data;
-
-  if(!userSnap.exists()){
-    data = {
-      xp: 0,
-      level: 1,
-      role: "student"
-    };
-
-    await setDoc(userRef, data);
-  } else {
-    data = userSnap.data();
-  }
-
-  document.getElementById("xp").textContent = data.xp;
-  document.getElementById("level").textContent = data.level;
-  document.getElementById("userRole").textContent = data.role;
-
-  /* PROGRESS CALCULATION */
-  const progressPercent = (data.xp % 100);
-  document.getElementById("progress").style.width = progressPercent + "%";
-
-});
-
-/* LOGOUT */
-window.logout = function(){
-  signOut(auth);
+  let progress = user.xp % 100;
+  document.getElementById("progressFill").style.width = progress + "%";
+  document.getElementById("progressText").textContent = progress + "%";
 }
 
-/* START GAME */
-window.startGame = function(subject){
-  localStorage.setItem("subject", subject);
-  window.location.href = "game.html";
+function logout(){
+  localStorage.clear();
+  window.location.replace("auth.html");
 }
 
-/* THEME SYSTEM */
-function detectSystemTheme(){
-  if(window.matchMedia('(prefers-color-scheme: light)').matches){
-    document.body.classList.add("light-mode");
-  }
+function startGame(subject){
+  alert("Starting " + subject);
 }
 
+/* THEME */
 function loadSavedTheme(){
   const saved = localStorage.getItem("theme");
 
-  if(saved){
-    document.body.classList.toggle("light-mode", saved === "light");
-  } else {
-    detectSystemTheme();
+  if(saved === "light"){
+    document.body.classList.add("light-mode");
   }
 
   updateIcon();
 }
 
-window.toggleTheme = function(){
+function toggleTheme(){
   document.body.classList.toggle("light-mode");
 
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
@@ -102,14 +54,9 @@ window.toggleTheme = function(){
 function updateIcon(){
   const icon = document.getElementById("themeIcon");
 
-  if(!icon) return;
-
   if(document.body.classList.contains("light-mode")){
     icon.textContent = "☀️";
   } else {
     icon.textContent = "🌙";
   }
 }
-
-/* RUN THEME */
-loadSavedTheme();

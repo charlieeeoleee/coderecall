@@ -6,7 +6,6 @@ import {
   GoogleAuthProvider,
   FacebookAuthProvider,
   signInWithPopup,
-  signInAnonymously,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -27,7 +26,9 @@ const auth = getAuth(app);
    AUTO REDIRECT IF LOGGED IN
 ========================= */
 onAuthStateChanged(auth, (user) => {
-  if (user) {
+  const isGuest = localStorage.getItem("guest");
+
+  if (user || isGuest) {
     window.location.href = "dashboard.html";
   }
 });
@@ -102,15 +103,11 @@ window.facebookLogin = async function(){
 }
 
 /* =========================
-   GUEST LOGIN (Firebase Anonymous)
+   ✅ GUEST LOGIN (FIXED)
 ========================= */
-window.playGuest = async function(){
-  try{
-    await signInAnonymously(auth);
-    window.location.href="dashboard.html";
-  }catch(error){
-    alert(error.message);
-  }
+window.playGuest = function(){
+  localStorage.setItem("guest", "true");
+  window.location.href = "dashboard.html";
 }
 
 /* =========================
@@ -150,10 +147,10 @@ function updateIcon(){
 
   if(document.body.classList.contains("light-mode")){
     icon.textContent = "☀️";
-    logo.src = "assets/logo-light.png";
+    if(logo) logo.src = "assets/logo-light.png";
   } else {
     icon.textContent = "🌙";
-    logo.src = "assets/logo-dark.png";
+    if(logo) logo.src = "assets/logo-dark.png";
   }
 }
 
