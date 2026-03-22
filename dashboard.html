@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Dashboard - Code Recall</title>
+<title>Code Recall Dashboard</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,41 +11,99 @@
 
 <body>
 
-<header class="navbar">
-  <div class="logo">CODE: RECALL</div>
-  <button onclick="logout()" class="logout-btn">Logout</button>
-</header>
+<div class="layout">
 
-<div class="main-container">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
 
-  <!-- WELCOME -->
-  <div class="welcome-box">
-    <h2>Welcome, <span id="username">Charles</span></h2>
-    <p>Email: <span id="email">charles@email.com</span></p>
-  </div>
+    <div class="top-section">
+      <h2 class="logo">CODE:RECALL!</h2>
 
-  <!-- PROGRESS (FIXED) -->
-  <div class="progress-box">
-    <p><strong>XP:</strong> <span id="xp">150</span></p>
-    <p><strong>Level:</strong> <span id="level">2</span></p>
-
-    <p><strong>Progress: <span id="progressText">50%</span></strong></p>
-
-    <div class="progress-bar">
-      <div id="progressFill" style="width:50%"></div>
+      <nav class="menu">
+        <a href="#">🏠 Dashboard</a>
+        <a href="#">📚 Subjects</a>
+        <a href="achievements.html">🏆 Achievements</a>
+        <a href="#">⚙ Settings</a>
+      </nav>
     </div>
-  </div>
 
-  <!-- SUBJECT -->
-  <div class="subject-box">
-    <h3>Subjects</h3>
-    <button>🖥 Computer Hardware</button>
-    <button>⚡ Electrical Circuits</button>
+    <!-- LOGOUT (BOTTOM ONLY) -->
+    <div class="bottom-section">
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+
+  </aside>
+
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <h2>Dashboard</h2>
+
+      <div class="user-top">
+        <span id="username">Charles</span>
+        <img src="https://i.pravatar.cc/40">
+      </div>
+    </div>
+
+
+    <!-- STATS -->
+    <div class="stats-grid">
+
+      <div class="card">
+        <h3>XP</h3>
+        <p id="xp">150</p>
+      </div>
+
+      <div class="card">
+        <h3>Level</h3>
+        <p id="level">2</p>
+      </div>
+
+      <div class="card">
+        <h3>Progress: <span id="progressText">50%</span></h3>
+        <div class="progress-bar">
+          <div id="progressFill" style="width:50%"></div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- START LEARNING -->
+    <div class="card section">
+      <h3>Start Learning</h3>
+
+      <div class="subjects">
+        <button onclick="startGame('hardware')">🖥 Computer Hardware</button>
+        <button onclick="startGame('circuits')">⚡ Electrical Circuits</button>
+      </div>
+    </div>
+
+
+    <!-- ACHIEVEMENTS -->
+    <div class="card section">
+      <h3>Achievements</h3>
+
+      <div class="badges">
+        <div class="badge">🥇 First Win</div>
+        <div class="badge">⚡ Fast Learner</div>
+        <div class="badge">🔥 3-Day Streak</div>
+      </div>
+    </div>
+
   </div>
 
 </div>
 
-<button class="theme-toggle">🌙</button>
+<!-- THEME BUTTON -->
+<button class="theme-toggle" onclick="toggleTheme()">
+  <span id="themeIcon">🌙</span>
+</button>
+
+<script type="module" src="dashboard.js"></script>
 
 </body>
 </html>
