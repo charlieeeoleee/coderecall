@@ -4,8 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
-  FacebookAuthProvider,
   signInWithPopup,
+  signInAnonymously,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -23,18 +23,22 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 /* =========================
-   AUTO REDIRECT IF LOGGED IN
+   🔥 SAFE REDIRECT (NO LOOP)
 ========================= */
-onAuthStateChanged(auth, (user) => {
-  const isGuest = localStorage.getItem("guest");
+let redirected = false;
 
-  if (user || isGuest) {
-    window.location.href = "dashboard.html";
+onAuthStateChanged(auth, (user) => {
+  if(user && !redirected){
+    redirected = true;
+
+    if(window.location.pathname.includes("auth.html")){
+      window.location.replace("dashboard.html");
+    }
   }
 });
 
 /* =========================
-   FORM SWITCHING
+   FORM SWITCHING (FIXED)
 ========================= */
 window.showRegister = function(){
   document.getElementById("loginForm").classList.remove("active");
@@ -47,7 +51,7 @@ window.showLogin = function(){
 }
 
 /* =========================
-   EMAIL LOGIN
+   LOGIN
 ========================= */
 window.login = async function(){
   try{
@@ -55,7 +59,7 @@ window.login = async function(){
     const password = document.getElementById("loginPassword").value;
 
     await signInWithEmailAndPassword(auth, email, password);
-    window.location.href="dashboard.html";
+    window.location.replace("dashboard.html");
   }catch(error){
     alert(error.message);
   }
@@ -70,7 +74,7 @@ window.register = async function(){
     const password = document.getElementById("registerPassword").value;
 
     await createUserWithEmailAndPassword(auth, email, password);
-    window.location.href="dashboard.html";
+    window.location.replace("dashboard.html");
   }catch(error){
     alert(error.message);
   }
@@ -83,35 +87,31 @@ window.googleLogin = async function(){
   try{
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-    window.location.href="dashboard.html";
+    window.location.replace("dashboard.html");
   }catch(error){
     alert(error.message);
   }
 }
 
 /* =========================
-   FACEBOOK LOGIN
+   ✅ GUEST LOGIN
 ========================= */
-window.facebookLogin = async function(){
+window.playGuest = async function(){
   try{
-    const provider = new FacebookAuthProvider();
-    await signInWithPopup(auth, provider);
-    window.location.href="dashboard.html";
+    await signInAnonymously(auth);
+
+    if(!redirected){
+      redirected = true;
+      window.location.replace("dashboard.html");
+    }
+
   }catch(error){
     alert(error.message);
   }
 }
 
 /* =========================
-   ✅ GUEST LOGIN (FIXED)
-========================= */
-window.playGuest = function(){
-  localStorage.setItem("guest", "true");
-  window.location.href = "dashboard.html";
-}
-
-/* =========================
-   THEME SYSTEM
+   🎨 THEME SYSTEM (FIXED LOGO)
 ========================= */
 
 function detectSystemTheme(){
@@ -146,10 +146,10 @@ function updateIcon(){
   const logo = document.querySelector(".main-logo");
 
   if(document.body.classList.contains("light-mode")){
-    icon.textContent = "☀️";
+    if(icon) icon.textContent = "☀️";
     if(logo) logo.src = "assets/logo-light.png";
   } else {
-    icon.textContent = "🌙";
+    if(icon) icon.textContent = "🌙";
     if(logo) logo.src = "assets/logo-dark.png";
   }
 }
@@ -162,5 +162,7 @@ window.togglePassword = function(id){
   input.type = input.type === "password" ? "text" : "password";
 }
 
-/* RUN ON LOAD */
+/* =========================
+   RUN ON LOAD
+========================= */
 loadSavedTheme();
