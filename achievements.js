@@ -11,13 +11,11 @@ import {
 import {
   getFirestore,
   doc,
-  getDoc,
-  setDoc,
-  updateDoc
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 /* =========================
-   FIREBASE CONFIG
+   CONFIG (YOUR REAL CONFIG)
 ========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -33,91 +31,80 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 /* =========================
-   LOAD USER DATA
+   BADGES
 ========================= */
-let currentUser = null;
+const badges = [
+  { name: "First Win", icon: "🥇", xp: 0 },
+  { name: "Rookie", icon: "🎯", xp: 50 },
+  { name: "Learner", icon: "📘", xp: 100 },
+  { name: "Intermediate", icon: "⚡", xp: 200 },
+  { name: "Pro", icon: "🔥", xp: 300 },
+  { name: "Master", icon: "👑", xp: 500 }
+];
 
+/* =========================
+   AUTH + LOAD DATA
+========================= */
 onAuthStateChanged(auth, async (user) => {
   if(user){
-    currentUser = user;
-    await loadXP();
-  }else{
+    const userRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(userRef);
+
+    let xp = 0;
+
+    if(docSnap.exists()){
+      xp = docSnap.data().xp || 0;
+    }
+
+    loadBadges(xp);
+  } else {
     window.location.href = "auth.html";
   }
 });
 
 /* =========================
-   LOAD XP FROM FIRESTORE
+   LOAD BADGES
 ========================= */
-async function loadXP(){
+function loadBadges(xp){
 
-  const userRef = doc(db, "users", currentUser.uid);
-  const docSnap = await getDoc(userRef);
+  const grid = document.getElementById("badgesGrid");
+  if(!grid) return;
 
-  let xp = 0;
+  grid.innerHTML = "";
 
-  if(docSnap.exists()){
-    xp = docSnap.data().xp || 0;
-  } else {
-    // create new user record
-    await setDoc(userRef, { xp: 0 });
-  }
+  let unlocked = 0;
 
-  updateUI(xp);
+  badges.forEach(badge => {
+
+    const isUnlocked = xp >= badge.xp;
+
+    if(isUnlocked) unlocked++;
+
+    const div = document.createElement("div");
+    div.className = "badge " + (isUnlocked ? "" : "locked");
+
+    div.innerHTML = `
+      <div class="badge-icon">${badge.icon}</div>
+      <div>${badge.name}</div>
+    `;
+
+    grid.appendChild(div);
+  });
+
+  document.getElementById("achievementCount").textContent =
+    unlocked + "/" + badges.length + " Unlocked";
+
+  document.getElementById("progressFill").style.width =
+    (unlocked / badges.length * 100) + "%";
 }
 
 /* =========================
-   UPDATE UI
-========================= */
-function updateUI(xp){
-
-  let level = Math.floor(xp / 100) + 1;
-  let progress = xp % 100;
-
-  document.getElementById("xp").textContent = xp;
-  document.getElementById("level").textContent = level;
-  document.getElementById("progressText").textContent = progress + "%";
-  document.getElementById("progressFill").style.width = progress + "%";
-}
-
-/* =========================
-   ADD XP (SAVE TO FIREBASE)
-========================= */
-window.startGame = async function(subject){
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const docSnap = await getDoc(userRef);
-
-  let xp = docSnap.data().xp || 0;
-
-  let gained = Math.floor(Math.random() * 50) + 10;
-  xp += gained;
-
-  await updateDoc(userRef, { xp });
-
-  alert("You gained " + gained + " XP!");
-
-  updateUI(xp);
-};
-
-/* =========================
-   LOGOUT (REAL)
+   ✅ MAKE FUNCTIONS GLOBAL
 ========================= */
 window.logout = async function(){
   await signOut(auth);
   window.location.href = "auth.html";
 };
-
-/* =========================
-   THEME (UNCHANGED)
-========================= */
-function loadTheme(){
-  const saved = localStorage.getItem("theme");
-  if(saved === "light"){
-    document.body.classList.add("light-mode");
-  }
-  updateIcon();
-}
 
 window.toggleTheme = function(){
   document.body.classList.toggle("light-mode");
@@ -128,12 +115,27 @@ window.toggleTheme = function(){
   updateIcon();
 };
 
+/* =========================
+   THEME LOAD
+========================= */
+function loadTheme(){
+  const saved = localStorage.getItem("theme");
+
+  if(saved === "light"){
+    document.body.classList.add("light-mode");
+  }
+
+  updateIcon();
+}
+
 function updateIcon(){
   const icon = document.getElementById("themeIcon");
+
   if(!icon) return;
 
   icon.textContent =
     document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
 
+/* RUN THEME ON LOAD */
 loadTheme();

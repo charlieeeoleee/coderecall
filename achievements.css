@@ -1,0 +1,181 @@
+body{
+margin:0;
+font-family:'Poppins', sans-serif;
+background:linear-gradient(135deg,#0b0f2a,#2b1e5a);
+color:white;
+transition:0.3s;
+}
+
+/* LAYOUT */
+.layout{ display:flex; }
+
+/* SIDEBAR */
+.sidebar{
+width:240px;
+background:#1a1140;
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+padding:20px;
+}
+
+.logo{
+font-family:'Press Start 2P';
+font-size:14px;
+background: linear-gradient(90deg,#ff8c00,#ff2e97);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+}
+
+.menu{
+display:flex;
+flex-direction:column;
+gap:15px;
+}
+
+.menu a{
+color:white;
+text-decoration:none;
+opacity:0.8;
+}
+
+.bottom-section{
+border-top:1px solid rgba(255,255,255,0.1);
+padding-top:15px;
+}
+
+.logout-btn{
+width:100%;
+padding:10px;
+background:#ff2e97;
+border:none;
+border-radius:10px;
+color:white;
+cursor:pointer;
+}
+
+/* MAIN */
+.main{
+flex:1;
+padding:30px;
+}
+
+/* TOPBAR */
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
+}
+
+.user-top{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+.user-top img{
+width:35px;
+border-radius:50%;
+}
+
+/* PROGRESS */
+.progress-header{
+margin-bottom:20px;
+}
+
+.progress-bar{
+height:10px;
+background:rgba(255,255,255,0.2);
+border-radius:10px;
+margin-top:10px;
+overflow:hidden;
+}
+
+#progressFill{
+height:100%;
+background:linear-gradient(90deg,#00e5ff,#00ffcc);
+}
+
+/* GRID */
+.badges-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:20px;
+}
+
+/* BADGE */
+.badge{
+background:#3a2575;
+padding:20px;
+border-radius:15px;
+text-align:center;
+transition:0.3s;
+}
+
+/* LOCKED */
+.badge.locked{
+opacity:0.3;
+filter:blur(1px);
+}
+
+/* ICON */
+.badge-icon{
+font-size:40px;
+margin-bottom:10px;
+}
+
+/* 🌙 THEME BUTTON */
+.theme-toggle{
+position:fixed;
+bottom:25px;
+right:25px;
+width:55px;
+height:55px;
+border:none;
+border-radius:50%;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:20px;
+cursor:pointer;
+background:linear-gradient(135deg,#00e5ff,#00ffcc);
+color:#000;
+box-shadow:0 0 15px #00e5ff;
+transition:0.3s;
+}
+
+.theme-toggle:hover{
+transform:scale(1.1) rotate(10deg);
+}
+
+/* LIGHT MODE */
+body.light-mode{
+background:#f4f6fb;
+color:#222;
+}
+
+body.light-mode .sidebar{
+background:white;
+}
+
+body.light-mode .menu a{
+color:#222;
+}
+
+body.light-mode .badge{
+background:white;
+color:#222;
+box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+
+body.light-mode .progress-bar{
+background:#ddd;
+}
+
+/* 🔥 ULTRA CLEAN BUTTON */
+body.light-mode .theme-toggle{
+background:linear-gradient(135deg,#ff2e97,#ff8c00);
+color:white;
+}

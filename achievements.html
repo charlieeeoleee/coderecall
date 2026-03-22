@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Achievements - Code Recall</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="achievements.css">
+<link rel="icon" type="image/png" href="assets/favicon.png">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="top-section">
+      <h2 class="logo">CODE:RECALL!</h2>
+
+      <nav class="menu">
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="#">📚 Subjects</a>
+        <a href="achievements.html">🏆 Achievements</a>
+        <a href="#">⚙ Settings</a>
+      </nav>
+    </div>
+
+    <div class="bottom-section">
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <h2>Achievements</h2>
+
+      <div class="user-top">
+        <span>Charles</span>
+        <img src="https://i.pravatar.cc/40">
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-header">
+      <span id="achievementCount">0/0 Unlocked</span>
+
+      <div class="progress-bar">
+        <div id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- BADGES -->
+    <div class="badges-grid" id="badgesGrid"></div>
+
+  </div>
+
+</div>
+
+<!-- THEME BUTTON -->
+<button class="theme-toggle" onclick="toggleTheme()">
+  <span id="themeIcon">🌙</span>
+</button>
+
+<script type="module" src="achievements.js"></script>
+
+</body>
+</html>
