@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Recall - Subjects</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="subjects-preview.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-code">CODE:</span>
+      <span class="logo-recall">RECALL!</span>
+    </div>
+
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="subjects-preview.html" class="active-link">Subjects</a>
+      <a href="faq.html">FAQ</a>
+      <button class="login-btn" onclick="goToAuth()">Login</button>
+    </nav>
+  </header>
+
+  <!-- MAIN -->
+  <main class="subjects-page">
+
+    <!-- HERO -->
+    <section class="subjects-hero fade-in">
+      <div class="hero-badge">Learning Areas</div>
+      <h1>Subjects Inside Code Recall</h1>
+      <p>
+        Code Recall currently focuses on two major subject areas for
+        Computer System Servicing learners: Computer Hardware and
+        Electrical Wiring and Electronics Circuit Components.
+      </p>
+    </section>
+
+    <!-- SUBJECTS -->
+    <section class="subjects-grid-section fade-in">
+      <div class="subject-card hover-glow">
+        <div class="subject-icon">🖥</div>
+        <h2>Computer Hardware</h2>
+        <p class="subject-text">
+          This subject focuses on the physical parts of a computer system,
+          including their functions, handling, and basic troubleshooting.
+          It helps learners understand how hardware components work together
+          in a complete computer setup.
+        </p>
+
+        <div class="topic-list">
+          <div class="topic-chip">Motherboard</div>
+          <div class="topic-chip">RAM</div>
+          <div class="topic-chip">Storage</div>
+          <div class="topic-chip">CPU</div>
+          <div class="topic-chip">Peripherals</div>
+          <div class="topic-chip">Troubleshooting</div>
+        </div>
+      </div>
+
+      <div class="subject-card hover-glow">
+        <div class="subject-icon">⚡</div>
+        <h2>Electrical Wiring and Electronics Circuit Components</h2>
+        <p class="subject-text">
+          This subject introduces learners to electricity, safety practices,
+          wiring concepts, and electronic circuit components commonly used in
+          technical and servicing tasks. It supports stronger understanding of
+          circuit-related foundations in CSS learning.
+        </p>
+
+        <div class="topic-list">
+          <div class="topic-chip">Electricity Basics</div>
+          <div class="topic-chip">Safety</div>
+          <div class="topic-chip">Wiring</div>
+          <div class="topic-chip">Circuits</div>
+          <div class="topic-chip">Components</div>
+          <div class="topic-chip">Tools</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHY THESE SUBJECTS -->
+    <section class="info-section fade-in">
+      <div class="section-heading">
+        <h2>Why These Subjects?</h2>
+        <p>These focus areas were selected to support foundational CSS competencies.</p>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card hover-glow">
+          <div class="info-icon">🎯</div>
+          <h3>Relevant to CSS</h3>
+          <p>
+            The platform focuses on topics directly related to Computer System
+            Servicing learning outcomes and technical competencies.
+          </p>
+        </div>
+
+        <div class="info-card hover-glow">
+          <div class="info-icon">📘</div>
+          <h3>Structured Learning</h3>
+          <p>
+            Each subject is organized to guide students from basic concepts
+            toward deeper understanding through modules and quizzes.
+          </p>
+        </div>
+
+        <div class="info-card hover-glow">
+          <div class="info-icon">🚀</div>
+          <h3>Better Engagement</h3>
+          <p>
+            Students can stay motivated while learning because the system
+            combines lessons with XP, badges, and progress feedback.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-card fade-in">
+      <h2>Want to study these subjects in Code Recall?</h2>
+      <p>
+        Login now to access interactive modules, quizzes, progress tracking,
+        and gamified rewards.
+      </p>
+
+      <div class="cta-buttons">
+        <button class="primary-btn" onclick="goToAuth()">Login / Register</button>
+        <button class="secondary-btn" onclick="goToHome()">Back to Home</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p>© 2026 Code Recall System | Gamified Learning Platform</p>
+    </div>
+  </footer>
+
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <script src="subjects-preview.js"></script>
+</body>
+</html>

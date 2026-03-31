@@ -1,110 +1,91 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Code Recall Dashboard</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="dashboard.css">
-<link rel="icon" type="image/png" href="assets/favicon.png">
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Recall Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
 
-<div class="layout">
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="top-section">
+        <h2 class="logo">CODE:RECALL!</h2>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-
-    <div class="top-section">
-      <h2 class="logo">CODE:RECALL!</h2>
-
-      <nav class="menu">
-        <a href="#">🏠 Dashboard</a>
-        <a href="#">📚 Subjects</a>
-        <a href="achievements.html">🏆 Badges</a>
-        <a href="#">⚙ Settings</a>
-      </nav>
-    </div>
-
-    <!-- LOGOUT (BOTTOM ONLY) -->
-    <div class="bottom-section">
-      <button onclick="logout()" class="logout-btn">Logout</button>
-    </div>
-
-  </aside>
-
-
-  <!-- MAIN -->
-  <div class="main">
-
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <h2>Dashboard</h2>
-
-      <div class="user-top">
-        <span id="username">Charles</span>
-        <img src="https://i.pravatar.cc/40">
-      </div>
-    </div>
-
-
-    <!-- STATS -->
-    <div class="stats-grid">
-
-      <div class="card">
-        <h3>XP</h3>
-        <p id="xp">150</p>
+        <nav class="menu">
+          <a href="dashboard.html">🏠 Dashboard</a>
+          <a href="subjects.html">📚 Subjects</a>
+          <a href="achievements.html">🏆 Badges</a>
+          <a href="settings.html">⚙ Settings</a>
+        </nav>
       </div>
 
-      <div class="card">
-        <h3>Level</h3>
-        <p id="level">2</p>
+      <div class="bottom-section">
+        <button onclick="logout()" class="logout-btn">Logout</button>
       </div>
+    </aside>
 
-      <div class="card">
-        <h3>Progress: <span id="progressText">50%</span></h3>
-        <div class="progress-bar">
-          <div id="progressFill" style="width:50%"></div>
+    <!-- MAIN -->
+    <div class="main">
+      <!-- TOPBAR -->
+      <div class="topbar">
+        <h2>Dashboard</h2>
+
+        <div class="user-top">
+          <span id="username">User</span>
+          <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
         </div>
       </div>
 
-    </div>
+      <!-- STATS -->
+      <div class="stats-grid">
+        <div class="card">
+          <h3>XP</h3>
+          <p id="xp">0</p>
+        </div>
 
+        <div class="card">
+          <h3>Level</h3>
+          <p id="level">1</p>
+        </div>
 
-    <!-- START LEARNING -->
-    <div class="card section">
-      <h3>Start Learning</h3>
+        <div class="card">
+          <h3>Progress: <span id="progressText">0%</span></h3>
+          <div class="progress-bar">
+            <div id="progressFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
 
-      <div class="subjects">
-        <button onclick="startGame('hardware')">🖥 Computer Hardware</button>
-        <button onclick="startGame('circuits')">⚡ Electrical Circuits</button>
+      <!-- START LEARNING -->
+      <div class="card section">
+        <h3>Start Learning</h3>
+        <div class="subjects">
+          <button onclick="startGame('hardware')">🖥 Computer Hardware</button>
+          <button onclick="startGame('electrical')">⚡ Electrical Wiring and Electronics Circuit Components</button>
+        </div>
+      </div>
+
+      <!-- ACHIEVEMENTS -->
+      <div class="card section">
+        <h3>Achievements</h3>
+        <div class="badges">
+          <div class="badge">🥇 First Win</div>
+          <div class="badge">⚡ Fast Learner</div>
+          <div class="badge">🔥 3-Day Streak</div>
+        </div>
       </div>
     </div>
-
-
-    <!-- ACHIEVEMENTS -->
-    <div class="card section">
-      <h3>Achievements</h3>
-
-      <div class="badges">
-        <div class="badge">🥇 First Win</div>
-        <div class="badge">⚡ Fast Learner</div>
-        <div class="badge">🔥 3-Day Streak</div>
-      </div>
-    </div>
-
   </div>
 
-</div>
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
 
-<!-- THEME BUTTON -->
-<button class="theme-toggle" onclick="toggleTheme()">
-  <span id="themeIcon">🌙</span>
-</button>
-
-<script type="module" src="dashboard.js"></script>
-
+  <script type="module" src="dashboard.js"></script>
 </body>
 </html>

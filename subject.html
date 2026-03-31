@@ -4,48 +4,65 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Subject - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="subject.css">
-  <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
-  <button class="back-btn" onclick="goBack()">← Back</button>
 
+  <!-- TOP LEFT LOGO -->
+  <div class="subject-logo">
+    <span class="subject-logo-code">CODE:</span>
+    <span class="subject-logo-recall">RECALL!</span>
+  </div>
+
+  <!-- THEME TOGGLE -->
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">🌙</span>
   </button>
 
   <main class="subject-page">
     <div class="subject-header card">
-      <h1 class="title" id="subjectTitle">SUBJECT</h1>
-      <p class="subject-desc" id="subjectDesc">Choose what you want to open.</p>
+      <h1 class="subject-title" id="subjectTitle">
+        ELECTRICAL WIRING AND ELECTRONICS CIRCUIT COMPONENTS
+      </h1>
+      <p class="subject-desc" id="subjectDesc">
+        Take the pre-test, study the modules, answer quizzes, and finish the post-test.
+      </p>
     </div>
 
-    <section class="subject-actions">
-      <button class="subject-action card" id="pretestBtn" onclick="openPretest()">
-        <span class="action-title">Pre-Test</span>
-        <span class="action-sub">Take the assessment first</span>
+    <div class="subject-actions">
+      <button class="subject-card card" id="pretestBtn" onclick="openPretest()">
+        <h2>Pre-Test</h2>
+        <p>Take the assessment first</p>
       </button>
 
-      <button class="subject-action card locked" id="modulesBtn" onclick="openModules()">
-        <span class="lock-badge">🔒</span>
-        <span class="action-title">Modules</span>
-        <span class="action-sub">Read the lessons</span>
+      <button class="subject-card card locked" id="modulesBtn" onclick="openModules()">
+        <span class="lock-icon">🔒</span>
+        <h2>Modules</h2>
+        <p>Read the lessons</p>
       </button>
 
-      <button class="subject-action card locked" id="quizzesBtn" onclick="openQuizzes()">
-        <span class="lock-badge">🔒</span>
-        <span class="action-title">Quizzes</span>
-        <span class="action-sub">Answer module quizzes</span>
+      <button class="subject-card card locked" id="quizzesBtn" onclick="openQuiz()">
+        <span class="lock-icon">🔒</span>
+        <h2>Quizzes</h2>
+        <p>Answer module quizzes</p>
       </button>
 
-      <button class="subject-action card locked" id="posttestBtn" onclick="openPosttest()">
-        <span class="lock-badge">🔒</span>
-        <span class="action-title">Post-Test</span>
-        <span class="action-sub">Final assessment</span>
+      <button class="subject-card card locked" id="posttestBtn" onclick="openPosttest()">
+        <span class="lock-icon">🔒</span>
+        <h2>Post-Test</h2>
+        <p>Final assessment</p>
       </button>
-    </section>
+    </div>
   </main>
+
+  <!-- BACK BUTTON -->
+  <button class="subject-back-btn" onclick="goBack()">← Back</button>
 
   <script src="subject.js"></script>
 </body>

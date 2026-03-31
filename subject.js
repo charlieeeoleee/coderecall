@@ -1,16 +1,14 @@
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
 
-/* =========================
-   SUBJECT LABELS
-========================= */
+/* SUBJECT META */
 const subjectMeta = {
   electrical: {
-    title: "ELECTRICAL",
+    title: "ELECTRICAL WIRING AND ELECTRONICS CIRCUIT COMPONENTS",
     desc: "Take the pre-test, study the modules, answer quizzes, and finish the post-test."
   },
   hardware: {
-    title: "HARDWARE",
+    title: "COMPUTER HARDWARE",
     desc: "Take the pre-test, study the modules, answer quizzes, and finish the post-test."
   }
 };
@@ -23,9 +21,7 @@ const meta = subjectMeta[subject] || {
 document.getElementById("subjectTitle").textContent = meta.title;
 document.getElementById("subjectDesc").textContent = meta.desc;
 
-/* =========================
-   NAVIGATION
-========================= */
+/* NAVIGATION */
 function goBack(){
   window.location.href = "dashboard.html";
 }
@@ -38,17 +34,15 @@ function openModules(){
   window.location.href = `modules.html?subject=${subject}&level=easy`;
 }
 
-function openQuizzes(){
-  window.location.href = `quiz-select.html?subject=${subject}&level=easy`;
+function openQuiz(){
+  window.location.href = `quiz.html?subject=${subject}&level=easy&type=quiz1`;
 }
 
 function openPosttest(){
   window.location.href = `quiz.html?subject=${subject}&level=easy&type=posttest`;
 }
 
-/* =========================
-   LOCK STATE
-========================= */
+/* LOCK / UNLOCK */
 function getProgressKey(name){
   return `${subject}_${name}`;
 }
@@ -56,14 +50,14 @@ function getProgressKey(name){
 function unlockButton(buttonId){
   const btn = document.getElementById(buttonId);
   btn.classList.remove("locked");
-  const badge = btn.querySelector(".lock-badge");
+  const badge = btn.querySelector(".lock-icon");
   if(badge) badge.remove();
 }
 
 function loadProgress(){
   const pretestDone = localStorage.getItem(getProgressKey("pretest")) === "true";
   const modulesDone = localStorage.getItem(getProgressKey("modules")) === "true";
-  const quizzesDone = localStorage.getItem(getProgressKey("quizzes")) === "true";
+  const quizDone = localStorage.getItem(getProgressKey("quiz")) === "true";
 
   if(pretestDone){
     unlockButton("modulesBtn");
@@ -73,14 +67,12 @@ function loadProgress(){
     unlockButton("quizzesBtn");
   }
 
-  if(quizzesDone){
+  if(quizDone){
     unlockButton("posttestBtn");
   }
 }
 
-/* =========================
-   THEME
-========================= */
+/* THEME */
 function loadTheme(){
   const saved = localStorage.getItem("theme");
   if(saved === "light"){

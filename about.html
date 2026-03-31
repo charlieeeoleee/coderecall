@@ -1,48 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>About - Code Recall</title>
-<link rel="stylesheet" href="about.css">
-</head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Recall - About</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="about.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
 <body>
 
-<header class="navbar">
-  <div class="logo">CODE: RECALL</div>
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-code">CODE:</span>
+      <span class="logo-recall">RECALL!</span>
+    </div>
 
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="about.html">About</a>
-    <a href="subjects.html">Subjects</a>
-    <a href="faq.html">FAQ</a>
-    <a href="auth.html" class="login-btn">Login</a>
-  </nav>
-</header>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html" class="active-link">About</a>
+      <a href="subjects-preview.html">Subjects</a>
+      <a href="faq.html">FAQ</a>
+      <button class="login-btn" onclick="goToAuth()">Login</button>
+    </nav>
+  </header>
 
-<section class="about">
+  <!-- MAIN -->
+  <main class="about-page">
 
-<h1>About Code Recall</h1>
+    <!-- HERO -->
+    <section class="about-hero fade-in">
+      <div class="hero-text">
+        <div class="hero-badge">About the Platform</div>
+        <h1>What is Code Recall?</h1>
+        <p>
+          Code Recall is a gamified learning platform designed to support
+          Computer System Servicing students through interactive lessons,
+          quizzes, XP rewards, badges, and guided progression.
+        </p>
+      </div>
+    </section>
 
-<p>
-Code Recall is a gamified learning system designed to help
-Computer System Servicing (CSS) students improve their
-understanding of technical subjects through interactive learning.
-</p>
+    <!-- MISSION / VISION -->
+    <section class="about-grid fade-in">
+      <div class="card hover-glow">
+        <div class="section-icon">🎯</div>
+        <h2>Our Mission</h2>
+        <p>
+          To make technical learning more engaging, motivating, and easier
+          to understand through gamified experiences that encourage students
+          to continue learning and practicing.
+        </p>
+      </div>
 
-<p>
-The system focuses on Computer Hardware and Electrical Wiring
-and Electronics Circuits, based on the results of a needs
-assessment conducted among students.
-</p>
+      <div class="card hover-glow">
+        <div class="section-icon">🌟</div>
+        <h2>Our Vision</h2>
+        <p>
+          To become an innovative learning support system that helps students
+          build stronger knowledge and confidence in CSS-related subjects
+          through interactive and rewarding digital learning.
+        </p>
+      </div>
+    </section>
 
-<p>
-By integrating gamification elements such as points, levels,
-progress tracking, and interactive gameplay, Code Recall aims to
-increase student engagement and improve learning outcomes.
-</p>
+    <!-- WHY IT MATTERS -->
+    <section class="info-block fade-in">
+      <div class="section-heading">
+        <h2>Why Code Recall Matters</h2>
+        <p>Built to answer the needs of learners who want a more engaging way to study.</p>
+      </div>
 
-</section>
+      <div class="info-grid">
+        <div class="card hover-glow">
+          <h3>🧠 Better Understanding</h3>
+          <p>
+            Technical concepts can be difficult, so the platform breaks them down
+            into more manageable learning experiences.
+          </p>
+        </div>
 
+        <div class="card hover-glow">
+          <h3>🎮 Higher Engagement</h3>
+          <p>
+            XP, badges, and progress tracking make students feel more involved
+            and motivated while learning.
+          </p>
+        </div>
+
+        <div class="card hover-glow">
+          <h3>📘 Guided Progression</h3>
+          <p>
+            Learners move step by step through lessons, assessments, and rewards,
+            helping them stay focused and organized.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUBJECT FOCUS -->
+    <section class="info-block fade-in">
+      <div class="section-heading">
+        <h2>Focus Areas</h2>
+        <p>The platform currently supports the following subject areas.</p>
+      </div>
+
+      <div class="focus-grid">
+        <div class="card hover-glow">
+          <div class="focus-icon">🖥</div>
+          <h3>Computer Hardware</h3>
+          <p>
+            Covers computer parts, their functions, proper handling,
+            and basic troubleshooting.
+          </p>
+        </div>
+
+        <div class="card hover-glow">
+          <div class="focus-icon">⚡</div>
+          <h3>Electrical Wiring and Electronics Circuit Components</h3>
+          <p>
+            Covers electricity, safety, wiring concepts, and electronics
+            circuit components related to CSS learning.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-card fade-in">
+      <h2>Want to experience Code Recall?</h2>
+      <p>Login now and start learning through a more interactive and rewarding platform.</p>
+
+      <div class="cta-buttons">
+        <button class="primary-btn" onclick="goToAuth()">Login / Register</button>
+        <button class="secondary-btn" onclick="goToHome()">Back to Home</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p>© 2026 Code Recall System | Gamified Learning Platform</p>
+    </div>
+  </footer>
+
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <script src="about.js"></script>
 </body>
 </html>

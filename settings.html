@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="settings.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="top-section">
+        <h2 class="logo">CODE:RECALL!</h2>
+
+        <nav class="menu">
+          <a href="dashboard.html">🏠 Dashboard</a>
+          <a href="subjects.html">📚 Subjects</a>
+          <a href="achievements.html">🏆 Badges</a>
+          <a href="settings.html" class="active-link">⚙ Settings</a>
+        </nav>
+      </div>
+
+      <div class="bottom-section">
+        <button onclick="logout()" class="logout-btn">Logout</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h2 class="page-title">Settings</h2>
+          <p class="page-subtitle">Manage your account, preferences, and system actions.</p>
+        </div>
+
+        <div class="user-top">
+          <span id="usernameTop">User</span>
+          <img id="userPhotoTop" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
+        </div>
+      </div>
+
+      <div class="settings-grid">
+
+        <!-- ACCOUNT -->
+        <div class="card settings-card">
+          <h3>👤 Account</h3>
+
+          <div class="account-box">
+            <img id="profilePhoto" src="https://i.pravatar.cc/80?img=12" alt="Profile Photo">
+            <div class="account-info">
+              <p><strong>Name:</strong> <span id="profileName">User</span></p>
+              <p><strong>Email:</strong> <span id="profileEmail">No email</span></p>
+              <p><strong>Login Type:</strong> <span id="loginType">Unknown</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- APPEARANCE -->
+        <div class="card settings-card">
+          <h3>🎨 Appearance</h3>
+
+          <div class="setting-row">
+            <div>
+              <strong>Theme</strong>
+              <p>Switch between dark and light mode.</p>
+            </div>
+            <button class="action-btn" onclick="toggleTheme()">Toggle Theme</button>
+          </div>
+        </div>
+
+        <!-- LEARNING PREFERENCES -->
+        <div class="card settings-card">
+          <h3>🎮 Learning Preferences</h3>
+
+          <div class="setting-row">
+            <div>
+              <strong>Sound Effects</strong>
+              <p>Enable or disable sounds in modules and quizzes.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="soundToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <strong>Auto-Advance</strong>
+              <p>Automatically continue after completing a module or quiz.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="autoAdvanceToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="card settings-card">
+          <h3>📊 Progress</h3>
+
+          <div class="progress-info">
+            <p><strong>Total XP:</strong> <span id="totalXP">0</span></p>
+            <p><strong>Level:</strong> <span id="levelValue">1</span></p>
+            <p><strong>Completed Subjects:</strong> <span id="completedSubjects">0</span></p>
+          </div>
+        </div>
+
+        <!-- SYSTEM ACTIONS -->
+        <div class="card settings-card full-width">
+          <h3>⚙ System Actions</h3>
+
+          <div class="system-actions">
+            <button class="action-btn logout-action" onclick="logout()">Logout</button>
+            <button class="action-btn danger-btn" onclick="resetProgress()">Reset Progress</button>
+            <button class="action-btn warning-btn" onclick="clearLocalData()">Clear Local Data</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <script type="module" src="settings.js"></script>
+</body>
+</html>

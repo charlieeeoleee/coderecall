@@ -1,6 +1,3 @@
-/* =========================
-   FIREBASE IMPORTS
-========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getAuth,
@@ -40,98 +37,94 @@ onAuthStateChanged(auth, async (user) => {
 
   if (user) {
     currentUser = user;
-    await loadDashboard();
+    await loadUserUI();
+    loadSubjectStats();
   } else if (isGuest) {
-    loadGuestDashboard();
+    loadGuestUI();
+    loadSubjectStats();
   } else {
     window.location.href = "auth.html";
   }
 });
 
 /* =========================
-   LOAD REAL USER DASHBOARD
+   LOAD REAL USER
 ========================= */
-async function loadDashboard() {
+async function loadUserUI() {
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
 
-  let xp = 0;
-  let name = "User";
-  let photo = "https://i.pravatar.cc/40?img=12";
+  let name = currentUser.displayName || currentUser.email || "User";
+  let photo = currentUser.photoURL || "https://i.pravatar.cc/40?img=12";
 
-  if (docSnap.exists()) {
-    const data = docSnap.data();
-
-    xp = data.xp || 0;
-
-    name =
-      currentUser.displayName ||
-      data.name ||
-      currentUser.email ||
-      "User";
-
-    photo =
-      currentUser.photoURL ||
-      data.photo ||
-      "https://i.pravatar.cc/40?img=12";
-  } else {
-    xp = 0;
-
-    name =
-      currentUser.displayName ||
-      currentUser.email ||
-      "User";
-
-    photo =
-      currentUser.photoURL ||
-      "https://i.pravatar.cc/40?img=12";
-
+  if (!docSnap.exists()) {
     await setDoc(userRef, {
       xp: 0,
-      name: name,
-      photo: photo,
+      name,
+      photo,
       email: currentUser.email || ""
     });
+  } else {
+    const data = docSnap.data();
+    name = currentUser.displayName || data.name || currentUser.email || "User";
+    photo = currentUser.photoURL || data.photo || "https://i.pravatar.cc/40?img=12";
   }
 
-  updateUserUI(name, photo);
-  updateStatsUI(xp);
-}
-
-/* =========================
-   LOAD GUEST DASHBOARD
-========================= */
-function loadGuestDashboard() {
-  const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
-  updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
-  updateStatsUI(guestXP);
-}
-
-/* =========================
-   UPDATE USER UI
-========================= */
-function updateUserUI(name, photo) {
   document.getElementById("username").textContent = name;
   document.getElementById("userPhoto").src = photo;
 }
 
 /* =========================
-   UPDATE STATS UI
+   LOAD GUEST
 ========================= */
-function updateStatsUI(xp) {
-  const level = Math.floor(xp / 100) + 1;
-  const progress = xp % 100;
-
-  document.getElementById("xp").textContent = xp;
-  document.getElementById("level").textContent = level;
-  document.getElementById("progressText").textContent = progress + "%";
-  document.getElementById("progressFill").style.width = progress + "%";
+function loadGuestUI() {
+  document.getElementById("username").textContent = "Guest";
+  document.getElementById("userPhoto").src = "https://i.pravatar.cc/40?img=8";
 }
 
 /* =========================
-   OPEN SUBJECT PAGE
+   SUBJECT PROGRESS
 ========================= */
-window.startGame = function(subject) {
+function loadSubjectStats() {
+  const subjects = ["hardware", "electrical"];
+  let completedCount = 0;
+
+  subjects.forEach(subject => {
+    const pretest = localStorage.getItem(`${subject}_pretest`) === "true";
+    const modules = localStorage.getItem(`${subject}_modules`) === "true";
+    const quiz = localStorage.getItem(`${subject}_quiz`) === "true";
+    const posttest = localStorage.getItem(`${subject}_posttest`) === "true";
+
+    let progress = 0;
+    let status = "Not Started";
+
+    if (pretest) progress += 25;
+    if (modules) progress += 25;
+    if (quiz) progress += 25;
+    if (posttest) progress += 25;
+
+    if (progress > 0) status = "In Progress";
+    if (progress === 100) {
+      status = "Finished";
+      completedCount++;
+    }
+
+    const progressText = document.getElementById(`${subject}ProgressText`);
+    const progressFill = document.getElementById(`${subject}ProgressFill`);
+    const statusEl = document.getElementById(`${subject}Status`);
+
+    if (progressText) progressText.textContent = `${progress}%`;
+    if (progressFill) progressFill.style.width = `${progress}%`;
+    if (statusEl) statusEl.textContent = status;
+  });
+
+  document.getElementById("completedCount").textContent = completedCount;
+}
+
+/* =========================
+   OPEN SUBJECT
+========================= */
+window.openSubject = function(subject) {
   window.location.href = `subject.html?subject=${subject}`;
 };
 
@@ -153,29 +146,23 @@ window.logout = async function() {
 ========================= */
 function loadTheme() {
   const saved = localStorage.getItem("theme");
-
   if (saved === "light") {
     document.body.classList.add("light-mode");
   }
-
   updateIcon();
 }
 
 window.toggleTheme = function() {
   document.body.classList.toggle("light-mode");
-
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
-
   updateIcon();
 };
 
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-
-  icon.textContent =
-    document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
 
 loadTheme();

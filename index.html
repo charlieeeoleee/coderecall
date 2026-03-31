@@ -1,118 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-<meta charset="UTF-8">
-<title>Code Recall</title>
-<link rel="stylesheet" href="landing.css">
-<link rel="icon" type="image/png" href="assets/favicon.png">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Recall</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="landing.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
 <body>
 
-<!-- NAVBAR -->
-<header class="navbar">
-  <div class="logo">CODE: RECALL</div>
+  <!-- NAVBAR -->
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-code">CODE:</span>
+      <span class="logo-recall">RECALL!</span>
+    </div>
 
-  <nav>
-    <a href="#">Home</a>
-    <a href="#about">About</a>
-    <a href="#subjects">Subjects</a>
-    <a href="faq.html" class="faq-btn">FAQ</a>
-    <a href="auth.html" class="login-btn">Login</a>
-  </nav>
-</header>
+    <nav class="nav-links">
+      <a href="index.html" class="active-link">Home</a>
+      <a href="about.html">About</a>
+      <a href="subjects-preview.html">Subjects</a>
+      <a href="faq.html">FAQ</a>
+      <button class="login-btn" onclick="goToAuth()">Login</button>
+    </nav>
+  </header>
 
+  <!-- MAIN -->
+  <main class="landing-page">
 
-<!-- HERO SECTION -->
-<section class="hero">
+    <!-- HERO -->
+    <section class="hero-card fade-in">
+      <div class="hero-left">
+        <div class="hero-badge">Interactive Learning Platform</div>
+        <h1>Learn. Earn. Unlock.</h1>
+        <p>
+          Code Recall transforms learning into an engaging journey through
+          interactive modules, quizzes, XP rewards, and achievements designed
+          for Computer System Servicing students.
+        </p>
 
-  <div class="hero-content">
-    
-    <h1>Gamified Learning for CSS Students</h1>
+        <div class="hero-buttons">
+          <button class="primary-btn" onclick="goToAuth()">Start Learning</button>
+          <button class="secondary-btn" onclick="playGuest()">Play as Guest</button>
+        </div>
+      </div>
 
-    <p>
-      Code Recall is a gamified learning platform designed to help
-      Computer System Servicing students master computer hardware
-      and electrical circuit concepts through interactive gameplay.
-    </p>
+      <div class="hero-right">
+        <div class="mini-card hover-glow">
+          <span class="mini-icon">⭐</span>
+          <div>
+            <h3>XP & Levels</h3>
+            <p>Earn XP as you progress through the platform.</p>
+          </div>
+        </div>
 
-    <a href="auth.html">
-      <button class="start-btn">Start Learning</button>
-    </a>
+        <div class="mini-card hover-glow">
+          <span class="mini-icon">🏆</span>
+          <div>
+            <h3>Badges</h3>
+            <p>Unlock achievements and celebrate milestones.</p>
+          </div>
+        </div>
 
-  </div>
+        <div class="mini-card hover-glow">
+          <span class="mini-icon">📘</span>
+          <div>
+            <h3>Interactive Modules</h3>
+            <p>Study lessons designed to support guided learning.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</section>
+    <!-- FEATURES -->
+    <section class="section-block fade-in">
+      <div class="section-heading">
+        <h2>Why Code Recall?</h2>
+        <p>Built to make learning more engaging, motivating, and effective.</p>
+      </div>
 
+      <div class="grid">
+        <div class="card hover-glow">
+          <div class="feature-icon">🎮</div>
+          <h3>Gamified Experience</h3>
+          <p>Students stay motivated through XP, achievements, and visible progress.</p>
+        </div>
 
-<!-- ABOUT -->
-<section id="about" class="about">
+        <div class="card hover-glow">
+          <div class="feature-icon">🧠</div>
+          <h3>Interactive Learning</h3>
+          <p>Lessons and quizzes are structured to guide learners step by step.</p>
+        </div>
 
-  <h2>About Code Recall</h2>
+        <div class="card hover-glow">
+          <div class="feature-icon">⚡</div>
+          <h3>Skill-Focused Content</h3>
+          <p>Learning content is aligned with CSS topics and technical foundations.</p>
+        </div>
+      </div>
+    </section>
 
-  <p>
-  Code Recall is a gamified learning system developed based on a needs
-  assessment conducted among Computer System Servicing students. The
-  system focuses on Computer Hardware and Electrical Wiring and Electronics
-  Circuits to help students better understand complex concepts through
-  interactive quizzes and gameplay.
-  </p>
+    <!-- SUBJECTS PREVIEW -->
+    <section class="section-block fade-in">
+      <div class="section-heading">
+        <h2>Subjects Preview</h2>
+        <p>A quick look at the learning areas inside Code Recall.</p>
+      </div>
 
-</section>
+      <div class="grid">
+        <div class="card subject-card hover-glow">
+          <div class="subject-icon">🖥</div>
+          <h3>Computer Hardware</h3>
+          <p>
+            This subject focuses on computer parts, their functions, proper handling,
+            and basic troubleshooting to help students understand how systems work.
+          </p>
+        </div>
 
+        <div class="card subject-card hover-glow">
+          <div class="subject-icon">⚡</div>
+          <h3>Electrical Wiring and Electronics Circuit Components</h3>
+          <p>
+            This subject introduces learners to electricity, safety practices, wiring
+            basics, and circuit components used in technical and servicing tasks.
+          </p>
+        </div>
+      </div>
+    </section>
 
-<!-- SUBJECTS -->
-<section id="subjects" class="subjects">
+    <!-- CTA -->
+    <section class="cta-card fade-in">
+      <h2>Ready to begin your learning journey?</h2>
+      <p>Access the platform now and start exploring modules, quizzes, XP, and rewards.</p>
 
-<h2>Subjects Covered</h2>
+      <div class="cta-buttons">
+        <button class="primary-btn" onclick="goToAuth()">Login / Register</button>
+        <button class="secondary-btn" onclick="goToAbout()">Learn More</button>
+      </div>
+    </section>
 
-<div class="subject-container">
+  </main>
 
-<div class="subject-card">
-<h3>🖥 Computer Hardware</h3>
-<p>
-Learn the internal components of a computer system,
-including motherboard, RAM, storage, and troubleshooting.
-</p>
-</div>
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p>© 2026 Code Recall System | Gamified Learning Platform</p>
+    </div>
+  </footer>
 
-<div class="subject-card">
-<h3>⚡ Electrical Wiring & Electronics Circuit</h3>
-<p>
-Understand electronic components, wiring systems, and
-basic circuit connections used in CSS.
-</p>
-</div>
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
 
-</div>
-
-</section>
-
-
-<!-- CTA -->
-<section class="cta">
-
-<h2>Ready to Start Learning?</h2>
-
-<p>Login to access the gamified learning modules.</p>
-
-<a href="auth.html">
-<button class="login-main">Login / Register</button>
-</a>
-
-</section>
-
-
-<!-- FOOTER -->
-<footer>
-
-<p>© 2026 Code Recall System | Gamified Learning Platform</p>
-
-</footer>
-
+  <script src="landing.js"></script>
 </body>
-<!-- VS Code test -->
- <!-- updated version -->
 </html>

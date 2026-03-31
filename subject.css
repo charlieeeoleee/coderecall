@@ -1,76 +1,244 @@
+body{
+  font-family: 'Montserrat', sans-serif;
+  min-height: 100vh;
+}
+
+/* ================= LOGO ================= */
+.subject-logo{
+  position: fixed;
+  top: 26px;
+  left: 28px;
+  z-index: 1000;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.subject-logo-code{
+  color: #ff8a2a;
+  text-shadow:
+    0 0 6px rgba(255,138,42,0.75),
+    0 0 16px rgba(255,138,42,0.45);
+}
+
+.subject-logo-recall{
+  color: #ff2e88;
+  text-shadow:
+    0 0 6px rgba(255,46,136,0.85),
+    0 0 16px rgba(255,46,136,0.55);
+}
+
+/* ================= PAGE ================= */
 .subject-page{
-  min-height:100vh;
-  width:min(1100px, 92%);
-  margin:0 auto;
-  padding:90px 0 40px;
+  width: min(980px, 90%);
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 120px 0 120px;
+
+  /* ✨ Entrance animation */
+  animation: fadeIn 0.6s ease;
 }
 
+@keyframes fadeIn{
+  from{
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= HEADER ================= */
 .subject-header{
-  text-align:center;
-  margin-bottom:30px;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 26px;
+  padding: 28px 24px;
 }
 
-.subject-header .title{
-  margin:0 0 10px;
-  font-size:clamp(28px, 4vw, 42px);
+.subject-title{
+  margin: 0 0 10px;
+  font-size: clamp(28px, 3vw, 48px);
+  font-weight: 800;
+  line-height: 1.12;
+  color: #eaf7ff;
 }
 
 .subject-desc{
-  margin:0;
-  opacity:0.85;
-  font-size:16px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.9;
 }
 
+/* ================= GRID ================= */
 .subject-actions{
-  display:grid;
-  grid-template-columns:repeat(2, minmax(240px, 1fr));
-  gap:24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 22px;
 }
 
-.subject-action{
-  position:relative;
-  min-height:170px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  text-align:center;
-  cursor:pointer;
-  border:none;
-  color:inherit;
+/* ================= CARDS ================= */
+.subject-card{
+  position: relative;
+  min-height: 165px;
+  border: none;
+  padding: 20px;
+  color: inherit;
+  font-family: 'Montserrat', sans-serif;
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  cursor: pointer;
+
+  /* ✨ smooth animation */
+  transition: all 0.25s ease;
 }
 
-.subject-action .action-title{
-  font-size:24px;
-  font-weight:700;
+.subject-card h2{
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
 }
 
-.subject-action .action-sub{
-  font-size:14px;
-  opacity:0.85;
+.subject-card p{
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.85;
 }
 
+/* 🔥 hover effect */
+.subject-card:not(.locked):hover{
+  transform: scale(1.03);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+/* 🔥 click effect */
+.subject-card:active{
+  transform: scale(0.97);
+}
+
+/* ================= LOCK ================= */
 .locked{
-  filter:blur(2px);
-  opacity:0.6;
-  pointer-events:none;
-  user-select:none;
+  filter: blur(2px);
+  opacity: 0.58;
+  pointer-events: none;
+  user-select: none;
 }
 
-.lock-badge{
-  position:absolute;
-  top:14px;
-  right:14px;
-  font-size:18px;
+.lock-icon{
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  font-size: 18px;
 }
 
-body.light-mode .subject-action{
-  color:#111;
+/* ================= BACK BUTTON ================= */
+.subject-back-btn{
+  position: fixed;
+  left: 28px;
+  bottom: 26px;
+  z-index: 1000;
+
+  padding: 15px 24px;
+  border-radius: 18px;
+  border: none;
+
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  font-family: 'Montserrat', sans-serif;
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  box-shadow:
+    0 0 12px rgba(255,46,136,0.25),
+    0 0 22px rgba(255,46,136,0.15);
+
+  cursor: pointer;
+
+  /* ✨ smooth */
+  transition: all 0.25s ease;
 }
 
+/* hover */
+.subject-back-btn:hover{
+  transform: translateY(-2px) scale(1.05);
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+/* click */
+.subject-back-btn:active{
+  transform: scale(0.95);
+}
+
+/* ================= LIGHT MODE ================= */
+body.light-mode .subject-title{
+  color: #111;
+}
+
+body.light-mode .subject-logo-code{
+  color: #ff7a1a;
+  text-shadow: none;
+}
+
+body.light-mode .subject-logo-recall{
+  color: #ff2e88;
+  text-shadow: none;
+}
+
+body.light-mode .subject-back-btn{
+  color: #111;
+}
+
+/* ================= RESPONSIVE ================= */
 @media (max-width: 768px){
+
+  .subject-logo{
+    font-size: 12px;
+    top: 22px;
+    left: 18px;
+  }
+
+  .subject-page{
+    width: 94%;
+    padding-top: 100px;
+    padding-bottom: 110px;
+    justify-content: flex-start;
+  }
+
   .subject-actions{
-    grid-template-columns:1fr;
+    grid-template-columns: 1fr;
+  }
+
+  .subject-card h2{
+    font-size: 28px;
+  }
+
+  .subject-back-btn{
+    left: 18px;
+    bottom: 18px;
+    padding: 13px 20px;
+    font-size: 15px;
   }
 }

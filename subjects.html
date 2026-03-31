@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subjects - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="subjects.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="top-section">
+        <h2 class="logo">CODE:RECALL!</h2>
+
+        <nav class="menu">
+          <a href="dashboard.html">🏠 Dashboard</a>
+          <a href="subjects.html" class="active-link">📚 Subjects</a>
+          <a href="achievements.html">🏆 Badges</a>
+          <a href="settings.html">⚙ Settings</a>
+        </nav>
+      </div>
+
+      <div class="bottom-section">
+        <button onclick="logout()" class="logout-btn">Logout</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h2 class="page-title">Subjects</h2>
+          <p class="page-subtitle">Choose a subject and continue your learning journey.</p>
+        </div>
+
+        <div class="user-top">
+          <span id="username">User</span>
+          <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
+        </div>
+      </div>
+
+      <!-- QUICK STATS -->
+      <div class="stats-grid">
+        <div class="card stat-card">
+          <h3>Total Subjects</h3>
+          <p>2</p>
+        </div>
+
+        <div class="card stat-card">
+          <h3>Active Subjects</h3>
+          <p>2</p>
+        </div>
+
+        <div class="card stat-card">
+          <h3>Completed Subjects</h3>
+          <p id="completedCount">0</p>
+        </div>
+      </div>
+
+      <!-- SUBJECT CARDS -->
+      <div class="subjects-grid">
+
+        <div class="card subject-card">
+          <div class="subject-icon">🖥</div>
+          <h3>Computer Hardware</h3>
+          <p class="subject-description">
+            Learn the parts, functions, and basic troubleshooting of computer hardware.
+          </p>
+
+          <div class="subject-meta">
+            <div class="meta-row">
+              <span>Difficulty</span>
+              <strong id="hardwareDifficulty">Easy</strong>
+            </div>
+            <div class="meta-row">
+              <span>Progress</span>
+              <strong id="hardwareProgressText">0%</strong>
+            </div>
+            <div class="progress-bar">
+              <div id="hardwareProgressFill" style="width:0%"></div>
+            </div>
+            <div class="meta-row">
+              <span>Status</span>
+              <strong id="hardwareStatus">Not Started</strong>
+            </div>
+          </div>
+
+          <button class="subject-open-btn" onclick="openSubject('hardware')">
+            Open Subject
+          </button>
+        </div>
+
+        <div class="card subject-card">
+          <div class="subject-icon">⚡</div>
+          <h3>Electrical Wiring and Electronics Circuit Components</h3>
+          <p class="subject-description">
+            Study electricity, wiring basics, safety practices, and electronics components.
+          </p>
+
+          <div class="subject-meta">
+            <div class="meta-row">
+              <span>Difficulty</span>
+              <strong id="electricalDifficulty">Easy</strong>
+            </div>
+            <div class="meta-row">
+              <span>Progress</span>
+              <strong id="electricalProgressText">0%</strong>
+            </div>
+            <div class="progress-bar">
+              <div id="electricalProgressFill" style="width:0%"></div>
+            </div>
+            <div class="meta-row">
+              <span>Status</span>
+              <strong id="electricalStatus">Not Started</strong>
+            </div>
+          </div>
+
+          <button class="subject-open-btn" onclick="openSubject('electrical')">
+            Open Subject
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <script type="module" src="subjects.js"></script>
+</body>
+</html>

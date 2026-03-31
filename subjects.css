@@ -8,7 +8,6 @@ body{
   overflow:hidden;
 }
 
-/* LAYOUT */
 .layout{
   display:flex;
   min-height:100vh;
@@ -26,14 +25,12 @@ body{
   box-sizing:border-box;
 }
 
-/* TOP SECTION */
 .top-section{
   display:flex;
   flex-direction:column;
   gap:30px;
 }
 
-/* LOGO */
 .logo{
   font-family:'Press Start 2P', cursive;
   font-size:14px;
@@ -44,7 +41,6 @@ body{
   margin:0;
 }
 
-/* MENU */
 .menu{
   display:flex;
   flex-direction:column;
@@ -59,18 +55,17 @@ body{
   transition:0.2s;
 }
 
-.menu a:hover{
+.menu a:hover,
+.menu a.active-link{
   opacity:1;
   transform:translateX(5px);
 }
 
-/* BOTTOM SECTION */
 .bottom-section{
   padding-top:20px;
   border-top:1px solid rgba(255,255,255,0.1);
 }
 
-/* LOGOUT */
 .logout-btn{
   width:100%;
   padding:12px;
@@ -94,19 +89,24 @@ body{
   overflow-y:auto;
 }
 
-/* TOPBAR */
 .topbar{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
   gap:20px;
 }
 
-.topbar h2{
+.page-title{
   margin:0;
+  font-size:32px;
 }
 
-/* USER */
+.page-subtitle{
+  margin:8px 0 0 0;
+  opacity:0.82;
+  font-size:14px;
+}
+
 .user-top{
   display:flex;
   align-items:center;
@@ -127,96 +127,125 @@ body{
   object-fit:cover;
 }
 
-/* GRID */
-.stats-grid{
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  gap:20px;
-}
-
-/* CARD */
+/* CARDS */
 .card{
   background:#3a2575;
   padding:20px;
   border-radius:18px;
   box-sizing:border-box;
-  min-height:120px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
 }
 
-/* BIGGER STATS */
-.stats-grid .card{
-  min-height:140px;
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:20px;
 }
 
-.section{
-  min-height:180px;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-start;
-}
-
-/* CARD TEXT */
-.card h3{
+.stat-card h3{
   margin:0 0 10px 0;
+  font-size:16px;
+  font-weight:600;
 }
 
-.card p{
+.stat-card p{
   margin:0;
-  font-size:26px;
+  font-size:28px;
   font-weight:700;
 }
 
-/* PROGRESS */
+/* SUBJECTS GRID */
+.subjects-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:22px;
+}
+
+.subject-card{
+  min-height:360px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  justify-content:flex-start;
+  transition:0.25s ease;
+}
+
+.subject-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 10px 25px rgba(0,0,0,0.18);
+}
+
+.subject-icon{
+  font-size:34px;
+  width:58px;
+  height:58px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,0.08);
+}
+
+.subject-card h3{
+  margin:0;
+  font-size:22px;
+  line-height:1.3;
+}
+
+.subject-description{
+  margin:0;
+  opacity:0.86;
+  font-size:14px;
+  line-height:1.6;
+  min-height:66px;
+}
+
+.subject-meta{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-top:4px;
+}
+
+.meta-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  font-size:14px;
+}
+
+.meta-row strong{
+  font-size:14px;
+}
+
 .progress-bar{
   height:12px;
-  background:rgba(255,255,255,0.2);
+  background:rgba(255,255,255,0.18);
   border-radius:10px;
-  margin-top:12px;
   overflow:hidden;
 }
 
-#progressFill{
+#hardwareProgressFill,
+#electricalProgressFill{
   height:100%;
   background:linear-gradient(90deg,#00e5ff,#00ffcc);
   transition:width 0.3s ease;
 }
 
-/* SUBJECTS */
-.subjects{
-  display:grid;
-  grid-template-columns:repeat(2, 1fr);
-  gap:15px;
-  margin-top:12px;
-  flex:1;
-}
-
-.subjects button{
-  width:100%;
-  min-height:54px;
-  padding:12px;
+.subject-open-btn{
+  margin-top:auto;
   border:none;
   border-radius:12px;
+  padding:13px 16px;
   background:#ff2e97;
   color:white;
   cursor:pointer;
   font-weight:600;
+  transition:0.2s ease;
 }
 
-/* BADGES */
-.badges{
-  display:flex;
-  gap:10px;
-  margin-top:12px;
-  flex-wrap:wrap;
-}
-
-.badge{
-  background:#ff2e97;
-  padding:8px 12px;
-  border-radius:10px;
+.subject-open-btn:hover{
+  transform:scale(1.02);
 }
 
 /* THEME BUTTON */
@@ -261,13 +290,14 @@ body.light-mode .user-top{
   box-shadow:0 5px 15px rgba(0,0,0,0.08);
 }
 
+body.light-mode .subject-icon{
+  background:#f3f4f8;
+}
+
 /* RESPONSIVE */
 @media(max-width:1100px){
-  .stats-grid{
-    grid-template-columns:1fr;
-  }
-
-  .subjects{
+  .stats-grid,
+  .subjects-grid{
     grid-template-columns:1fr;
   }
 }

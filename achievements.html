@@ -1,74 +1,99 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Badges - Code Recall</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Badges - Code Recall</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="achievements.css">
-<link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="achievements.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
-
 <body>
 
-<div class="layout">
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="top-section">
+        <h2 class="logo">CODE:RECALL!</h2>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-
-    <div class="top-section">
-      <h2 class="logo">CODE:RECALL!</h2>
-
-      <nav class="menu">
-        <a href="dashboard.html">🏠 Dashboard</a>
-        <a href="#">📚 Subjects</a>
-        <a href="achievements.html">🏆 Badges</a>
-        <a href="#">⚙ Settings</a>
-      </nav>
-    </div>
-
-    <div class="bottom-section">
-      <button onclick="logout()" class="logout-btn">Logout</button>
-    </div>
-
-  </aside>
-
-  <!-- MAIN -->
-  <div class="main">
-
-    <!-- TOPBAR -->
-    <div class="topbar">
-      <h2>Badges</h2>
-
-      <div class="user-top">
-        <span>Charles</span>
-        <img src="https://i.pravatar.cc/40">
+        <nav class="menu">
+          <a href="dashboard.html">🏠 Dashboard</a>
+          <a href="subjects.html">📚 Subjects</a>
+          <a href="achievements.html" class="active-link">🏆 Badges</a>
+          <a href="settings.html">⚙ Settings</a>
+        </nav>
       </div>
-    </div>
 
-    <!-- PROGRESS -->
-    <div class="progress-header">
-      <span id="achievementCount">0/0 Unlocked</span>
-
-      <div class="progress-bar">
-        <div id="progressFill"></div>
+      <div class="bottom-section">
+        <button onclick="logout()" class="logout-btn">Logout</button>
       </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h2 class="page-title">Badges</h2>
+          <p class="page-subtitle">Unlock achievements as you grow your XP and complete your learning journey.</p>
+        </div>
+
+        <div class="user-top">
+          <span id="username">User</span>
+          <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
+        </div>
+      </div>
+
+      <!-- OVERVIEW -->
+      <div class="overview-grid">
+        <div class="overview-card">
+          <h3>Unlocked</h3>
+          <p id="achievementCount">0/0</p>
+        </div>
+
+        <div class="overview-card">
+          <h3>Total XP</h3>
+          <p id="xpValue">0</p>
+        </div>
+
+        <div class="overview-card">
+          <h3>Progress</h3>
+          <div class="progress-bar">
+            <div id="progressFill"></div>
+          </div>
+          <span id="progressPercent">0%</span>
+        </div>
+      </div>
+
+      <!-- BADGES GRID -->
+      <div class="badges-grid" id="badgesGrid"></div>
     </div>
-
-    <!-- BADGES -->
-    <div class="badges-grid" id="badgesGrid"></div>
-
   </div>
 
-</div>
+  <!-- BADGE MODAL -->
+  <div id="badgeModal" class="badge-modal">
+    <div class="badge-modal-content">
+      <button class="close-btn" onclick="closeBadgeModal()">✖</button>
 
-<!-- THEME BUTTON -->
-<button class="theme-toggle" onclick="toggleTheme()">
-  <span id="themeIcon">🌙</span>
-</button>
+      <div id="modalIcon" class="modal-icon">🏆</div>
+      <h2 id="modalTitle">Badge</h2>
+      <p id="modalDesc">Description</p>
+      <div id="modalXP" class="modal-xp">0 XP</div>
+      <div id="modalState" class="modal-state">Unlocked</div>
+    </div>
+  </div>
 
-<script type="module" src="achievements.js"></script>
+  <!-- CONFETTI -->
+  <div id="confettiContainer" class="confetti-container"></div>
 
+  <!-- THEME BUTTON -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <script type="module" src="achievements.js"></script>
 </body>
 </html>
