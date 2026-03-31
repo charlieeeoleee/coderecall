@@ -1,0 +1,100 @@
+:root{
+  --primary:#ff2e88;
+  --primary-2:#ff4db8;
+  --secondary:#00f5d4;
+  --bg-dark:#1e1b4b;
+  --bg-deep:#0f172a;
+  --bg-purple:#2a0a3d;
+  --glass:rgba(255,255,255,0.06);
+  --glass-light:rgba(255,255,255,0.75);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(135deg,var(--bg-dark),var(--bg-deep),var(--bg-purple));
+  color:white;
+  transition:0.3s ease;
+  min-height:100vh;
+}
+
+body.light-mode{
+  background:linear-gradient(135deg,#f4f4f4,#e9e9f3,#f7f7fb);
+  color:#111;
+}
+
+/* GLOBAL CARD */
+.card{
+  background:var(--glass);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 0 18px rgba(255,0,150,0.18);
+  transition:0.25s ease;
+  backdrop-filter:blur(10px);
+}
+
+.card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 0 22px rgba(255,0,150,0.35);
+}
+
+body.light-mode .card{
+  background:var(--glass-light);
+  border:1px solid rgba(0,0,0,0.05);
+  box-shadow:0 10px 20px rgba(0,0,0,0.06);
+}
+
+/* GLOBAL BUTTONS */
+.primary-btn,
+.back-btn,
+.theme-toggle{
+  border:none;
+  cursor:pointer;
+  transition:0.25s ease;
+}
+
+.back-btn{
+  position:fixed;
+  top:18px;
+  left:18px;
+  padding:10px 16px;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-2));
+  color:white;
+  font-weight:700;
+  box-shadow:0 0 12px rgba(255,0,150,0.35);
+  z-index:1000;
+}
+
+.back-btn:hover{
+  transform:translateY(-2px);
+}
+
+.theme-toggle{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  background:var(--secondary);
+  color:#111;
+  font-size:20px;
+  box-shadow:0 0 14px rgba(0,255,200,0.5);
+  z-index:1000;
+}
+
+.title{
+  text-align:center;
+  margin:0;
+  text-shadow:0 0 10px rgba(255,0,150,0.35);
+}
+
+body.light-mode .title{
+  text-shadow:none;
+}
