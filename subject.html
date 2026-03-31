@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subject - Code Recall</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="subject.css" />
+</head>
+<body>
+  <button class="back-btn" onclick="goBack()">← Back</button>
+
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <main class="subject-page">
+    <div class="subject-header card">
+      <h1 class="title" id="subjectTitle">SUBJECT</h1>
+      <p class="subject-desc" id="subjectDesc">Choose what you want to open.</p>
+    </div>
+
+    <section class="subject-actions">
+      <button class="subject-action card" id="pretestBtn" onclick="openPretest()">
+        <span class="action-title">Pre-Test</span>
+        <span class="action-sub">Take the assessment first</span>
+      </button>
+
+      <button class="subject-action card locked" id="modulesBtn" onclick="openModules()">
+        <span class="lock-badge">🔒</span>
+        <span class="action-title">Modules</span>
+        <span class="action-sub">Read the lessons</span>
+      </button>
+
+      <button class="subject-action card locked" id="quizzesBtn" onclick="openQuizzes()">
+        <span class="lock-badge">🔒</span>
+        <span class="action-title">Quizzes</span>
+        <span class="action-sub">Answer module quizzes</span>
+      </button>
+
+      <button class="subject-action card locked" id="posttestBtn" onclick="openPosttest()">
+        <span class="lock-badge">🔒</span>
+        <span class="action-title">Post-Test</span>
+        <span class="action-sub">Final assessment</span>
+      </button>
+    </section>
+  </main>
+
+  <script src="subject.js"></script>
+</body>
+</html>
