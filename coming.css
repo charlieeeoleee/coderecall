@@ -1,0 +1,123 @@
+body{
+margin:0;
+font-family:'Poppins',sans-serif;
+background:linear-gradient(135deg,#0b0f2a,#2b1e5a);
+color:white;
+display:flex;
+flex-direction:column;
+min-height:100vh;
+transition:0.3s;
+}
+
+/* NAVBAR */
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 40px;
+background:rgba(0,0,0,0.2);
+backdrop-filter:blur(10px);
+}
+
+.logo{
+font-family:'Press Start 2P';
+font-size:14px;
+}
+
+.logo-code{ color:#ff8c00; }
+.logo-recall{ color:#ff2e97; }
+
+.navbar nav a{
+margin-left:20px;
+color:white;
+text-decoration:none;
+}
+
+/* MAIN */
+.coming{
+flex:1;
+display:flex;
+justify-content:center;
+align-items:center;
+text-align:center;
+padding:20px;
+}
+
+.coming-box{
+max-width:500px;
+}
+
+.coming h1{
+font-size:42px;
+margin-bottom:20px;
+text-shadow:0 0 20px #ff2e97;
+}
+
+.coming p{
+margin-bottom:30px;
+line-height:1.6;
+}
+
+/* BUTTONS */
+.actions{
+display:flex;
+justify-content:center;
+gap:15px;
+flex-wrap:wrap;
+}
+
+.btn-primary,
+.btn-secondary{
+padding:14px 25px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+font-size:15px;
+}
+
+/* PINK */
+.btn-primary{
+background:linear-gradient(135deg,#ff2e97,#ff4db8);
+color:white;
+box-shadow:0 0 20px #ff2e97;
+}
+
+/* CYAN */
+.btn-secondary{
+background:linear-gradient(135deg,#00e5ff,#00ffcc);
+color:black;
+box-shadow:0 0 20px #00e5ff;
+}
+
+/* FOOTER */
+footer{
+text-align:center;
+padding:20px;
+background:#1a1140;
+}
+
+/* THEME BUTTON */
+.theme-toggle{
+position:fixed;
+bottom:20px;
+right:20px;
+padding:15px;
+border:none;
+border-radius:50%;
+cursor:pointer;
+background:linear-gradient(135deg,#00e5ff,#00ffcc);
+}
+
+/* LIGHT MODE */
+body.light-mode{
+background:#f4f6fb;
+color:#222;
+}
+
+body.light-mode .navbar{
+background:white;
+}
+
+body.light-mode footer{
+background:white;
+}
