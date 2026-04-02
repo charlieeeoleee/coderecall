@@ -56,11 +56,13 @@ async function loadUserSettings() {
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
 
-  let name = currentUser.displayName || currentUser.email || "User";
+  let name = "User";
   let email = currentUser.email || "No email";
   let photo = currentUser.photoURL || "https://i.pravatar.cc/80?img=12";
 
   if (!docSnap.exists()) {
+    name = currentUser.displayName || currentUser.email || "User";
+
     await setDoc(userRef, {
       xp: 0,
       name,
@@ -69,12 +71,32 @@ async function loadUserSettings() {
     });
   } else {
     const data = docSnap.data();
-    name = currentUser.displayName || data.name || currentUser.email || "User";
-    email = currentUser.email || data.email || "No email";
-    photo = currentUser.photoURL || data.photo || "https://i.pravatar.cc/80?img=12";
+
+    name =
+      data.name ||
+      currentUser.displayName ||
+      currentUser.email ||
+      "User";
+
+    email =
+      data.email ||
+      currentUser.email ||
+      "No email";
+
+    photo =
+      data.photo ||
+      currentUser.photoURL ||
+      "https://i.pravatar.cc/80?img=12";
   }
 
-  const loginType = currentUser.providerData?.[0]?.providerId || "unknown";
+  const providerIds = currentUser.providerData?.map(p => p.providerId) || [];
+  let loginType = "Unknown";
+
+  if (providerIds.includes("google.com")) {
+    loginType = "Google";
+  } else if (providerIds.includes("password")) {
+    loginType = "Email / Password";
+  }
 
   document.getElementById("usernameTop").textContent = name;
   document.getElementById("userPhotoTop").src = photo;
@@ -82,14 +104,7 @@ async function loadUserSettings() {
   document.getElementById("profileName").textContent = name;
   document.getElementById("profileEmail").textContent = email;
   document.getElementById("profilePhoto").src = photo;
-
-  if (loginType.includes("google")) {
-    document.getElementById("loginType").textContent = "Google";
-  } else if (loginType.includes("password")) {
-    document.getElementById("loginType").textContent = "Email / Password";
-  } else {
-    document.getElementById("loginType").textContent = "Unknown";
-  }
+  document.getElementById("loginType").textContent = loginType;
 }
 
 /* =========================
@@ -130,14 +145,12 @@ function loadPreferences() {
    PROGRESS
 ========================= */
 function loadProgress() {
-  let xp = 0;
-
   if (currentUser) {
     loadXPFromFirestore();
     return;
   }
 
-  xp = parseInt(localStorage.getItem("guest_xp")) || 0;
+  const xp = parseInt(localStorage.getItem("guest_xp")) || 0;
   renderProgress(xp);
 }
 
@@ -231,7 +244,20 @@ window.clearLocalData = function() {
    LOGOUT
 ========================= */
 window.logout = async function() {
-  localStorage.removeItem("guest");
+  const isGuest = localStorage.getItem("guest") === "true";
+
+  if (isGuest) {
+    const registerNow = confirm("You are using a guest account. Register first to save your progress. Do you want to go to registration?");
+    if (registerNow) {
+      window.location.href = "auth.html";
+      return;
+    }
+
+    localStorage.removeItem("guest");
+    localStorage.removeItem("guest_xp");
+    window.location.href = "auth.html";
+    return;
+  }
 
   if (auth.currentUser) {
     await signOut(auth);

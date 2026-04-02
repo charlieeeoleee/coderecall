@@ -13,7 +13,6 @@
 
   <div class="container">
 
-    <!-- LEFT SIDE -->
     <div class="left">
       <img src="assets/logo-dark.png" class="main-logo" alt="Code Recall Logo">
 
@@ -22,7 +21,6 @@
       </button>
     </div>
 
-    <!-- RIGHT SIDE -->
     <div class="right">
 
       <!-- LOGIN FORM -->
@@ -36,7 +34,9 @@
           <span class="toggle-password" onclick="togglePassword('loginPassword')">👁</span>
         </div>
 
-        <p class="helper-link forgot-link" onclick="forgotPassword()">Forgot password?</p>
+        <div class="helper-links">
+          <p class="forgot-text" onclick="openResetPopup()">Forgot password?</p>
+        </div>
 
         <button class="primary-btn" onclick="login()">Login</button>
 
@@ -86,6 +86,51 @@
         </p>
       </div>
 
+    </div>
+  </div>
+
+  <!-- MAIN POPUP -->
+  <div id="popup" class="popup">
+    <div class="popup-box">
+      <h3 id="popupTitle">Title</h3>
+      <p id="popupMessage">Message</p>
+
+      <div class="popup-actions">
+        <button id="popupOkBtn" onclick="closePopup()">OK</button>
+        <button id="popupExtraBtn" style="display:none;"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESET PASSWORD POPUP -->
+  <div id="resetPopup" class="popup">
+    <div class="popup-box">
+      <h3>Reset Password</h3>
+      <p>Enter your email and we’ll send a password reset link.</p>
+      <input type="email" id="resetEmail" placeholder="Enter your email">
+      <div class="popup-actions">
+        <button onclick="confirmReset()">Send Email</button>
+        <button class="secondary-popup-btn" onclick="closeResetPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESEND VERIFICATION POPUP -->
+  <div id="resendPopup" class="popup">
+    <div class="popup-box">
+      <h3>Resend Verification</h3>
+      <p>Enter your email and password to resend your verification email.</p>
+      <input type="email" id="resendEmail" placeholder="Enter your email">
+
+      <div class="password-wrapper popup-password-wrapper">
+        <input type="password" id="resendPassword" placeholder="Enter your password">
+        <span class="toggle-password" onclick="togglePassword('resendPassword')">👁</span>
+      </div>
+
+      <div class="popup-actions">
+        <button onclick="confirmResend()">Send Email</button>
+        <button class="secondary-popup-btn" onclick="closeResendPopup()">Cancel</button>
+      </div>
     </div>
   </div>
 
