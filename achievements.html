@@ -4,21 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Badges - Code Recall</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="achievements.css">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
-
   <div class="layout">
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="top-section">
-        <h2 class="logo">CODE:RECALL!</h2>
+        <a href="index.html" class="logo-link">
+          <h2 class="logo">CODE:RECALL!</h2>
+        </a>
 
         <nav class="menu">
           <a href="dashboard.html">🏠 Dashboard</a>
@@ -68,6 +67,10 @@
         </div>
       </div>
 
+      <div class="info-note">
+        <p>Click a badge to view its details, requirement, and progress.</p>
+      </div>
+
       <!-- BADGES GRID -->
       <div class="badges-grid" id="badgesGrid"></div>
     </div>
@@ -81,8 +84,30 @@
       <div id="modalIcon" class="modal-icon">🏆</div>
       <h2 id="modalTitle">Badge</h2>
       <p id="modalDesc">Description</p>
-      <div id="modalXP" class="modal-xp">0 XP</div>
+
+      <div class="modal-detail-box">
+        <p><strong>Requirement:</strong> <span id="modalRequirement">Requirement</span></p>
+        <p><strong>Your Progress:</strong> <span id="modalProgress">0/0 (0%)</span></p>
+      </div>
+
+      <div id="modalXP" class="modal-xp">Reward</div>
       <div id="modalState" class="modal-state">Unlocked</div>
+    </div>
+  </div>
+
+  <!-- GUEST LOGOUT POPUP -->
+  <div id="guestLogoutPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="guestLogoutTitle">Save Your Progress</h3>
+      <p id="guestLogoutMessage">
+        You are currently using a guest account. Register an account now to save your progress and XP before logging out.
+      </p>
+
+      <div class="popup-actions">
+        <button id="guestPrimaryBtn" onclick="registerGuestAccount()">Register to Save Progress</button>
+        <button id="guestSecondaryBtn" class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
+        <button id="guestCancelBtn" class="secondary-btn" onclick="closeGuestLogoutPopup()">Cancel</button>
+      </div>
     </div>
   </div>
 

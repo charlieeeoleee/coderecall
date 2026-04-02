@@ -25,63 +25,31 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* SOUND */
-const badgeSound = new Audio("assets/sounds/badge-unlock.mp3");
+let currentIsGuest = false;
+let currentUser = null;
 
-/* BADGES DATA */
-const badges = [
-  {
-    name: "First Win",
-    icon: "🥇",
-    xp: 0,
-    description: "Started your learning journey."
-  },
-  {
-    name: "Rookie",
-    icon: "🎯",
-    xp: 50,
-    description: "Earned your first 50 XP."
-  },
-  {
-    name: "Learner",
-    icon: "📘",
-    xp: 100,
-    description: "Reached 100 XP milestone."
-  },
-  {
-    name: "Intermediate",
-    icon: "⚡",
-    xp: 200,
-    description: "Your progress is becoming stronger."
-  },
-  {
-    name: "Pro",
-    icon: "🔥",
-    xp: 300,
-    description: "A serious learner with strong momentum."
-  },
-  {
-    name: "Master",
-    icon: "👑",
-    xp: 500,
-    description: "Top-tier mastery unlocked."
-  }
-];
-
-/* AUTH */
+/* =========================
+   AUTH
+========================= */
 onAuthStateChanged(auth, async (user) => {
   const isGuest = localStorage.getItem("guest") === "true";
 
   if (user) {
+    currentUser = user;
+    currentIsGuest = false;
     await loadRealUser(user);
   } else if (isGuest) {
+    currentUser = null;
+    currentIsGuest = true;
     loadGuestUser();
   } else {
     window.location.href = "auth.html";
   }
 });
 
-/* REAL USER */
+/* =========================
+   USER LOAD
+========================= */
 async function loadRealUser(user) {
   const userRef = doc(db, "users", user.uid);
   const docSnap = await getDoc(userRef);
@@ -89,48 +57,212 @@ async function loadRealUser(user) {
   let xp = 0;
   let name = user.displayName || user.email || "User";
   let photo = user.photoURL || "https://i.pravatar.cc/40?img=12";
+  let progress = {};
 
   if (!docSnap.exists()) {
     await setDoc(userRef, {
       xp: 0,
       name,
       photo,
-      email: user.email || ""
+      email: user.email || "",
+      progress: {}
     });
   } else {
     const data = docSnap.data();
     xp = data.xp || 0;
-    name = user.displayName || data.name || user.email || "User";
-    photo = user.photoURL || data.photo || "https://i.pravatar.cc/40?img=12";
+    name = data.name || user.displayName || user.email || "User";
+    photo = data.photo || user.photoURL || "https://i.pravatar.cc/40?img=12";
+    progress = data.progress || {};
   }
 
   updateUserUI(name, photo);
-  renderBadges(xp);
+  renderBadges(xp, progress, false);
 }
 
-/* GUEST */
 function loadGuestUser() {
   const xp = parseInt(localStorage.getItem("guest_xp")) || 0;
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
-  renderBadges(xp);
+  renderBadges(xp, {}, true);
 }
 
-/* UI */
 function updateUserUI(name, photo) {
   document.getElementById("username").textContent = name;
   document.getElementById("userPhoto").src = photo;
 }
 
-/* RENDER BADGES */
-function renderBadges(xp) {
+/* =========================
+   HELPERS
+========================= */
+function getLocalProgress(key) {
+  return localStorage.getItem(key) === "true";
+}
+
+function getSavedProgress(progressObj, key) {
+  return progressObj[key] === true || getLocalProgress(key);
+}
+
+function getGuestStreak() {
+  return parseInt(localStorage.getItem("guest_streak")) || 0;
+}
+
+/* =========================
+   BADGES DATA
+========================= */
+function buildBadges(xp, progressObj, isGuest) {
+  const hardwarePre = getSavedProgress(progressObj, "hardware_pretest");
+  const hardwareModules = getSavedProgress(progressObj, "hardware_modules");
+  const hardwareQuiz = getSavedProgress(progressObj, "hardware_quiz");
+  const hardwarePost = getSavedProgress(progressObj, "hardware_posttest");
+
+  const electricalPre = getSavedProgress(progressObj, "electrical_pretest");
+  const electricalModules = getSavedProgress(progressObj, "electrical_modules");
+  const electricalQuiz = getSavedProgress(progressObj, "electrical_quiz");
+  const electricalPost = getSavedProgress(progressObj, "electrical_posttest");
+
+  const anyQuiz = hardwareQuiz || electricalQuiz || hardwarePre || electricalPre;
+  const anyModule = hardwareModules || electricalModules;
+  const exploredBoth = (hardwarePre || hardwareModules || hardwareQuiz || hardwarePost) &&
+                       (electricalPre || electricalModules || electricalQuiz || electricalPost);
+  const bothSubjectsCompleted = hardwarePost && electricalPost;
+
+  const streak = isGuest ? getGuestStreak() : 0;
+
+  return [
+    {
+      name: "First Step",
+      icon: "🥇",
+      description: "Earn your first 10 XP and begin your learning adventure.",
+      requirement: "Reach 10 XP",
+      rewardText: "10 XP milestone",
+      unlocked: xp >= 10,
+      progressValue: Math.min(xp, 10),
+      progressMax: 10
+    },
+    {
+      name: "Rookie",
+      icon: "🎯",
+      description: "You are gaining momentum and starting to level up your skills.",
+      requirement: "Reach 50 XP",
+      rewardText: "50 XP milestone",
+      unlocked: xp >= 50,
+      progressValue: Math.min(xp, 50),
+      progressMax: 50
+    },
+    {
+      name: "Learner",
+      icon: "📘",
+      description: "You reached 100 XP and proved that your learning is consistent.",
+      requirement: "Reach 100 XP",
+      rewardText: "100 XP milestone",
+      unlocked: xp >= 100,
+      progressValue: Math.min(xp, 100),
+      progressMax: 100
+    },
+    {
+      name: "Intermediate",
+      icon: "⚡",
+      description: "Your progress is becoming stronger and more stable.",
+      requirement: "Reach 200 XP",
+      rewardText: "200 XP milestone",
+      unlocked: xp >= 200,
+      progressValue: Math.min(xp, 200),
+      progressMax: 200
+    },
+    {
+      name: "Pro",
+      icon: "🔥",
+      description: "A serious learner with strong momentum and commitment.",
+      requirement: "Reach 300 XP",
+      rewardText: "300 XP milestone",
+      unlocked: xp >= 300,
+      progressValue: Math.min(xp, 300),
+      progressMax: 300
+    },
+    {
+      name: "Master",
+      icon: "👑",
+      description: "Top-tier mastery unlocked through dedication and progress.",
+      requirement: "Reach 500 XP",
+      rewardText: "500 XP milestone",
+      unlocked: xp >= 500,
+      progressValue: Math.min(xp, 500),
+      progressMax: 500
+    },
+    {
+      name: "Finisher",
+      icon: "🏁",
+      description: "Complete your first quiz or test-related activity.",
+      requirement: "Finish your first quiz or test",
+      rewardText: "First completion badge",
+      unlocked: anyQuiz,
+      progressValue: anyQuiz ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "Module Reader",
+      icon: "📖",
+      description: "Read and complete your first learning module.",
+      requirement: "Complete one module",
+      rewardText: "Module milestone",
+      unlocked: anyModule,
+      progressValue: anyModule ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "Explorer",
+      icon: "🌍",
+      description: "Try both subjects and explore the learning system fully.",
+      requirement: "Explore both subjects",
+      rewardText: "Exploration badge",
+      unlocked: exploredBoth,
+      progressValue: exploredBoth ? 2 : countExploredSubjects(
+        hardwarePre || hardwareModules || hardwareQuiz || hardwarePost,
+        electricalPre || electricalModules || electricalQuiz || electricalPost
+      ),
+      progressMax: 2
+    },
+    {
+      name: "Completionist",
+      icon: "🏆",
+      description: "Complete both subjects and prove full system dedication.",
+      requirement: "Finish both subjects",
+      rewardText: "Full completion badge",
+      unlocked: bothSubjectsCompleted,
+      progressValue: countCompletedSubjects(hardwarePost, electricalPost),
+      progressMax: 2
+    }
+  ];
+}
+
+function countExploredSubjects(hardwareDone, electricalDone) {
+  let count = 0;
+  if (hardwareDone) count++;
+  if (electricalDone) count++;
+  return count;
+}
+
+function countCompletedSubjects(hardwareDone, electricalDone) {
+  let count = 0;
+  if (hardwareDone) count++;
+  if (electricalDone) count++;
+  return count;
+}
+
+/* =========================
+   RENDER BADGES
+========================= */
+function renderBadges(xp, progressObj, isGuest) {
+  const badges = buildBadges(xp, progressObj, isGuest);
   const grid = document.getElementById("badgesGrid");
   grid.innerHTML = "";
 
-  let unlocked = 0;
+  let unlockedCount = 0;
 
   badges.forEach((badge) => {
-    const isUnlocked = xp >= badge.xp;
-    if (isUnlocked) unlocked++;
+    const isUnlocked = badge.unlocked;
+    if (isUnlocked) unlockedCount++;
+
+    const progressPercent = Math.round((badge.progressValue / badge.progressMax) * 100);
 
     const card = document.createElement("button");
     card.className = `badge-card ${isUnlocked ? "unlocked" : "locked"}`;
@@ -140,39 +272,50 @@ function renderBadges(xp) {
       <div class="badge-icon">${badge.icon}</div>
       <div class="badge-name">${badge.name}</div>
       <div class="badge-desc">${badge.description}</div>
-      <div class="badge-xp">${badge.xp} XP</div>
+      <div class="badge-xp">${badge.rewardText}</div>
+      <div class="badge-requirement">${badge.requirement}</div>
+
+      <div class="badge-progress-wrap">
+        <div class="badge-progress-bar">
+          <div class="badge-progress-fill" style="width:${progressPercent}%"></div>
+        </div>
+        <span class="badge-progress-text">${badge.progressValue}/${badge.progressMax} completed</span>
+      </div>
     `;
 
-    card.addEventListener("click", () => openBadgeModal(badge, isUnlocked));
+    card.addEventListener("click", () => openBadgeModal(badge));
     grid.appendChild(card);
   });
 
-  const percent = Math.round((unlocked / badges.length) * 100);
+  const percent = Math.round((unlockedCount / badges.length) * 100);
 
-  document.getElementById("achievementCount").textContent = `${unlocked}/${badges.length}`;
+  document.getElementById("achievementCount").textContent = `${unlockedCount}/${badges.length}`;
   document.getElementById("xpValue").textContent = xp;
   document.getElementById("progressFill").style.width = `${percent}%`;
   document.getElementById("progressPercent").textContent = `${percent}%`;
 }
 
-/* MODAL */
-function openBadgeModal(badge, unlocked) {
-  const modal = document.getElementById("badgeModal");
+/* =========================
+   MODAL
+========================= */
+function openBadgeModal(badge) {
+  const progressPercent = Math.round((badge.progressValue / badge.progressMax) * 100);
+
   document.getElementById("modalIcon").textContent = badge.icon;
   document.getElementById("modalTitle").textContent = badge.name;
-  document.getElementById("modalDesc").textContent = unlocked
-    ? badge.description
-    : "Keep learning to unlock this badge!";
-  document.getElementById("modalXP").textContent = `${badge.xp} XP`;
+  document.getElementById("modalDesc").textContent = badge.description;
+  document.getElementById("modalRequirement").textContent = badge.requirement;
+  document.getElementById("modalProgress").textContent =
+    `${badge.progressValue}/${badge.progressMax} (${progressPercent}%)`;
+  document.getElementById("modalXP").textContent = badge.rewardText;
 
   const modalState = document.getElementById("modalState");
-  modalState.textContent = unlocked ? "Unlocked" : "Locked";
-  modalState.className = `modal-state ${unlocked ? "" : "locked"}`;
+  modalState.textContent = badge.unlocked ? "Unlocked" : "Locked";
+  modalState.className = `modal-state ${badge.unlocked ? "" : "locked"}`;
 
-  modal.classList.add("active");
+  document.getElementById("badgeModal").classList.add("active");
 
-  if (unlocked) {
-    playBadgeSound();
+  if (badge.unlocked) {
     launchConfetti();
   }
 }
@@ -188,16 +331,9 @@ window.addEventListener("click", (e) => {
   }
 });
 
-/* SOUND */
-function playBadgeSound() {
-  const soundEnabled = localStorage.getItem("soundEnabled");
-  if (soundEnabled === "false") return;
-
-  badgeSound.currentTime = 0;
-  badgeSound.play().catch(() => {});
-}
-
-/* CONFETTI */
+/* =========================
+   CONFETTI
+========================= */
 function launchConfetti() {
   const container = document.getElementById("confettiContainer");
   container.innerHTML = "";
@@ -219,9 +355,112 @@ function launchConfetti() {
   }, 4000);
 }
 
-/* LOGOUT */
+/* =========================
+   GUEST LOGOUT
+========================= */
+function hasGuestProgress() {
+  const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
+
+  const progressKeys = [
+    "hardware_pretest",
+    "hardware_modules",
+    "hardware_quiz",
+    "hardware_posttest",
+    "electrical_pretest",
+    "electrical_modules",
+    "electrical_quiz",
+    "electrical_posttest"
+  ];
+
+  const hasProgressKey = progressKeys.some((key) => localStorage.getItem(key) === "true");
+  return guestXP > 0 || hasProgressKey;
+}
+
+function openGuestLogoutPopup(withProgress = true) {
+  const popup = document.getElementById("guestLogoutPopup");
+  const title = document.getElementById("guestLogoutTitle");
+  const message = document.getElementById("guestLogoutMessage");
+  const primaryBtn = document.getElementById("guestPrimaryBtn");
+  const secondaryBtn = document.getElementById("guestSecondaryBtn");
+  const cancelBtn = document.getElementById("guestCancelBtn");
+
+  if (withProgress) {
+    title.textContent = "Save Your Progress";
+    message.textContent = "You are currently using a guest account. Register an account now to save your progress and XP before logging out.";
+
+    primaryBtn.style.display = "block";
+    primaryBtn.textContent = "Register to Save Progress";
+    primaryBtn.onclick = registerGuestAccount;
+
+    secondaryBtn.style.display = "block";
+    secondaryBtn.textContent = "Log Out Anyway";
+    secondaryBtn.onclick = confirmGuestLogout;
+
+    cancelBtn.style.display = "block";
+  } else {
+    title.textContent = "Log Out Guest Session";
+    message.textContent = "You are currently using guest mode. Are you sure you want to log out?";
+
+    primaryBtn.style.display = "block";
+    primaryBtn.textContent = "Log Out";
+    primaryBtn.onclick = confirmGuestLogout;
+
+    secondaryBtn.style.display = "none";
+    cancelBtn.style.display = "block";
+  }
+
+  popup.classList.add("active");
+}
+
+window.closeGuestLogoutPopup = function() {
+  document.getElementById("guestLogoutPopup").classList.remove("active");
+};
+
+window.registerGuestAccount = function() {
+  localStorage.setItem("guest_pending_save", "true");
+  closeGuestLogoutPopup();
+  window.location.href = "auth.html";
+};
+
+window.confirmGuestLogout = function() {
+  clearGuestSession();
+  closeGuestLogoutPopup();
+  window.location.href = "auth.html";
+};
+
+function clearGuestSession() {
+  const keysToRemove = [
+    "guest",
+    "guest_xp",
+    "guest_streak",
+    "guest_last_active_date",
+    "guest_pending_save",
+    "hardware_pretest",
+    "hardware_modules",
+    "hardware_quiz",
+    "hardware_posttest",
+    "electrical_pretest",
+    "electrical_modules",
+    "electrical_quiz",
+    "electrical_posttest"
+  ];
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
+
+/* =========================
+   LOGOUT
+========================= */
 window.logout = async function() {
-  localStorage.removeItem("guest");
+  if (currentIsGuest) {
+    if (hasGuestProgress()) {
+      openGuestLogoutPopup(true);
+      return;
+    } else {
+      openGuestLogoutPopup(false);
+      return;
+    }
+  }
 
   if (auth.currentUser) {
     await signOut(auth);
@@ -230,7 +469,9 @@ window.logout = async function() {
   window.location.href = "auth.html";
 };
 
-/* THEME */
+/* =========================
+   THEME
+========================= */
 window.toggleTheme = function() {
   document.body.classList.toggle("light-mode");
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";

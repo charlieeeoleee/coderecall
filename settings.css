@@ -31,6 +31,11 @@ body{
   gap:30px;
 }
 
+.logo-link{
+  text-decoration:none;
+  display:inline-block;
+}
+
 .logo{
   font-family:'Press Start 2P', cursive;
   font-size:14px;
@@ -39,6 +44,11 @@ body{
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
   margin:0;
+  cursor:pointer;
+}
+
+.logo-link:hover .logo{
+  transform:scale(1.02);
 }
 
 .menu{
@@ -75,6 +85,10 @@ body{
   color:white;
   cursor:pointer;
   font-weight:600;
+}
+
+.logout-btn:hover{
+  transform:translateY(-2px);
 }
 
 /* MAIN */
@@ -167,6 +181,24 @@ body{
 .account-info p{
   margin:6px 0;
   font-size:14px;
+}
+
+.status-pill{
+  display:inline-block;
+  font-size:12px;
+  font-weight:700;
+  padding:6px 10px;
+  border-radius:999px;
+}
+
+.status-pill.unlocked{
+  background:#00ffcc;
+  color:#0b0f2a;
+}
+
+.status-pill.locked{
+  background:rgba(255,255,255,0.16);
+  color:white;
 }
 
 /* SETTING ROW */
@@ -291,6 +323,69 @@ body{
   z-index:1000;
 }
 
+/* POPUPS */
+.popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  pointer-events:none;
+  transition:0.25s;
+  z-index:1200;
+}
+
+.popup.active{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.popup-box{
+  width:360px;
+  max-width:90%;
+  background:#1a1140;
+  border-radius:18px;
+  padding:24px;
+  box-shadow:0 0 35px rgba(255,46,151,0.45);
+  text-align:center;
+}
+
+.popup-box h3{
+  margin:0 0 12px 0;
+}
+
+.popup-box p{
+  margin:0;
+  line-height:1.6;
+  font-size:14px;
+  opacity:0.95;
+}
+
+.popup-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:18px;
+}
+
+.popup-actions button{
+  border:none;
+  border-radius:12px;
+  padding:12px;
+  cursor:pointer;
+  font-weight:600;
+  background:#ff2e97;
+  color:white;
+}
+
+.popup-actions .secondary-btn{
+  background:transparent;
+  border:2px solid #00e5ff;
+  color:#00e5ff;
+}
+
 /* LIGHT MODE */
 body.light-mode{
   background:#f4f6fb;
@@ -318,6 +413,22 @@ body.light-mode .user-top{
 
 body.light-mode .setting-row{
   border-bottom:1px solid rgba(0,0,0,0.08);
+}
+
+body.light-mode .popup-box{
+  background:white;
+  color:#222;
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);
+}
+
+body.light-mode .popup-actions .secondary-btn{
+  color:#0077ff;
+  border-color:#0077ff;
+}
+
+body.light-mode .status-pill.locked{
+  background:#ececf7;
+  color:#222;
 }
 
 /* RESPONSIVE */

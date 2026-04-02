@@ -13,7 +13,9 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="top-section">
-        <h2 class="logo">CODE:RECALL!</h2>
+        <a href="index.html" class="logo-link">
+          <h2 class="logo">CODE:RECALL!</h2>
+        </a>
 
         <nav class="menu">
           <a href="dashboard.html">🏠 Dashboard</a>
@@ -70,13 +72,13 @@
       </div>
 
       <!-- ACHIEVEMENTS -->
-      <div class="card section">
-        <h3>Achievements</h3>
-        <div class="badges">
-          <div class="badge">🥇 First Win</div>
-          <div class="badge">⚡ Fast Learner</div>
-          <div class="badge">🔥 3-Day Streak</div>
+      <div class="card section achievements-section">
+        <div class="section-head">
+          <h3>Achievements</h3>
+          <span class="section-note">Click an achievement to view details</span>
         </div>
+
+        <div id="achievementsGrid" class="achievements-grid"></div>
       </div>
     </div>
   </div>
@@ -85,6 +87,39 @@
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">🌙</span>
   </button>
+
+  <!-- GUEST LOGOUT POPUP -->
+  <div id="guestLogoutPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="guestLogoutTitle">Save Your Progress</h3>
+      <p id="guestLogoutMessage">
+        You are currently using a guest account. Register an account now to save your progress and XP before logging out.
+      </p>
+
+      <div class="popup-actions">
+        <button id="guestPrimaryBtn" onclick="registerGuestAccount()">Register to Save Progress</button>
+        <button id="guestSecondaryBtn" class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
+        <button id="guestCancelBtn" class="secondary-btn" onclick="closeGuestLogoutPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENT MODAL -->
+  <div id="achievementModal" class="popup">
+    <div class="popup-box achievement-popup-box">
+      <div id="achievementModalIcon" class="achievement-modal-icon">🏆</div>
+      <h3 id="achievementModalTitle">Achievement</h3>
+      <p id="achievementModalDesc">Description</p>
+      <div id="achievementModalStatus" class="achievement-modal-status">Unlocked</div>
+
+      <div class="popup-actions">
+        <button onclick="closeAchievementModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFETTI -->
+  <div id="confettiContainer" class="confetti-container"></div>
 
   <script type="module" src="dashboard.js"></script>
 </body>

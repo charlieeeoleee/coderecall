@@ -31,6 +31,11 @@ body{
   gap:30px;
 }
 
+.logo-link{
+  text-decoration:none;
+  display:inline-block;
+}
+
 .logo{
   font-family:'Press Start 2P', cursive;
   font-size:14px;
@@ -39,6 +44,11 @@ body{
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
   margin:0;
+  cursor:pointer;
+}
+
+.logo-link:hover .logo{
+  transform:scale(1.02);
 }
 
 .menu{
@@ -75,6 +85,10 @@ body{
   color:white;
   cursor:pointer;
   font-weight:600;
+}
+
+.logout-btn:hover{
+  transform:translateY(-2px);
 }
 
 /* MAIN */
@@ -179,10 +193,22 @@ body{
   opacity:0.85;
 }
 
+.info-note{
+  background:rgba(255,255,255,0.06);
+  padding:14px 16px;
+  border-radius:14px;
+}
+
+.info-note p{
+  margin:0;
+  font-size:14px;
+  opacity:0.9;
+}
+
 /* BADGES GRID */
 .badges-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
   gap:20px;
 }
 
@@ -192,13 +218,13 @@ body{
   background:#3a2575;
   border-radius:18px;
   padding:22px 18px;
-  min-height:230px;
+  min-height:285px;
   box-sizing:border-box;
   text-align:center;
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:center;
+  justify-content:flex-start;
   gap:10px;
   transition:0.25s ease;
   cursor:pointer;
@@ -241,6 +267,7 @@ body{
 .badge-icon{
   font-size:50px;
   margin-bottom:2px;
+  margin-top:6px;
 }
 
 .badge-name{
@@ -253,7 +280,7 @@ body{
   font-size:13px;
   line-height:1.5;
   opacity:0.84;
-  min-height:40px;
+  min-height:44px;
 }
 
 .badge-xp{
@@ -263,6 +290,42 @@ body{
   padding:6px 12px;
   border-radius:999px;
   background:rgba(255,255,255,0.08);
+}
+
+.badge-requirement{
+  margin-top:2px;
+  font-size:12px;
+  line-height:1.4;
+  opacity:0.88;
+  min-height:34px;
+}
+
+.badge-progress-wrap{
+  width:100%;
+  margin-top:auto;
+}
+
+.badge-progress-bar{
+  height:9px;
+  width:100%;
+  background:rgba(255,255,255,0.15);
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.badge-progress-fill{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#00e5ff,#00ffcc);
+  transition:width 0.3s ease;
+}
+
+.badge-progress-text{
+  display:block;
+  margin-top:8px;
+  font-size:12px;
+  opacity:0.88;
 }
 
 /* MODAL */
@@ -286,7 +349,7 @@ body{
 
 .badge-modal-content{
   position:relative;
-  width:min(380px, 88vw);
+  width:min(420px, 90vw);
   background:#3a2575;
   border-radius:22px;
   padding:34px 24px 28px;
@@ -334,6 +397,20 @@ body{
   opacity:0.9;
 }
 
+.modal-detail-box{
+  background:rgba(255,255,255,0.08);
+  border-radius:16px;
+  padding:14px 16px;
+  margin:14px 0;
+  text-align:left;
+}
+
+.modal-detail-box p{
+  margin:8px 0;
+  font-size:13px;
+  line-height:1.5;
+}
+
 .modal-xp{
   display:inline-block;
   margin-bottom:12px;
@@ -352,6 +429,69 @@ body{
 
 .modal-state.locked{
   color:#ff9f43;
+}
+
+/* GUEST POPUP */
+.popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.65);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  pointer-events:none;
+  transition:0.25s;
+  z-index:2200;
+}
+
+.popup.active{
+  opacity:1;
+  pointer-events:auto;
+}
+
+.popup-box{
+  width:360px;
+  max-width:90%;
+  background:#1a1140;
+  border-radius:18px;
+  padding:24px;
+  box-shadow:0 0 35px rgba(255,46,151,0.45);
+  text-align:center;
+}
+
+.popup-box h3{
+  margin:0 0 12px 0;
+}
+
+.popup-box p{
+  margin:0;
+  line-height:1.6;
+  font-size:14px;
+  opacity:0.95;
+}
+
+.popup-actions{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:18px;
+}
+
+.popup-actions button{
+  border:none;
+  border-radius:12px;
+  padding:12px;
+  cursor:pointer;
+  font-weight:600;
+  background:#ff2e97;
+  color:white;
+}
+
+.popup-actions .secondary-btn{
+  background:transparent;
+  border:2px solid #00e5ff;
+  color:#00e5ff;
 }
 
 /* CONFETTI */
@@ -431,7 +571,8 @@ body.light-mode .user-top{
   box-shadow:0 5px 15px rgba(0,0,0,0.08);
 }
 
-body.light-mode .progress-bar{
+body.light-mode .progress-bar,
+body.light-mode .badge-progress-bar{
   background:#ddd;
 }
 
@@ -442,6 +583,30 @@ body.light-mode .theme-toggle{
 
 body.light-mode .close-btn{
   color:#222;
+}
+
+body.light-mode .info-note{
+  background:#ffffff;
+  box-shadow:0 5px 15px rgba(0,0,0,0.08);
+}
+
+body.light-mode .popup-box{
+  background:white;
+  color:#222;
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);
+}
+
+body.light-mode .popup-actions .secondary-btn{
+  color:#0077ff;
+  border-color:#0077ff;
+}
+
+body.light-mode .modal-detail-box{
+  background:#f6f7fc;
+}
+
+body.light-mode .badge-card.locked{
+  background:#f7f8fc;
 }
 
 /* RESPONSIVE */

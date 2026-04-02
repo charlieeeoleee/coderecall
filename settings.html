@@ -18,7 +18,9 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="top-section">
-        <h2 class="logo">CODE:RECALL!</h2>
+        <a href="index.html" class="logo-link">
+          <h2 class="logo">CODE:RECALL!</h2>
+        </a>
 
         <nav class="menu">
           <a href="dashboard.html">🏠 Dashboard</a>
@@ -55,10 +57,12 @@
 
           <div class="account-box">
             <img id="profilePhoto" src="https://i.pravatar.cc/80?img=12" alt="Profile Photo">
+
             <div class="account-info">
               <p><strong>Name:</strong> <span id="profileName">User</span></p>
               <p><strong>Email:</strong> <span id="profileEmail">No email</span></p>
               <p><strong>Login Type:</strong> <span id="loginType">Unknown</span></p>
+              <p><strong>Verification:</strong> <span id="verificationStatus" class="status-pill locked">Unknown</span></p>
             </div>
           </div>
         </div>
@@ -133,6 +137,47 @@
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">🌙</span>
   </button>
+
+  <!-- GUEST LOGOUT POPUP -->
+  <div id="guestLogoutPopup" class="popup">
+    <div class="popup-box">
+      <h3>Save Your Progress</h3>
+      <p>
+        You are currently using a guest account. Register an account now to save your progress and XP before logging out.
+      </p>
+
+      <div class="popup-actions">
+        <button onclick="registerGuestAccount()">Register to Save Progress</button>
+        <button class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
+        <button class="secondary-btn" onclick="closeGuestLogoutPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM POPUP -->
+  <div id="systemPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="systemPopupTitle">System Action</h3>
+      <p id="systemPopupMessage">Message</p>
+
+      <div class="popup-actions">
+        <button id="systemPopupConfirmBtn">Confirm</button>
+        <button class="secondary-btn" onclick="closeSystemPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFO POPUP -->
+  <div id="infoPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="infoPopupTitle">Notice</h3>
+      <p id="infoPopupMessage">Message</p>
+
+      <div class="popup-actions">
+        <button onclick="closeInfoPopup()">OK</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="settings.js"></script>
 </body>

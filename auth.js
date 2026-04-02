@@ -111,6 +111,8 @@ window.login = async function(){
       return;
     }
 
+    await transferGuestProgressIfNeeded(cred.user.uid);
+
     window.location.replace("dashboard.html");
   }catch(error){
     isHandlingAuthFlow = false;
@@ -132,26 +134,34 @@ window.register = async function(){
       return;
     }
 
+    /* COMPLETE GOOGLE REGISTRATION */
     if (pendingGoogle) {
       const pending = JSON.parse(pendingGoogle);
       const userRef = doc(db, "users", pending.uid);
 
       isHandlingAuthFlow = true;
 
+      const existingSnap = await getDoc(userRef);
+      const existingData = existingSnap.exists() ? existingSnap.data() : {};
+
       await setDoc(userRef, {
-        xp: 0,
+        xp: existingData.xp || 0,
         name,
         email: pending.email,
         photo: pending.photo || "https://i.pravatar.cc/40?img=12",
         provider: "google",
-        createdAt: Date.now()
+        createdAt: existingData.createdAt || Date.now(),
+        progress: existingData.progress || {}
       });
+
+      await transferGuestProgressIfNeeded(pending.uid);
 
       localStorage.removeItem(pendingGoogleKey);
       window.location.replace("dashboard.html");
       return;
     }
 
+    /* EMAIL REGISTRATION */
     if (!password || password.length < 6) {
       showPopup("Weak Password", "Password must be at least 6 characters.");
       return;
@@ -167,8 +177,11 @@ window.register = async function(){
       email,
       photo: "https://i.pravatar.cc/40?img=12",
       provider: "password",
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      progress: {}
     });
+
+    await transferGuestProgressIfNeeded(cred.user.uid);
 
     await cred.user.reload();
     await new Promise(resolve => setTimeout(resolve, 1200));
@@ -222,6 +235,7 @@ window.googleLogin = async function(){
     const docSnap = await getDoc(userRef);
 
     if (docSnap.exists()) {
+      await transferGuestProgressIfNeeded(user.uid);
       localStorage.removeItem(pendingGoogleKey);
       window.location.replace("dashboard.html");
       return;
@@ -339,6 +353,68 @@ window.confirmResend = async function(){
   }
 };
 
+/* GUEST MODE */
+window.playGuest = function(){
+  localStorage.setItem("guest", "true");
+  if (!localStorage.getItem("guest_xp")) {
+    localStorage.setItem("guest_xp", "0");
+  }
+  window.location.replace("dashboard.html");
+};
+
+/* GUEST SAVE SYSTEM */
+async function transferGuestProgressIfNeeded(uid) {
+  const shouldTransfer = localStorage.getItem("guest_pending_save") === "true";
+  if (!shouldTransfer) {
+    isHandlingAuthFlow = false;
+    return;
+  }
+
+  const userRef = doc(db, "users", uid);
+  const docSnap = await getDoc(userRef);
+  const existingData = docSnap.exists() ? docSnap.data() : {};
+
+  const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
+
+  const guestProgress = {
+    hardware_pretest: localStorage.getItem("hardware_pretest") === "true",
+    hardware_modules: localStorage.getItem("hardware_modules") === "true",
+    hardware_quiz: localStorage.getItem("hardware_quiz") === "true",
+    hardware_posttest: localStorage.getItem("hardware_posttest") === "true",
+    electrical_pretest: localStorage.getItem("electrical_pretest") === "true",
+    electrical_modules: localStorage.getItem("electrical_modules") === "true",
+    electrical_quiz: localStorage.getItem("electrical_quiz") === "true",
+    electrical_posttest: localStorage.getItem("electrical_posttest") === "true"
+  };
+
+  const mergedXP = (existingData.xp || 0) + guestXP;
+  const mergedProgress = {
+    ...(existingData.progress || {}),
+    ...guestProgress
+  };
+
+  await setDoc(userRef, {
+    ...existingData,
+    xp: mergedXP,
+    progress: mergedProgress
+  });
+
+  clearGuestAfterTransfer();
+  isHandlingAuthFlow = false;
+}
+
+function clearGuestAfterTransfer() {
+  const keysToRemove = [
+    "guest",
+    "guest_xp",
+    "guest_streak",
+    "guest_last_active_date",
+    "guest_pending_save"
+  ];
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
+
 /* MAIN POPUP */
 function showPopup(title, message, extraAction = null){
   document.getElementById("popupTitle").textContent = title;
@@ -360,15 +436,6 @@ function showPopup(title, message, extraAction = null){
 
 window.closePopup = function(){
   document.getElementById("popup").classList.remove("active");
-};
-
-/* GUEST MODE */
-window.playGuest = function(){
-  localStorage.setItem("guest", "true");
-  if (!localStorage.getItem("guest_xp")) {
-    localStorage.setItem("guest_xp", "0");
-  }
-  window.location.replace("dashboard.html");
 };
 
 /* NAVIGATION */

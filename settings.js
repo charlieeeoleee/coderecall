@@ -28,6 +28,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
+let currentIsGuest = false;
 
 /* =========================
    AUTH STATE
@@ -37,10 +38,13 @@ onAuthStateChanged(auth, async (user) => {
 
   if (user) {
     currentUser = user;
+    currentIsGuest = false;
     await loadUserSettings();
     loadPreferences();
     loadProgress();
   } else if (isGuest) {
+    currentUser = null;
+    currentIsGuest = true;
     loadGuestSettings();
     loadPreferences();
     loadProgress();
@@ -91,11 +95,17 @@ async function loadUserSettings() {
 
   const providerIds = currentUser.providerData?.map(p => p.providerId) || [];
   let loginType = "Unknown";
+  let verificationText = "Unknown";
+  let verificationClass = "locked";
 
   if (providerIds.includes("google.com")) {
     loginType = "Google";
+    verificationText = "Verified";
+    verificationClass = "unlocked";
   } else if (providerIds.includes("password")) {
     loginType = "Email / Password";
+    verificationText = currentUser.emailVerified ? "Verified" : "Not Verified";
+    verificationClass = currentUser.emailVerified ? "unlocked" : "locked";
   }
 
   document.getElementById("usernameTop").textContent = name;
@@ -105,6 +115,10 @@ async function loadUserSettings() {
   document.getElementById("profileEmail").textContent = email;
   document.getElementById("profilePhoto").src = photo;
   document.getElementById("loginType").textContent = loginType;
+
+  const verificationStatus = document.getElementById("verificationStatus");
+  verificationStatus.textContent = verificationText;
+  verificationStatus.className = `status-pill ${verificationClass}`;
 }
 
 /* =========================
@@ -120,6 +134,10 @@ function loadGuestSettings() {
   document.getElementById("profileEmail").textContent = "No email";
   document.getElementById("profilePhoto").src = guestPhoto;
   document.getElementById("loginType").textContent = "Guest Mode";
+
+  const verificationStatus = document.getElementById("verificationStatus");
+  verificationStatus.textContent = "Guest Session";
+  verificationStatus.className = "status-pill locked";
 }
 
 /* =========================
@@ -185,11 +203,76 @@ function renderProgress(xp) {
 /* =========================
    RESET PROGRESS
 ========================= */
-window.resetProgress = async function() {
-  const confirmed = confirm("Are you sure you want to reset all progress?");
-  if (!confirmed) return;
+window.resetProgress = function() {
+  openSystemPopup(
+    "Reset Progress",
+    "Are you sure you want to reset all progress? This action cannot be undone.",
+    async () => {
+      const keysToRemove = [
+        "hardware_pretest",
+        "hardware_modules",
+        "hardware_quiz",
+        "hardware_posttest",
+        "electrical_pretest",
+        "electrical_modules",
+        "electrical_quiz",
+        "electrical_posttest",
+        "guest_xp"
+      ];
 
-  const keysToRemove = [
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+
+      if (currentUser) {
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          await setDoc(userRef, {
+            ...data,
+            xp: 0
+          });
+        }
+      }
+
+      closeSystemPopup();
+      showInfoPopup("Progress Reset", "Progress reset successfully.");
+      window.location.reload();
+    }
+  );
+};
+
+/* =========================
+   CLEAR LOCAL DATA
+========================= */
+window.clearLocalData = function() {
+  openSystemPopup(
+    "Clear Local Data",
+    "Clear local preferences and cached data on this device?",
+    () => {
+      const keepKeys = ["guest"];
+      const allKeys = Object.keys(localStorage);
+
+      allKeys.forEach(key => {
+        if (!keepKeys.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      closeSystemPopup();
+      showInfoPopup("Local Data Cleared", "Local data cleared successfully.");
+      window.location.reload();
+    }
+  );
+};
+
+/* =========================
+   GUEST LOGOUT HELPERS
+========================= */
+function hasGuestProgress() {
+  const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
+
+  const progressKeys = [
     "hardware_pretest",
     "hardware_modules",
     "hardware_quiz",
@@ -197,66 +280,73 @@ window.resetProgress = async function() {
     "electrical_pretest",
     "electrical_modules",
     "electrical_quiz",
-    "electrical_posttest",
-    "guest_xp"
+    "electrical_posttest"
   ];
 
-  keysToRemove.forEach(key => localStorage.removeItem(key));
+  const hasProgressKey = progressKeys.some((key) => localStorage.getItem(key) === "true");
+  return guestXP > 0 || hasProgressKey;
+}
 
-  if (currentUser) {
-    const userRef = doc(db, "users", currentUser.uid);
-    const docSnap = await getDoc(userRef);
+function clearGuestSession() {
+  const keysToRemove = [
+    "guest",
+    "guest_xp",
+    "guest_streak",
+    "guest_last_active_date",
+    "guest_pending_save",
+    "hardware_pretest",
+    "hardware_modules",
+    "hardware_quiz",
+    "hardware_posttest",
+    "electrical_pretest",
+    "electrical_modules",
+    "electrical_quiz",
+    "electrical_posttest"
+  ];
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      await setDoc(userRef, {
-        ...data,
-        xp: 0
-      });
-    }
-  }
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+}
 
-  alert("Progress reset successfully.");
-  window.location.reload();
+function openGuestLogoutPopup() {
+  document.getElementById("guestLogoutPopup").classList.add("active");
+}
+
+window.closeGuestLogoutPopup = function() {
+  document.getElementById("guestLogoutPopup").classList.remove("active");
 };
 
-/* =========================
-   CLEAR LOCAL DATA
-========================= */
-window.clearLocalData = function() {
-  const confirmed = confirm("Clear local preferences and cached data?");
-  if (!confirmed) return;
+window.registerGuestAccount = function() {
+  localStorage.setItem("guest_pending_save", "true");
+  closeGuestLogoutPopup();
+  window.location.href = "auth.html";
+};
 
-  const keepKeys = [];
-  const allKeys = Object.keys(localStorage);
-
-  allKeys.forEach(key => {
-    if (!keepKeys.includes(key)) {
-      localStorage.removeItem(key);
-    }
-  });
-
-  alert("Local data cleared.");
-  window.location.reload();
+window.confirmGuestLogout = function() {
+  clearGuestSession();
+  closeGuestLogoutPopup();
+  window.location.href = "auth.html";
 };
 
 /* =========================
    LOGOUT
 ========================= */
 window.logout = async function() {
-  const isGuest = localStorage.getItem("guest") === "true";
-
-  if (isGuest) {
-    const registerNow = confirm("You are using a guest account. Register first to save your progress. Do you want to go to registration?");
-    if (registerNow) {
-      window.location.href = "auth.html";
+  if (currentIsGuest) {
+    if (hasGuestProgress()) {
+      openGuestLogoutPopup();
+      return;
+    } else {
+      openSystemPopup(
+        "Log Out Guest Session",
+        "Are you sure you want to log out of guest mode?",
+        () => {
+          clearGuestSession();
+          closeSystemPopup();
+          window.location.href = "auth.html";
+        }
+      );
       return;
     }
-
-    localStorage.removeItem("guest");
-    localStorage.removeItem("guest_xp");
-    window.location.href = "auth.html";
-    return;
   }
 
   if (auth.currentUser) {
@@ -264,6 +354,36 @@ window.logout = async function() {
   }
 
   window.location.href = "auth.html";
+};
+
+/* =========================
+   SYSTEM POPUP
+========================= */
+function openSystemPopup(title, message, confirmAction) {
+  document.getElementById("systemPopupTitle").textContent = title;
+  document.getElementById("systemPopupMessage").textContent = message;
+
+  const confirmBtn = document.getElementById("systemPopupConfirmBtn");
+  confirmBtn.onclick = confirmAction;
+
+  document.getElementById("systemPopup").classList.add("active");
+}
+
+window.closeSystemPopup = function() {
+  document.getElementById("systemPopup").classList.remove("active");
+};
+
+/* =========================
+   INFO POPUP
+========================= */
+function showInfoPopup(title, message) {
+  document.getElementById("infoPopupTitle").textContent = title;
+  document.getElementById("infoPopupMessage").textContent = message;
+  document.getElementById("infoPopup").classList.add("active");
+}
+
+window.closeInfoPopup = function() {
+  document.getElementById("infoPopup").classList.remove("active");
 };
 
 /* =========================
