@@ -11,6 +11,15 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import {
+  initGlobalClickSound,
+  initThemeMusic,
+  playThemeMusic,
+  restartThemeMusic,
+  stopThemeMusic,
+  handleSoundToggle
+} from "./sound.js";
+
 /* =========================
    FIREBASE CONFIG
 ========================= */
@@ -151,7 +160,7 @@ function loadPreferences() {
   document.getElementById("autoAdvanceToggle").checked = autoAdvance === "true";
 
   document.getElementById("soundToggle").addEventListener("change", (e) => {
-    localStorage.setItem("soundEnabled", e.target.checked ? "true" : "false");
+    handleSoundToggle(e.target.checked);
   });
 
   document.getElementById("autoAdvanceToggle").addEventListener("change", (e) => {
@@ -402,6 +411,7 @@ window.toggleTheme = function() {
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
   updateIcon();
+  restartThemeMusic();
 };
 
 function updateIcon() {
@@ -411,3 +421,6 @@ function updateIcon() {
 }
 
 loadTheme();
+initGlobalClickSound();
+initThemeMusic();
+playThemeMusic();
