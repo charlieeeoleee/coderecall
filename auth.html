@@ -1,80 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Code: Recall - Login</title>
-<link rel="stylesheet" href="auth.css">
-<link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta charset="UTF-8">
+  <title>Code: Recall - Login</title>
+  <link rel="stylesheet" href="auth.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
-<div class="container">
+  <button class="back-btn" onclick="goBack()">← Back</button>
 
-  <!-- LEFT SIDE -->
-  <div class="left">
-    <img src="assets/logo.png" class="main-logo">
+  <div class="container">
 
-    <button class="theme-toggle" onclick="toggleTheme()">
-      <span id="themeIcon">🌙</span>
-    </button>
+    <!-- LEFT SIDE -->
+    <div class="left">
+      <img src="assets/logo-dark.png" class="main-logo" alt="Code Recall Logo">
 
-  </div>
-
-
-  <!-- RIGHT SIDE -->
-  <div class="right">
-
-    <!-- LOGIN FORM -->
-    <div id="loginForm" class="form-box active">
-      <h2>Login</h2>
-
-      <input type="email" id="loginEmail" placeholder="Email">
-      <div class="password-wrapper">
-  <input type="password" id="loginPassword" placeholder="Password">
-  <span class="toggle-password" onclick="togglePassword('loginPassword')">👁</span>
-</div>
-
-      <button class="primary-btn" onclick="login()">Login</button>
-
-      <div class="social-buttons">
-        <button class="google-btn" onclick="googleLogin()">Google</button>
-        <button class="facebook-btn" onclick="facebookLogin()">Facebook</button>
-      </div>
-
-      <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
-
-      <p class="switch-text">
-        Don't have account?
-        <span onclick="showRegister()">Register</span>
-      </p>
+      <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="themeIcon">🌙</span>
+      </button>
     </div>
 
-    <!-- REGISTER FORM -->
-    <div id="registerForm" class="form-box">
-      <h2>Create Account</h2>
+    <!-- RIGHT SIDE -->
+    <div class="right">
 
-      <input type="email" id="registerEmail" placeholder="Email">
-      <div class="password-wrapper">
-  <input type="password" id="registerPassword" placeholder="Password">
-  <span class="toggle-password" onclick="togglePassword('registerPassword')">👁</span>
-</div>
+      <!-- LOGIN FORM -->
+      <div id="loginForm" class="form-box active">
+        <h2>Login</h2>
 
-      <button class="primary-btn" onclick="register()">Register</button>
+        <input type="email" id="loginEmail" placeholder="Email">
 
-      <div class="social-buttons">
-        <button class="google-btn" onclick="googleLogin()">Google</button>
-        <button class="facebook-btn" onclick="facebookLogin()">Facebook</button>
+        <div class="password-wrapper">
+          <input type="password" id="loginPassword" placeholder="Password">
+          <span class="toggle-password" onclick="togglePassword('loginPassword')">👁</span>
+        </div>
+
+        <p class="helper-link forgot-link" onclick="forgotPassword()">Forgot password?</p>
+
+        <button class="primary-btn" onclick="login()">Login</button>
+
+        <div class="social-buttons">
+          <button class="google-btn" onclick="googleLogin()">
+            <span class="google-icon">G</span>
+            <span>Login with Google</span>
+          </button>
+        </div>
+
+        <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
+
+        <p class="switch-text">
+          Don't have an account?
+          <span onclick="showRegister()">Register</span>
+        </p>
       </div>
 
-      <p class="switch-text">
-        Already have account?
-        <span onclick="showLogin()">Login</span>
-      </p>
+      <!-- REGISTER FORM -->
+      <div id="registerForm" class="form-box">
+        <h2 id="registerTitle">Create Account</h2>
+
+        <input type="text" id="registerName" placeholder="Full Name">
+        <input type="email" id="registerEmail" placeholder="Email">
+
+        <div class="password-wrapper" id="registerPasswordWrapper">
+          <input type="password" id="registerPassword" placeholder="Password">
+          <span class="toggle-password" onclick="togglePassword('registerPassword')">👁</span>
+        </div>
+
+        <button class="primary-btn" id="registerBtn" onclick="register()">Register</button>
+
+        <div class="social-buttons">
+          <button class="google-btn" onclick="googleLogin()">
+            <span class="google-icon">G</span>
+            <span>Continue with Google</span>
+          </button>
+        </div>
+
+        <p class="helper-text" id="googleRegisterNote" style="display:none;">
+          Complete your Google account registration to continue.
+        </p>
+
+        <p class="switch-text">
+          Already have an account?
+          <span onclick="showLogin()">Login</span>
+        </p>
+      </div>
+
     </div>
-
   </div>
-</div>
 
-<script type="module" src="auth.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
