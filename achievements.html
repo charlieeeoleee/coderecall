@@ -115,6 +115,22 @@
   <!-- CONFETTI -->
   <div id="confettiContainer" class="confetti-container"></div>
 
+  <!-- FULLSCREEN COMPLETION SCREEN -->
+  <div id="completionOverlay" class="completion-overlay">
+    <div class="completion-content">
+      <div class="completion-glow"></div>
+      <div class="completion-icon">🏆</div>
+      <h1 class="completion-title">SYSTEM COMPLETED</h1>
+      <p class="completion-text">
+        You finished all subjects and completed the entire learning system!
+      </p>
+      <div class="completion-badge">Completionist Unlocked</div>
+      <button class="completion-close-btn" onclick="closeCompletionOverlay()">
+        Awesome!
+      </button>
+    </div>
+  </div>
+
   <!-- THEME BUTTON -->
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">🌙</span>

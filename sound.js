@@ -1,209 +1,286 @@
-// ===============================
-// GLOBAL STATE
-// ===============================
-let sounds = {};
-let hasUserInteracted = false;
-let hasStartedMusic = false;
-let currentMusicVolume = 1;
+const STORAGE_KEYS = {
+  soundEnabled: "soundEnabled",
+  musicEnabled: "musicEnabled",
+  musicTime: "themeMusicTime",
+  musicTrack: "themeMusicTrack",
+  musicPlaying: "themeMusicPlaying",
+  musicVolume: "themeMusicVolume"
+};
 
-// ===============================
-// LOAD SOUNDS
-// ===============================
-function loadSound(name, loop = false) {
+let sounds = {};
+let clickSoundInitialized = false;
+let themeMusic = null;
+let musicResumeTimer = null;
+
+function loadSound(name, volume = 1) {
   const audio = new Audio(`assets/sounds/${name}.mp3`);
   audio.preload = "auto";
-  audio.loop = loop;
+  audio.volume = volume;
   return audio;
+}
+
+function getThemeTrackName() {
+  const isLight = document.body.classList.contains("light-mode");
+  return isLight ? "bg-light" : "bg-dark";
+}
+
+function getSavedMusicTime() {
+  const value = parseFloat(sessionStorage.getItem(STORAGE_KEYS.musicTime) || "0");
+  return Number.isFinite(value) ? value : 0;
+}
+
+function saveMusicTime() {
+  if (!themeMusic) return;
+  sessionStorage.setItem(STORAGE_KEYS.musicTime, String(themeMusic.currentTime || 0));
+}
+
+function saveMusicState() {
+  if (!themeMusic) return;
+
+  sessionStorage.setItem(STORAGE_KEYS.musicTrack, getThemeTrackName());
+  sessionStorage.setItem(STORAGE_KEYS.musicPlaying, String(!themeMusic.paused));
+  sessionStorage.setItem(STORAGE_KEYS.musicVolume, String(themeMusic.volume ?? 0.35));
+  saveMusicTime();
+}
+
+function clearMusicResumeTimer() {
+  if (musicResumeTimer) {
+    clearInterval(musicResumeTimer);
+    musicResumeTimer = null;
+  }
+}
+
+function startMusicStateSync() {
+  clearMusicResumeTimer();
+
+  musicResumeTimer = setInterval(() => {
+    saveMusicState();
+  }, 500);
+}
+
+function stopMusicStateSync() {
+  clearMusicResumeTimer();
+  saveMusicState();
+}
+
+function createThemeMusic() {
+  const trackName = getThemeTrackName();
+  const audio = new Audio(`assets/sounds/${trackName}.mp3`);
+  audio.loop = true;
+  audio.preload = "auto";
+  audio.volume = parseFloat(sessionStorage.getItem(STORAGE_KEYS.musicVolume) || "0.35");
+
+  const savedTrack = sessionStorage.getItem(STORAGE_KEYS.musicTrack);
+  const savedTime = getSavedMusicTime();
+
+  if (savedTrack === trackName && savedTime > 0) {
+    try {
+      audio.currentTime = savedTime;
+    } catch {
+      // ignore seek issue
+    }
+  } else {
+    sessionStorage.setItem(STORAGE_KEYS.musicTime, "0");
+  }
+
+  audio.addEventListener("timeupdate", saveMusicTime);
+  audio.addEventListener("pause", saveMusicState);
+  audio.addEventListener("play", saveMusicState);
+  audio.addEventListener("ended", saveMusicState);
+
+  themeMusic = audio;
+  return themeMusic;
+}
+
+function canPlayMusic() {
+  return localStorage.getItem(STORAGE_KEYS.musicEnabled) !== "false";
+}
+
+function canPlaySounds() {
+  return localStorage.getItem(STORAGE_KEYS.soundEnabled) !== "false";
 }
 
 export function initSounds() {
   sounds = {
-    click: loadSound("click"),
-    correct: loadSound("correct"),
-    wrong: loadSound("wrong"),
-    completion: loadSound("completion"),
-    badge: loadSound("badge"),
-    master: loadSound("master-badge"),
-    confetti: loadSound("confetti"),
-    full: loadSound("full-completion"),
-
-    bgLight: loadSound("bg-light", true),
-    bgDark: loadSound("bg-dark", true),
+    badge: loadSound("badge", 0.8),
+    master: loadSound("master-badge", 0.9),
+    full: loadSound("full-completion", 0.95),
+    completion: loadSound("completion", 0.85),
+    confetti: loadSound("confetti", 0.75),
+    click: loadSound("click", 0.45),
+    correct: loadSound("correct", 0.75),
+    wrong: loadSound("wrong", 0.75)
   };
 
-  sounds.bgLight.volume = currentMusicVolume;
-  sounds.bgDark.volume = currentMusicVolume;
-}
+  if (!themeMusic) {
+    createThemeMusic();
+  }
 
-// ===============================
-// UTIL
-// ===============================
-function isSoundEnabled() {
-  return localStorage.getItem("soundEnabled") !== "false";
-}
+  window.addEventListener("beforeunload", () => {
+    stopMusicStateSync();
+  });
 
-function markUserInteraction() {
-  hasUserInteracted = true;
-}
-
-function applyMusicVolume(volume) {
-  currentMusicVolume = volume;
-
-  if (sounds.bgLight) sounds.bgLight.volume = volume;
-  if (sounds.bgDark) sounds.bgDark.volume = volume;
-}
-
-// ===============================
-// PLAY SOUND (NO DELAY FIX)
-// ===============================
-export function playSound(name) {
-  if (!isSoundEnabled()) return;
-
-  const original = sounds[name];
-  if (!original) return;
-
-  const clone = original.cloneNode();
-  clone.volume = original.volume;
-  clone.play().catch(() => {});
-}
-
-// ===============================
-// CLICK SOUND (GLOBAL)
-// ===============================
-export function initGlobalClickSound() {
-  document.addEventListener("click", (e) => {
-    markUserInteraction();
-
-    if (!isSoundEnabled()) return;
-
-    const target = e.target;
-    if (!target) return;
-
-    const isClickable =
-      target.tagName === "BUTTON" ||
-      target.tagName === "A" ||
-      target.tagName === "INPUT" ||
-      target.tagName === "LABEL" ||
-      target.closest("button") ||
-      target.closest("a") ||
-      target.closest("label") ||
-      target.closest(".switch") ||
-      target.closest(".slider") ||
-      target.closest(".subject-card") ||
-      target.closest(".badge-card") ||
-      target.closest(".achievement-card") ||
-      target.closest(".theme-toggle");
-
-    const noClickSound = target.closest(".no-click-sound");
-
-    if (isClickable && !noClickSound) {
-      playSound("click");
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      saveMusicState();
     }
   });
 }
 
-// ===============================
-// THEME MUSIC CORE
-// ===============================
-function getCurrentThemeMusic() {
-  return document.body.classList.contains("light-mode")
-    ? sounds.bgLight
-    : sounds.bgDark;
+export function playSound(name) {
+  if (!canPlaySounds()) return;
+  if (!sounds[name]) return;
+
+  try {
+    const instance = sounds[name].cloneNode();
+    instance.volume = sounds[name].volume;
+    instance.play().catch(() => {});
+  } catch {
+    // ignore playback issues
+  }
 }
 
-function stopAllThemeMusic() {
-  sounds.bgLight.pause();
-  sounds.bgLight.currentTime = 0;
+export function initGlobalClickSound() {
+  if (clickSoundInitialized) return;
+  clickSoundInitialized = true;
 
-  sounds.bgDark.pause();
-  sounds.bgDark.currentTime = 0;
+  document.addEventListener("click", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const clickable = target.closest("button, a, .badge-card, .top-player, .rank-item, .subject-card, .module-card");
+    if (!clickable) return;
+
+    playSound("click");
+  });
 }
 
-// ===============================
-// PLAY THEME MUSIC
-// ===============================
-export function playThemeMusic(forceRestart = false) {
-  if (!isSoundEnabled()) {
-    stopAllThemeMusic();
-    return Promise.reject();
+export async function tryStartMusic() {
+  if (!canPlayMusic()) return;
+
+  if (!themeMusic) {
+    createThemeMusic();
   }
 
-  const audio = getCurrentThemeMusic();
+  if (!themeMusic) return;
 
-  if (forceRestart) {
-    stopAllThemeMusic();
-    audio.currentTime = 0;
+  const savedTrack = sessionStorage.getItem(STORAGE_KEYS.musicTrack);
+  const currentTrack = getThemeTrackName();
+  const savedTime = getSavedMusicTime();
+
+  if (savedTrack === currentTrack && savedTime > 0 && Math.abs(themeMusic.currentTime - savedTime) > 0.5) {
+    try {
+      themeMusic.currentTime = savedTime;
+    } catch {
+      // ignore seek issues
+    }
   }
 
-  audio.volume = currentMusicVolume;
-  return audio.play();
+  try {
+    await themeMusic.play();
+    sessionStorage.setItem(STORAGE_KEYS.musicPlaying, "true");
+    saveMusicState();
+    startMusicStateSync();
+  } catch {
+    // browser autoplay blocked
+  }
 }
 
-// ===============================
-// RESTART
-// ===============================
 export function restartThemeMusic() {
-  if (!isSoundEnabled()) return;
+  const shouldResume = sessionStorage.getItem(STORAGE_KEYS.musicPlaying) !== "false";
 
-  stopAllThemeMusic();
+  stopMusicStateSync();
 
-  const audio = getCurrentThemeMusic();
-  audio.currentTime = 0;
-  audio.volume = currentMusicVolume;
-  audio.play().catch(() => {});
+  let currentTime = getSavedMusicTime();
+  let currentVolume = 0.35;
+
+  if (themeMusic) {
+    currentVolume = themeMusic.volume || 0.35;
+    try {
+      themeMusic.pause();
+    } catch {
+      // ignore
+    }
+  }
+
+  const oldMusic = themeMusic;
+  themeMusic = null;
+
+  if (oldMusic) {
+    oldMusic.src = "";
+  }
+
+  createThemeMusic();
+
+  if (themeMusic) {
+    themeMusic.volume = currentVolume;
+    try {
+      themeMusic.currentTime = currentTime;
+    } catch {
+      // ignore
+    }
+  }
+
+  sessionStorage.setItem(STORAGE_KEYS.musicTrack, getThemeTrackName());
+  sessionStorage.setItem(STORAGE_KEYS.musicTime, String(currentTime));
+
+  if (shouldResume && canPlayMusic()) {
+    tryStartMusic();
+  } else {
+    saveMusicState();
+  }
 }
 
-// ===============================
-// STOP MUSIC
-// ===============================
-export function stopThemeMusic() {
-  stopAllThemeMusic();
-}
-
-// ===============================
-// AUTO START MUSIC
-// ===============================
-export function tryStartMusic() {
-  if (hasStartedMusic) return;
-
-  playThemeMusic(true)
-    .then(() => {
-      hasStartedMusic = true;
-    })
-    .catch(() => {
-      document.addEventListener(
-        "click",
-        () => {
-          if (!hasStartedMusic) {
-            playThemeMusic(true);
-            hasStartedMusic = true;
-          }
-        },
-        { once: true }
-      );
-    });
-}
-
-// ===============================
-// MUSIC DUCKING FOR MODALS
-// ===============================
-export function lowerThemeMusic(volume = 0.15) {
-  applyMusicVolume(volume);
+export function lowerThemeMusic(volume = 0.08) {
+  if (!themeMusic) return;
+  themeMusic.volume = volume;
+  saveMusicState();
 }
 
 export function restoreThemeMusic() {
-  applyMusicVolume(1);
+  if (!themeMusic) return;
+
+  let savedVolume = parseFloat(sessionStorage.getItem(STORAGE_KEYS.musicVolume) || "0.35");
+
+  if (!Number.isFinite(savedVolume) || savedVolume <= 0.1) {
+    savedVolume = 0.35;
+  }
+
+  themeMusic.volume = savedVolume;
+  saveMusicState();
 }
 
-// ===============================
-// SETTINGS TOGGLE INTEGRATION
-// ===============================
 export function handleSoundToggle(enabled) {
-  localStorage.setItem("soundEnabled", enabled ? "true" : "false");
+  localStorage.setItem(STORAGE_KEYS.soundEnabled, enabled ? "true" : "false");
+}
 
-  if (!enabled) {
-    stopAllThemeMusic();
-  } else {
+export function handleMusicToggle(enabled) {
+  localStorage.setItem(STORAGE_KEYS.musicEnabled, enabled ? "true" : "false");
+
+  if (!themeMusic) {
+    createThemeMusic();
+  }
+
+  if (enabled) {
     tryStartMusic();
+  } else if (themeMusic) {
+    themeMusic.pause();
+    sessionStorage.setItem(STORAGE_KEYS.musicPlaying, "false");
+    saveMusicState();
+    stopMusicStateSync();
   }
 }
+
+export function stopThemeMusic() {
+  if (!themeMusic) return;
+  themeMusic.pause();
+  sessionStorage.setItem(STORAGE_KEYS.musicPlaying, "false");
+  saveMusicState();
+  stopMusicStateSync();
+}
+
+export function getThemeMusic() {
+  return themeMusic;
+}
+
+window.playSound = playSound;

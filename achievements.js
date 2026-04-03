@@ -464,11 +464,34 @@ function handleNewBadgeUnlocks(badges) {
   );
 
   if (newlyUnlockedBadges.length > 0) {
+
+    const nonCompletionBadges = newlyUnlockedBadges.filter(
+  (badge) => badge.name !== "Completionist"
+);
+
+nonCompletionBadges.forEach((badge, index) => {
+  setTimeout(() => {
+    showAchievementPopup(
+      `${badge.icon} ${badge.name}`,
+      badge.rewardText
+    );
+
+    if (badge.name === "Master") {
+      playSound("master");
+    } else {
+      playSound("badge");
+    }
+  }, index * 900);
+});
+
+
+
     playAutoUnlockCelebration(newlyUnlockedBadges);
   }
 
   saveUnlockedBadges(currentlyUnlockedNames);
 }
+
 
 /* =========================
    MODAL
@@ -718,3 +741,41 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
+function showAchievementPopup(title, desc) {
+  const containerId = "achievementPopupContainer";
+
+  let container = document.getElementById(containerId);
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = containerId;
+    document.body.appendChild(container);
+  }
+
+  const popup = document.createElement("div");
+  popup.className = "achievement-popup";
+  popup.innerHTML = `
+    <div class="popup-icon">🏆</div>
+    <div class="popup-text">
+      <strong>${title}</strong>
+      <p>${desc}</p>
+    </div>
+  `;
+
+  container.appendChild(popup);
+
+  requestAnimationFrame(() => {
+    popup.classList.add("show");
+  });
+
+  setTimeout(() => {
+    popup.classList.remove("show");
+
+    setTimeout(() => {
+      popup.remove();
+    }, 400);
+  }, 3500);
+}
+
+window.showAchievementPopup = showAchievementPopup;
