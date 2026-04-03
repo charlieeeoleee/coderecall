@@ -13,7 +13,6 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
-
   <div class="layout">
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -26,6 +25,7 @@
           <a href="dashboard.html">🏠 Dashboard</a>
           <a href="subjects.html">📚 Subjects</a>
           <a href="achievements.html">🏆 Badges</a>
+          <a href="leaderboard.html">🥇 Leaderboard</a>
           <a href="settings.html" class="active-link">⚙ Settings</a>
         </nav>
       </div>
@@ -50,11 +50,9 @@
       </div>
 
       <div class="settings-grid">
-
         <!-- ACCOUNT -->
         <div class="card settings-card">
           <h3>👤 Account</h3>
-
           <div class="account-box">
             <img id="profilePhoto" src="https://i.pravatar.cc/80?img=12" alt="Profile Photo">
 
@@ -76,7 +74,10 @@
               <strong>Theme</strong>
               <p>Switch between dark and light mode.</p>
             </div>
-            <button class="action-btn" onclick="toggleTheme()">Toggle Theme</button>
+
+            <button class="action-btn theme-action-btn" onclick="toggleTheme()">
+              Toggle Theme
+            </button>
           </div>
         </div>
 
@@ -89,6 +90,7 @@
               <strong>Sound Effects</strong>
               <p>Enable or disable sounds in modules and quizzes.</p>
             </div>
+
             <label class="switch">
               <input type="checkbox" id="soundToggle">
               <span class="slider"></span>
@@ -100,6 +102,7 @@
               <strong>Auto-Advance</strong>
               <p>Automatically continue after completing a module or quiz.</p>
             </div>
+
             <label class="switch">
               <input type="checkbox" id="autoAdvanceToggle">
               <span class="slider"></span>
@@ -110,7 +113,6 @@
         <!-- PROGRESS -->
         <div class="card settings-card">
           <h3>📊 Progress</h3>
-
           <div class="progress-info">
             <p><strong>Total XP:</strong> <span id="totalXP">0</span></p>
             <p><strong>Level:</strong> <span id="levelValue">1</span></p>
@@ -128,7 +130,6 @@
             <button class="action-btn warning-btn" onclick="clearLocalData()">Clear Local Data</button>
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -145,7 +146,6 @@
       <p>
         You are currently using a guest account. Register an account now to save your progress and XP before logging out.
       </p>
-
       <div class="popup-actions">
         <button onclick="registerGuestAccount()">Register to Save Progress</button>
         <button class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
@@ -159,7 +159,6 @@
     <div class="popup-box">
       <h3 id="systemPopupTitle">System Action</h3>
       <p id="systemPopupMessage">Message</p>
-
       <div class="popup-actions">
         <button id="systemPopupConfirmBtn">Confirm</button>
         <button class="secondary-btn" onclick="closeSystemPopup()">Cancel</button>
@@ -172,7 +171,6 @@
     <div class="popup-box">
       <h3 id="infoPopupTitle">Notice</h3>
       <p id="infoPopupMessage">Message</p>
-
       <div class="popup-actions">
         <button onclick="closeInfoPopup()">OK</button>
       </div>

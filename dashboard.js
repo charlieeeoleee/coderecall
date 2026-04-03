@@ -12,7 +12,12 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc
+  updateDoc,
+  collection,
+  getDocs,
+  query,
+  orderBy,
+  limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
   initSounds,
@@ -41,6 +46,7 @@ let currentUser = null;
 let currentXP = 0;
 let currentIsGuest = false;
 let currentAchievements = [];
+let leaderboardData = [];
 
 /* =========================
    AUTH STATE
@@ -76,14 +82,12 @@ async function loadDashboard() {
 
   if (docSnap.exists()) {
     const data = docSnap.data();
-
     xp = data.xp || 0;
     name =
       data.name ||
       currentUser.displayName ||
       currentUser.email ||
       "User";
-
     photo =
       data.photo ||
       currentUser.photoURL ||
@@ -94,7 +98,6 @@ async function loadDashboard() {
       currentUser.displayName ||
       currentUser.email ||
       "User";
-
     photo =
       currentUser.photoURL ||
       "https://i.pravatar.cc/40?img=12";
@@ -110,10 +113,11 @@ async function loadDashboard() {
   }
 
   currentXP = xp;
-
   updateUserUI(name, photo);
   updateStatsUI(xp);
   renderDashboardAchievements(xp, false);
+  await loadLeaderboard();
+  renderDashboardLeaderboardPreview();
 }
 
 /* =========================
@@ -123,11 +127,97 @@ function loadGuestDashboard() {
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
 
   currentXP = guestXP;
-
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   updateStatsUI(guestXP);
   renderDashboardAchievements(guestXP, true);
+  renderDashboardLeaderboardPreview();
 }
+
+/* =========================
+   LEADERBOARD DATA
+========================= */
+async function loadLeaderboard() {
+  try {
+    const q = query(
+      collection(db, "users"),
+      orderBy("xp", "desc"),
+      limit(50)
+    );
+
+    const snapshot = await getDocs(q);
+
+    leaderboardData = [];
+    snapshot.forEach((docItem) => {
+      leaderboardData.push({
+        id: docItem.id,
+        ...docItem.data()
+      });
+    });
+
+  } catch (error) {
+    console.error("Leaderboard Error:", error);
+    leaderboardData = [];
+  }
+}
+
+function buildDashboardLeaderboardPlayers() {
+  const players = [...leaderboardData];
+
+  if (currentIsGuest) {
+    players.push({
+      id: "guest-user",
+      name: "Guest",
+      photo: "https://i.pravatar.cc/40?img=8",
+      xp: currentXP
+    });
+  }
+
+  players.sort((a, b) => (b.xp || 0) - (a.xp || 0));
+  return players.slice(0, 3);
+}
+
+function renderDashboardLeaderboardPreview() {
+  const container = document.getElementById("dashboardLeaderboardPreview");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const topPlayers = buildDashboardLeaderboardPlayers();
+
+  if (!topPlayers.length) {
+    container.innerHTML = `<div class="preview-empty">No leaderboard data yet.</div>`;
+    return;
+  }
+
+  topPlayers.forEach((player, index) => {
+    const positionClass = index === 0 ? "first" : index === 1 ? "second" : "third";
+    const medal = index === 0 ? "👑" : index === 1 ? "🥈" : "🥉";
+    const rankLabel = index === 0 ? "1st Place" : index === 1 ? "2nd Place" : "3rd Place";
+
+    const card = document.createElement("div");
+    card.className = `preview-player ${positionClass}`;
+
+    card.innerHTML = `
+      <div class="preview-badge">${medal}</div>
+      <img class="preview-avatar" src="${player.photo || "https://i.pravatar.cc/40?img=12"}" alt="${escapeHtml(player.name || "User")}">
+      <div class="preview-name">${escapeHtml(player.name || "User")}</div>
+      <div class="preview-rank">${rankLabel}</div>
+      <div class="preview-xp">${player.xp || 0} XP</div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+window.goToLeaderboard = function() {
+  window.location.href = "leaderboard.html";
+};
 
 /* =========================
    UPDATE USER STREAK (REAL USER)
@@ -196,8 +286,62 @@ function updateStatsUI(xp) {
 
   document.getElementById("xp").textContent = xp;
   document.getElementById("level").textContent = level;
-  document.getElementById("progressText").textContent = progress + "%";
-  document.getElementById("progressFill").style.width = progress + "%";
+  animateNumber("xp", xp);
+  animateNumber("level", level);
+  animateProgress(progress);
+}
+
+function animateNumber(elementId, targetValue) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  const duration = 900;
+  const start = 0;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(start + (targetValue - start) * eased);
+
+    el.textContent = value;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+function animateProgress(target) {
+  const text = document.getElementById("progressText");
+  const fill = document.getElementById("progressFill");
+  if (!text || !fill) return;
+
+  let current = 0;
+  const duration = 1000;
+  const startTime = performance.now();
+
+  fill.style.width = "0%";
+  text.textContent = "0%";
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    current = Math.round(target * eased);
+
+    fill.style.width = `${current}%`;
+    text.textContent = `${current}%`;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
 }
 
 /* =========================
@@ -208,7 +352,6 @@ function renderDashboardAchievements(xp, isGuest) {
   if (!grid) return;
 
   let streak = 0;
-
   if (isGuest) {
     streak = parseInt(localStorage.getItem("guest_streak")) || 0;
   }
@@ -288,9 +431,11 @@ function renderDashboardAchievements(xp, isGuest) {
 
   grid.innerHTML = "";
 
-  currentAchievements.forEach((achievement) => {
+  currentAchievements.forEach((achievement, index) => {
     const card = document.createElement("button");
     card.className = `achievement-card ${achievement.unlocked ? "unlocked" : "locked"}`;
+    card.style.animation = `fadeSlideUp 0.55s ease both`;
+    card.style.animationDelay = `${0.08 * (index + 1)}s`;
 
     card.innerHTML = `
       <div class="achievement-top">
@@ -344,6 +489,7 @@ function launchConfetti() {
   if (!container) return;
 
   container.innerHTML = "";
+
   const colors = ["#ff2e97", "#00e5ff", "#00ffcc", "#ff8c00", "#ffffff"];
 
   for (let i = 0; i < 70; i++) {
@@ -373,7 +519,6 @@ window.startGame = function(subject) {
 ========================= */
 function hasGuestProgress() {
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
-
   const progressKeys = [
     "hardware_pretest",
     "hardware_modules",
@@ -384,7 +529,6 @@ function hasGuestProgress() {
     "electrical_quiz",
     "electrical_posttest"
   ];
-
   const hasProgressKey = progressKeys.some((key) => localStorage.getItem(key) === "true");
   return guestXP > 0 || hasProgressKey;
 }
@@ -400,26 +544,20 @@ function openGuestLogoutPopup(withProgress = true) {
   if (withProgress) {
     title.textContent = "Save Your Progress";
     message.textContent = "You are currently using a guest account. Register an account now to save your progress and XP before logging out.";
-
     primaryBtn.style.display = "block";
     primaryBtn.textContent = "Register to Save Progress";
     primaryBtn.onclick = registerGuestAccount;
-
     secondaryBtn.style.display = "block";
     secondaryBtn.textContent = "Log Out Anyway";
     secondaryBtn.onclick = confirmGuestLogout;
-
     cancelBtn.style.display = "block";
   } else {
     title.textContent = "Log Out Guest Session";
     message.textContent = "You are currently using guest mode. Are you sure you want to log out?";
-
     primaryBtn.style.display = "block";
     primaryBtn.textContent = "Log Out";
     primaryBtn.onclick = confirmGuestLogout;
-
     secondaryBtn.style.display = "none";
-
     cancelBtn.style.display = "block";
   }
 
@@ -499,8 +637,8 @@ function isYesterday(previousDate, currentDate) {
 
   const prev = new Date(previousDate + "T00:00:00");
   const curr = new Date(currentDate + "T00:00:00");
-
   const diff = curr.getTime() - prev.getTime();
+
   return diff === 24 * 60 * 60 * 1000;
 }
 
@@ -526,7 +664,6 @@ window.toggleTheme = function() {
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-
   icon.textContent =
     document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
@@ -536,6 +673,6 @@ initSounds();
 initGlobalClickSound();
 tryStartMusic();
 
-document.body.addEventListener("click", (e) => {
+document.body.addEventListener("click", () => {
   tryStartMusic();
-}, {once: true});
+}, { once: true });

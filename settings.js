@@ -10,7 +10,6 @@ import {
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 import {
   initSounds,
   initGlobalClickSound,
@@ -77,6 +76,8 @@ async function loadUserSettings() {
 
     await setDoc(userRef, {
       xp: 0,
+      xpWeekly: 0,
+      xpChange: 0,
       name,
       photo,
       email
@@ -155,14 +156,17 @@ function loadPreferences() {
   const soundEnabled = localStorage.getItem("soundEnabled");
   const autoAdvance = localStorage.getItem("autoAdvance");
 
-  document.getElementById("soundToggle").checked = soundEnabled !== "false";
-  document.getElementById("autoAdvanceToggle").checked = autoAdvance === "true";
+  const soundToggle = document.getElementById("soundToggle");
+  const autoAdvanceToggle = document.getElementById("autoAdvanceToggle");
 
-  document.getElementById("soundToggle").addEventListener("change", (e) => {
+  soundToggle.checked = soundEnabled !== "false";
+  autoAdvanceToggle.checked = autoAdvance === "true";
+
+  soundToggle.addEventListener("change", (e) => {
     handleSoundToggle(e.target.checked);
   });
 
-  document.getElementById("autoAdvanceToggle").addEventListener("change", (e) => {
+  autoAdvanceToggle.addEventListener("change", (e) => {
     localStorage.setItem("autoAdvance", e.target.checked ? "true" : "false");
   });
 }
@@ -203,9 +207,31 @@ function renderProgress(xp) {
     if (done) completedSubjects++;
   });
 
-  document.getElementById("totalXP").textContent = xp;
-  document.getElementById("levelValue").textContent = level;
-  document.getElementById("completedSubjects").textContent = completedSubjects;
+  animateNumber(document.getElementById("totalXP"), xp);
+  animateNumber(document.getElementById("levelValue"), level);
+  animateNumber(document.getElementById("completedSubjects"), completedSubjects);
+}
+
+function animateNumber(element, targetValue) {
+  if (!element) return;
+
+  const duration = 900;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(targetValue * eased);
+
+    element.textContent = value;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
 }
 
 /* =========================
@@ -225,7 +251,8 @@ window.resetProgress = function() {
         "electrical_modules",
         "electrical_quiz",
         "electrical_posttest",
-        "guest_xp"
+        "guest_xp",
+        "guest_xpWeekly"
       ];
 
       keysToRemove.forEach(key => localStorage.removeItem(key));
@@ -238,7 +265,9 @@ window.resetProgress = function() {
           const data = docSnap.data();
           await setDoc(userRef, {
             ...data,
-            xp: 0
+            xp: 0,
+            xpWeekly: 0,
+            xpChange: 0
           });
         }
       }
@@ -299,6 +328,7 @@ function clearGuestSession() {
   const keysToRemove = [
     "guest",
     "guest_xp",
+    "guest_xpWeekly",
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
@@ -419,6 +449,9 @@ function updateIcon() {
   icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
 
+/* =========================
+   INIT
+========================= */
 loadTheme();
 initSounds();
 initGlobalClickSound();

@@ -10,7 +10,6 @@ import {
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 import {
   initSounds,
   initGlobalClickSound,
@@ -21,7 +20,9 @@ import {
   restoreThemeMusic
 } from "./sound.js";
 
-/* FIREBASE CONFIG */
+/* =========================
+   FIREBASE CONFIG
+========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
   authDomain: "gamifiedlearningsystem.firebaseapp.com",
@@ -37,6 +38,7 @@ const db = getFirestore(app);
 
 let currentIsGuest = false;
 let currentUser = null;
+let isCelebrating = false;
 
 /* =========================
    AUTH
@@ -72,6 +74,8 @@ async function loadRealUser(user) {
   if (!docSnap.exists()) {
     await setDoc(userRef, {
       xp: 0,
+      xpWeekly: 0,
+      xpChange: 0,
       name,
       photo,
       email: user.email || "",
@@ -119,11 +123,9 @@ function getBadgeStorageKey() {
   if (currentIsGuest) {
     return "badge_unlocks_guest";
   }
-
   if (currentUser?.uid) {
     return `badge_unlocks_${currentUser.uid}`;
   }
-
   return "badge_unlocks_default";
 }
 
@@ -146,10 +148,10 @@ function getBadgePrioritySound(badgeName) {
   return "badge";
 }
 
-let isCelebrating = false;
-
+/* =========================
+   CELEBRATION
+========================= */
 function playAutoUnlockCelebration(newlyUnlockedBadges) {
-  // 🚫 stop if walang new badges OR may ongoing celebration
   if (!newlyUnlockedBadges.length || isCelebrating) return;
 
   isCelebrating = true;
@@ -159,24 +161,20 @@ function playAutoUnlockCelebration(newlyUnlockedBadges) {
   );
 
   if (hasCompletionist) {
-    // 🎉 FINAL SYSTEM COMPLETION
     playSound("full");
-
     setTimeout(() => {
       playSound("confetti");
-    }, 300);
-
+      launchConfetti();
+      openCompletionOverlay();
+    }, 250);
   } else {
-    // 🔔 normal badge unlock
     playSound("badge");
+    launchConfetti();
   }
 
-  launchConfetti();
-
-  // 🔓 unlock after delay para hindi mag spam
   setTimeout(() => {
     isCelebrating = false;
-  }, 2000);
+  }, 2500);
 }
 
 /* =========================
@@ -198,8 +196,8 @@ function buildBadges(xp, progressObj, isGuest) {
   const exploredBoth =
     (hardwarePre || hardwareModules || hardwareQuiz || hardwarePost) &&
     (electricalPre || electricalModules || electricalQuiz || electricalPost);
-  const bothSubjectsCompleted = hardwarePost && electricalPost;
 
+  const bothSubjectsCompleted = hardwarePost && electricalPost;
   const streak = isGuest ? getGuestStreak() : 0;
   void streak;
 
@@ -334,7 +332,7 @@ function renderBadges(xp, progressObj, isGuest) {
 
   let unlockedCount = 0;
 
-  badges.forEach((badge) => {
+  badges.forEach((badge, index) => {
     const isUnlocked = badge.unlocked;
     if (isUnlocked) unlockedCount++;
 
@@ -342,6 +340,7 @@ function renderBadges(xp, progressObj, isGuest) {
 
     const card = document.createElement("button");
     card.className = `badge-card ${isUnlocked ? "unlocked" : "locked"}`;
+    card.style.animationDelay = `${0.07 * (index + 1)}s`;
 
     card.innerHTML = `
       <div class="badge-state">${isUnlocked ? "Unlocked" : "Locked"}</div>
@@ -353,7 +352,7 @@ function renderBadges(xp, progressObj, isGuest) {
 
       <div class="badge-progress-wrap">
         <div class="badge-progress-bar">
-          <div class="badge-progress-fill" style="width:${progressPercent}%"></div>
+          <div class="badge-progress-fill" style="width:0%"></div>
         </div>
         <span class="badge-progress-text">${badge.progressValue}/${badge.progressMax} completed</span>
       </div>
@@ -361,22 +360,103 @@ function renderBadges(xp, progressObj, isGuest) {
 
     card.addEventListener("click", () => openBadgeModal(badge));
     grid.appendChild(card);
+
+    const fill = card.querySelector(".badge-progress-fill");
+    if (fill) {
+      requestAnimationFrame(() => {
+        fill.style.width = `${progressPercent}%`;
+      });
+    }
   });
 
   const percent = Math.round((unlockedCount / badges.length) * 100);
 
-  document.getElementById("achievementCount").textContent = `${unlockedCount}/${badges.length}`;
-  document.getElementById("xpValue").textContent = xp;
-  document.getElementById("progressFill").style.width = `${percent}%`;
-  document.getElementById("progressPercent").textContent = `${percent}%`;
+  animateNumber(document.getElementById("xpValue"), xp);
+  animateTextNumber(document.getElementById("achievementCount"), unlockedCount, badges.length);
+  animateProgress(percent);
 
   handleNewBadgeUnlocks(badges);
+}
+
+function animateNumber(element, targetValue) {
+  if (!element) return;
+
+  const duration = 900;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(targetValue * eased);
+
+    element.textContent = value;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+function animateTextNumber(element, current, total) {
+  if (!element) return;
+
+  const duration = 900;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(current * eased);
+
+    element.textContent = `${value}/${total}`;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+function animateProgress(target) {
+  const fill = document.getElementById("progressFill");
+  const text = document.getElementById("progressPercent");
+
+  if (!fill || !text) return;
+
+  fill.style.width = "0%";
+  text.textContent = "0%";
+
+  requestAnimationFrame(() => {
+    fill.style.width = `${target}%`;
+  });
+
+  const duration = 1000;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(target * eased);
+
+    text.textContent = `${value}%`;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
 }
 
 function handleNewBadgeUnlocks(badges) {
   const currentlyUnlocked = badges.filter((badge) => badge.unlocked);
   const currentlyUnlockedNames = currentlyUnlocked.map((badge) => badge.name);
-
   const previouslyUnlockedNames = getSavedUnlockedBadges();
 
   const newlyUnlockedBadges = currentlyUnlocked.filter(
@@ -423,10 +503,40 @@ window.closeBadgeModal = function() {
   restoreThemeMusic();
 };
 
+window.openCompletionOverlay = function() {
+  const overlay = document.getElementById("completionOverlay");
+  if (!overlay) return;
+
+  lowerThemeMusic(0.04);
+
+  overlay.classList.remove("shake");
+  overlay.classList.add("active");
+
+  setTimeout(() => {
+    overlay.classList.add("shake");
+  }, 60);
+};
+
+window.closeCompletionOverlay = function() {
+  const overlay = document.getElementById("completionOverlay");
+  if (!overlay) return;
+
+  overlay.classList.remove("active");
+  overlay.classList.remove("shake");
+  restoreThemeMusic();
+};
+
 window.addEventListener("click", (e) => {
   const modal = document.getElementById("badgeModal");
   if (e.target === modal) {
     modal.classList.remove("active");
+    restoreThemeMusic();
+  }
+
+  const completionOverlay = document.getElementById("completionOverlay");
+  if (e.target === completionOverlay) {
+    completionOverlay.classList.remove("active");
+    completionOverlay.classList.remove("shake");
     restoreThemeMusic();
   }
 });
@@ -445,9 +555,9 @@ function launchConfetti() {
   for (let i = 0; i < 80; i++) {
     const piece = document.createElement("div");
     piece.className = "confetti-piece";
-    piece.style.left = Math.random() * 100 + "vw";
+    piece.style.left = `${Math.random() * 100}vw`;
     piece.style.background = colors[Math.floor(Math.random() * colors.length)];
-    piece.style.animationDuration = (2 + Math.random() * 2) + "s";
+    piece.style.animationDuration = `${2 + Math.random() * 2}s`;
     piece.style.transform = `rotate(${Math.random() * 360}deg)`;
     container.appendChild(piece);
   }
@@ -534,6 +644,7 @@ function clearGuestSession() {
   const keysToRemove = [
     "guest",
     "guest_xp",
+    "guest_xpWeekly",
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
@@ -596,6 +707,9 @@ function updateIcon() {
   icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
 
+/* =========================
+   INIT
+========================= */
 loadTheme();
 initSounds();
 initGlobalClickSound();

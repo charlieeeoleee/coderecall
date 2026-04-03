@@ -8,7 +8,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-
   <div class="layout">
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -16,15 +15,14 @@
         <a href="index.html" class="logo-link">
           <h2 class="logo">CODE:RECALL!</h2>
         </a>
-
         <nav class="menu">
-          <a href="dashboard.html">🏠 Dashboard</a>
+          <a href="dashboard.html" class="active-link">🏠 Dashboard</a>
           <a href="subjects.html">📚 Subjects</a>
           <a href="achievements.html">🏆 Badges</a>
+          <a href="leaderboard.html">🥇 Leaderboard</a>
           <a href="settings.html">⚙ Settings</a>
         </nav>
       </div>
-
       <div class="bottom-section">
         <button onclick="logout()" class="logout-btn">Logout</button>
       </div>
@@ -35,7 +33,6 @@
       <!-- TOPBAR -->
       <div class="topbar">
         <h2>Dashboard</h2>
-
         <div class="user-top">
           <span id="username">User</span>
           <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
@@ -48,12 +45,10 @@
           <h3>XP</h3>
           <p id="xp">0</p>
         </div>
-
         <div class="card">
           <h3>Level</h3>
           <p id="level">1</p>
         </div>
-
         <div class="card">
           <h3>Progress: <span id="progressText">0%</span></h3>
           <div class="progress-bar">
@@ -71,13 +66,25 @@
         </div>
       </div>
 
+      <!-- LEADERBOARD PREVIEW -->
+      <div class="card section leaderboard-preview-section">
+        <div class="section-head">
+          <div>
+            <h3>Leaderboard Preview</h3>
+            <span class="section-note">Top learners in the system</span>
+          </div>
+          <button class="view-full-btn" onclick="goToLeaderboard()">View Full Leaderboard</button>
+        </div>
+
+        <div id="dashboardLeaderboardPreview" class="dashboard-leaderboard-preview"></div>
+      </div>
+
       <!-- ACHIEVEMENTS -->
       <div class="card section achievements-section">
         <div class="section-head">
           <h3>Achievements</h3>
           <span class="section-note">Click an achievement to view details</span>
         </div>
-
         <div id="achievementsGrid" class="achievements-grid"></div>
       </div>
     </div>
@@ -95,7 +102,6 @@
       <p id="guestLogoutMessage">
         You are currently using a guest account. Register an account now to save your progress and XP before logging out.
       </p>
-
       <div class="popup-actions">
         <button id="guestPrimaryBtn" onclick="registerGuestAccount()">Register to Save Progress</button>
         <button id="guestSecondaryBtn" class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
@@ -111,7 +117,6 @@
       <h3 id="achievementModalTitle">Achievement</h3>
       <p id="achievementModalDesc">Description</p>
       <div id="achievementModalStatus" class="achievement-modal-status">Unlocked</div>
-
       <div class="popup-actions">
         <button onclick="closeAchievementModal()">OK</button>
       </div>

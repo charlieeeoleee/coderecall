@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Badges - Code Recall</title>
+  <title>Leaderboard - Code Recall</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="achievements.css">
+  <link rel="stylesheet" href="leaderboard.css">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -24,8 +24,8 @@
         <nav class="menu">
           <a href="dashboard.html">🏠 Dashboard</a>
           <a href="subjects.html">📚 Subjects</a>
-          <a href="achievements.html" class="active-link">🏆 Badges</a>
-          <a href="leaderboard.html">🥇 Leaderboard</a>
+          <a href="achievements.html">🏆 Badges</a>
+          <a href="leaderboard.html" class="active-link">🥇 Leaderboard</a>
           <a href="settings.html">⚙ Settings</a>
         </nav>
       </div>
@@ -39,8 +39,8 @@
     <div class="main">
       <div class="topbar">
         <div>
-          <h2 class="page-title">Badges</h2>
-          <p class="page-subtitle">Unlock achievements as you grow your XP and complete your learning journey.</p>
+          <h2 class="page-title">Leaderboard</h2>
+          <p class="page-subtitle">Top players in Code Recall ranked by XP.</p>
         </div>
 
         <div class="user-top">
@@ -52,48 +52,60 @@
       <!-- OVERVIEW -->
       <div class="overview-grid">
         <div class="overview-card">
-          <h3>Unlocked</h3>
-          <p id="achievementCount">0/0</p>
+          <h3>Your Rank</h3>
+          <p id="yourRank">--</p>
         </div>
 
         <div class="overview-card">
-          <h3>Total XP</h3>
-          <p id="xpValue">0</p>
+          <h3>Your XP</h3>
+          <p id="yourXP">0</p>
         </div>
 
         <div class="overview-card">
-          <h3>Progress</h3>
-          <div class="progress-bar">
-            <div id="progressFill"></div>
-          </div>
-          <span id="progressPercent">0%</span>
+          <h3>Total Players</h3>
+          <p id="totalPlayers">0</p>
         </div>
       </div>
 
-      <div class="info-note">
-        <p>Click a badge to view its details, requirement, and progress.</p>
+      <div class="leaderboard-toggle">
+       <button onclick="setLeaderboardMode('all')" id="btnAll" class="active">
+        All-Time
+       </button>
+
+       <button onclick="setLeaderboardMode('weekly')" id="btnWeekly">
+        Weekly
+       </button>
+     </div>
+
+      <!-- TOP 3 -->
+      <div class="card section">
+        <div class="section-head">
+          <h3>Top 3 Players</h3>
+          <span class="section-note">Best performers in the system</span>
+        </div>
+
+        <div id="topThree" class="top-three"></div>
       </div>
 
-      <!-- BADGES GRID -->
-      <div class="badges-grid" id="badgesGrid"></div>
-    </div>
-  </div>
+      <!-- TOP MOVERS -->
+      <div class="card section">
+        <div class="section-head">
+          <h3>Top Movers</h3>
+          <span class="section-note">Players with the biggest XP gain</span>
+        </div>
 
-  <!-- BADGE MODAL -->
-  <div id="badgeModal" class="badge-modal">
-    <div class="badge-modal-content">
-      <button class="close-btn" onclick="closeBadgeModal()">✖</button>
-      <div id="modalIcon" class="modal-icon">🏆</div>
-      <h2 id="modalTitle">Badge</h2>
-      <p id="modalDesc">Description</p>
-
-      <div class="modal-detail-box">
-        <p><strong>Requirement:</strong> <span id="modalRequirement">Requirement</span></p>
-        <p><strong>Your Progress:</strong> <span id="modalProgress">0/0 (0%)</span></p>
+        <div id="topMovers" class="movers-grid"></div>
       </div>
 
-      <div id="modalXP" class="modal-xp">Reward</div>
-      <div id="modalState" class="modal-state">Unlocked</div>
+      <!-- FULL RANKING -->
+      <div class="card section">
+        <div class="section-head">
+          <h3>Full Rankings</h3>
+          <span class="section-note">All players ranked by XP</span>
+        </div>
+
+        <div id="leaderboardList" class="leaderboard-list"></div>
+      </div>
     </div>
   </div>
 
@@ -112,14 +124,11 @@
     </div>
   </div>
 
-  <!-- CONFETTI -->
-  <div id="confettiContainer" class="confetti-container"></div>
-
   <!-- THEME BUTTON -->
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">🌙</span>
   </button>
 
-  <script type="module" src="achievements.js"></script>
+  <script type="module" src="leaderboard.js"></script>
 </body>
 </html>

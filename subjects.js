@@ -10,7 +10,6 @@ import {
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
 import {
   initSounds,
   initGlobalClickSound,
@@ -71,6 +70,8 @@ async function loadUserUI() {
   if (!docSnap.exists()) {
     await setDoc(userRef, {
       xp: 0,
+      xpWeekly: 0,
+      xpChange: 0,
       name,
       photo,
       email: currentUser.email || ""
@@ -99,8 +100,9 @@ function loadGuestUI() {
 function loadSubjectStats() {
   const subjects = ["hardware", "electrical"];
   let completedCount = 0;
+  let activeCount = 0;
 
-  subjects.forEach(subject => {
+  subjects.forEach((subject) => {
     const pretest = localStorage.getItem(`${subject}_pretest`) === "true";
     const modules = localStorage.getItem(`${subject}_modules`) === "true";
     const quiz = localStorage.getItem(`${subject}_quiz`) === "true";
@@ -114,7 +116,11 @@ function loadSubjectStats() {
     if (quiz) progress += 25;
     if (posttest) progress += 25;
 
-    if (progress > 0) status = "In Progress";
+    if (progress > 0) {
+      status = "In Progress";
+      activeCount++;
+    }
+
     if (progress === 100) {
       status = "Finished";
       completedCount++;
@@ -125,11 +131,46 @@ function loadSubjectStats() {
     const statusEl = document.getElementById(`${subject}Status`);
 
     if (progressText) progressText.textContent = `${progress}%`;
-    if (progressFill) progressFill.style.width = `${progress}%`;
     if (statusEl) statusEl.textContent = status;
+
+    if (progressFill) {
+      progressFill.style.width = "0%";
+      requestAnimationFrame(() => {
+        progressFill.style.width = `${progress}%`;
+      });
+    }
   });
 
-  document.getElementById("completedCount").textContent = completedCount;
+  const completedEl = document.getElementById("completedCount");
+  const activeEl = document.getElementById("activeSubjects");
+  const totalEl = document.getElementById("totalSubjects");
+
+  animateNumber(completedEl, completedCount);
+  animateNumber(activeEl, activeCount || 2);
+  animateNumber(totalEl, 2);
+}
+
+function animateNumber(element, targetValue) {
+  if (!element) return;
+
+  const duration = 900;
+  const start = 0;
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(start + (targetValue - start) * eased);
+
+    element.textContent = value;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
 }
 
 /* =========================
@@ -216,6 +257,7 @@ function clearGuestSession() {
   const keysToRemove = [
     "guest",
     "guest_xp",
+    "guest_xpWeekly",
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
@@ -245,6 +287,8 @@ window.logout = async function() {
       return;
     }
   }
+
+  localStorage.removeItem("guest");
 
   if (auth.currentUser) {
     await signOut(auth);
@@ -278,7 +322,14 @@ function updateIcon() {
   icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
 
+/* =========================
+   INIT
+========================= */
 loadTheme();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();
+
+document.body.addEventListener("click", () => {
+  tryStartMusic();
+}, { once: true });

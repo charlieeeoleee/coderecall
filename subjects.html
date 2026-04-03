@@ -13,7 +13,6 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
-
   <div class="layout">
     <!-- SIDEBAR -->
     <aside class="sidebar">
@@ -26,6 +25,7 @@
           <a href="dashboard.html">🏠 Dashboard</a>
           <a href="subjects.html" class="active-link">📚 Subjects</a>
           <a href="achievements.html">🏆 Badges</a>
+          <a href="leaderboard.html">🥇 Leaderboard</a>
           <a href="settings.html">⚙ Settings</a>
         </nav>
       </div>
@@ -53,12 +53,12 @@
       <div class="stats-grid">
         <div class="card stat-card">
           <h3>Total Subjects</h3>
-          <p>2</p>
+          <p id="totalSubjects">2</p>
         </div>
 
         <div class="card stat-card">
           <h3>Active Subjects</h3>
-          <p>2</p>
+          <p id="activeSubjects">2</p>
         </div>
 
         <div class="card stat-card">
@@ -69,10 +69,14 @@
 
       <!-- SUBJECT CARDS -->
       <div class="subjects-grid">
+        <div class="card subject-card" onclick="openSubject('hardware')">
+          <div class="subject-card-top">
+            <div class="subject-icon">🖥</div>
+            <div class="subject-badge">Core</div>
+          </div>
 
-        <div class="card subject-card">
-          <div class="subject-icon">🖥</div>
           <h3>Computer Hardware</h3>
+
           <p class="subject-description">
             Learn the parts, functions, and basic troubleshooting of computer hardware.
           </p>
@@ -82,27 +86,35 @@
               <span>Difficulty</span>
               <strong id="hardwareDifficulty">Easy</strong>
             </div>
+
             <div class="meta-row">
               <span>Progress</span>
               <strong id="hardwareProgressText">0%</strong>
             </div>
+
             <div class="progress-bar">
-              <div id="hardwareProgressFill" style="width:0%"></div>
+              <div id="hardwareProgressFill" class="progress-fill" style="width:0%"></div>
             </div>
+
             <div class="meta-row">
               <span>Status</span>
               <strong id="hardwareStatus">Not Started</strong>
             </div>
           </div>
 
-          <button class="subject-open-btn" onclick="openSubject('hardware')">
+          <button class="subject-open-btn">
             Open Subject
           </button>
         </div>
 
-        <div class="card subject-card">
-          <div class="subject-icon">⚡</div>
+        <div class="card subject-card" onclick="openSubject('electrical')">
+          <div class="subject-card-top">
+            <div class="subject-icon">⚡</div>
+            <div class="subject-badge">Core</div>
+          </div>
+
           <h3>Electrical Wiring and Electronics Circuit Components</h3>
+
           <p class="subject-description">
             Study electricity, wiring basics, safety practices, and electronics components.
           </p>
@@ -112,24 +124,26 @@
               <span>Difficulty</span>
               <strong id="electricalDifficulty">Easy</strong>
             </div>
+
             <div class="meta-row">
               <span>Progress</span>
               <strong id="electricalProgressText">0%</strong>
             </div>
+
             <div class="progress-bar">
-              <div id="electricalProgressFill" style="width:0%"></div>
+              <div id="electricalProgressFill" class="progress-fill" style="width:0%"></div>
             </div>
+
             <div class="meta-row">
               <span>Status</span>
               <strong id="electricalStatus">Not Started</strong>
             </div>
           </div>
 
-          <button class="subject-open-btn" onclick="openSubject('electrical')">
+          <button class="subject-open-btn">
             Open Subject
           </button>
         </div>
-
       </div>
     </div>
   </div>
@@ -141,7 +155,6 @@
       <p id="guestLogoutMessage">
         You are currently using a guest account. Register an account now to save your progress and XP before logging out.
       </p>
-
       <div class="popup-actions">
         <button id="guestPrimaryBtn" onclick="registerGuestAccount()">Register to Save Progress</button>
         <button id="guestSecondaryBtn" class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
