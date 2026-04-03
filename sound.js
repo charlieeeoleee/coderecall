@@ -1,76 +1,65 @@
-// ==========================
-// GLOBAL SOUND SYSTEM
-// ==========================
+// ===============================
+// GLOBAL STATE
+// ===============================
+let sounds = {};
+let hasUserInteracted = false;
+let hasStartedMusic = false;
+let currentMusicVolume = 1;
 
-// ---------- SOUND PATHS ----------
-const soundPaths = {
-  click: "assets/sounds/click.mp3",
-  correct: "assets/sounds/correct.mp3",
-  wrong: "assets/sounds/wrong.mp3",
-  badge: "assets/sounds/badge.mp3",
-  master: "assets/sounds/master-badge.mp3",
-  completion: "assets/sounds/completion.mp3",
-  fullCompletion: "assets/sounds/full-completion.mp3",
-  confetti: "assets/sounds/confetti.mp3"
-};
-
-// ---------- PRELOADED ONE-SHOT SOUNDS ----------
-const sounds = {};
-for (const [key, path] of Object.entries(soundPaths)) {
-  const audio = new Audio(path);
+// ===============================
+// LOAD SOUNDS
+// ===============================
+function loadSound(name, loop = false) {
+  const audio = new Audio(`assets/sounds/${name}.mp3`);
   audio.preload = "auto";
-  sounds[key] = audio;
+  audio.loop = loop;
+  return audio;
 }
 
-// ---------- THEME MUSIC ----------
-const bgLight = new Audio("assets/sounds/bg-light.mp3");
-const bgDark = new Audio("assets/sounds/bg-dark.mp3");
+export function initSounds() {
+  sounds = {
+    click: loadSound("click"),
+    correct: loadSound("correct"),
+    wrong: loadSound("wrong"),
+    completion: loadSound("completion"),
+    badge: loadSound("badge"),
+    master: loadSound("master-badge"),
+    confetti: loadSound("confetti"),
+    full: loadSound("full-completion"),
 
-bgLight.loop = true;
-bgDark.loop = true;
-bgLight.preload = "auto";
-bgDark.preload = "auto";
+    bgLight: loadSound("bg-light", true),
+    bgDark: loadSound("bg-dark", true),
+  };
 
-let themeMusicInitialized = false;
-let userInteracted = false;
+  sounds.bgLight.volume = currentMusicVolume;
+  sounds.bgDark.volume = currentMusicVolume;
+}
 
-// ==========================
-// HELPERS
-// ==========================
+// ===============================
+// UTIL
+// ===============================
 function isSoundEnabled() {
   return localStorage.getItem("soundEnabled") !== "false";
 }
 
 function markUserInteraction() {
-  userInteracted = true;
+  hasUserInteracted = true;
 }
 
-function stopAudio(audio) {
-  audio.pause();
-  audio.currentTime = 0;
+function applyMusicVolume(volume) {
+  currentMusicVolume = volume;
+
+  if (sounds.bgLight) sounds.bgLight.volume = volume;
+  if (sounds.bgDark) sounds.bgDark.volume = volume;
 }
 
-function stopAllThemeMusic() {
-  stopAudio(bgLight);
-  stopAudio(bgDark);
-}
-
-function getActiveThemeMusic() {
-  return document.body.classList.contains("light-mode") ? bgLight : bgDark;
-}
-
-function getInactiveThemeMusic() {
-  return document.body.classList.contains("light-mode") ? bgDark : bgLight;
-}
-
-// ==========================
-// ONE-SHOT SOUND PLAYER
-// Faster click response using cloned audio
-// ==========================
-export function playSound(type) {
+// ===============================
+// PLAY SOUND (NO DELAY FIX)
+// ===============================
+export function playSound(name) {
   if (!isSoundEnabled()) return;
 
-  const original = sounds[type];
+  const original = sounds[name];
   if (!original) return;
 
   const clone = original.cloneNode();
@@ -78,9 +67,9 @@ export function playSound(type) {
   clone.play().catch(() => {});
 }
 
-// ==========================
-// CLICK SOUND
-// ==========================
+// ===============================
+// CLICK SOUND (GLOBAL)
+// ===============================
 export function initGlobalClickSound() {
   document.addEventListener("click", (e) => {
     markUserInteraction();
@@ -100,6 +89,7 @@ export function initGlobalClickSound() {
       target.closest("label") ||
       target.closest(".switch") ||
       target.closest(".slider") ||
+      target.closest(".subject-card") ||
       target.closest(".badge-card") ||
       target.closest(".achievement-card") ||
       target.closest(".theme-toggle");
@@ -112,85 +102,108 @@ export function initGlobalClickSound() {
   });
 }
 
-// ==========================
-// THEME MUSIC
-// ==========================
+// ===============================
+// THEME MUSIC CORE
+// ===============================
+function getCurrentThemeMusic() {
+  return document.body.classList.contains("light-mode")
+    ? sounds.bgLight
+    : sounds.bgDark;
+}
+
+function stopAllThemeMusic() {
+  sounds.bgLight.pause();
+  sounds.bgLight.currentTime = 0;
+
+  sounds.bgDark.pause();
+  sounds.bgDark.currentTime = 0;
+}
+
+// ===============================
+// PLAY THEME MUSIC
+// ===============================
 export function playThemeMusic(forceRestart = false) {
   if (!isSoundEnabled()) {
     stopAllThemeMusic();
-    return;
+    return Promise.reject();
   }
 
-  if (!userInteracted) return;
-
-  const active = getActiveThemeMusic();
-  const inactive = getInactiveThemeMusic();
-
-  // always stop the opposite track immediately
-  inactive.pause();
-  inactive.currentTime = 0;
+  const audio = getCurrentThemeMusic();
 
   if (forceRestart) {
-    active.pause();
-    active.currentTime = 0;
+    stopAllThemeMusic();
+    audio.currentTime = 0;
   }
 
-  if (active.paused) {
-    active.play().catch(() => {});
-  }
+  audio.volume = currentMusicVolume;
+  return audio.play();
 }
 
+// ===============================
+// RESTART
+// ===============================
+export function restartThemeMusic() {
+  if (!isSoundEnabled()) return;
+
+  stopAllThemeMusic();
+
+  const audio = getCurrentThemeMusic();
+  audio.currentTime = 0;
+  audio.volume = currentMusicVolume;
+  audio.play().catch(() => {});
+}
+
+// ===============================
+// STOP MUSIC
+// ===============================
 export function stopThemeMusic() {
   stopAllThemeMusic();
 }
 
-export function restartThemeMusic() {
-  stopAllThemeMusic();
-  playThemeMusic(true);
+// ===============================
+// AUTO START MUSIC
+// ===============================
+export function tryStartMusic() {
+  if (hasStartedMusic) return;
+
+  playThemeMusic(true)
+    .then(() => {
+      hasStartedMusic = true;
+    })
+    .catch(() => {
+      document.addEventListener(
+        "click",
+        () => {
+          if (!hasStartedMusic) {
+            playThemeMusic(true);
+            hasStartedMusic = true;
+          }
+        },
+        { once: true }
+      );
+    });
 }
 
-// ==========================
-// INIT THEME MUSIC
-// Start only after first user interaction
-// ==========================
-export function initThemeMusic() {
-  if (themeMusicInitialized) return;
-  themeMusicInitialized = true;
-
-  const startMusic = () => {
-    markUserInteraction();
-    playThemeMusic(true);
-  };
-
-  document.addEventListener("click", startMusic, { once: true });
-  document.addEventListener("keydown", startMusic, { once: true });
-  document.addEventListener("touchstart", startMusic, { once: true });
+// ===============================
+// MUSIC DUCKING FOR MODALS
+// ===============================
+export function lowerThemeMusic(volume = 0.15) {
+  applyMusicVolume(volume);
 }
 
-// ==========================
-// BADGE / COMPLETION HELPERS
-// ==========================
-export function playBadgeSound(isMaster = false) {
-  playSound(isMaster ? "master" : "badge");
+export function restoreThemeMusic() {
+  applyMusicVolume(1);
 }
 
-export function playCompletionSound(isFullCompletion = false) {
-  playSound(isFullCompletion ? "fullCompletion" : "completion");
-}
-
-export function playConfettiSound() {
-  playSound("confetti");
-}
-
-// ==========================
-// SETTINGS INTEGRATION
-// ==========================
+// ===============================
+// SETTINGS TOGGLE INTEGRATION
+// ===============================
 export function handleSoundToggle(enabled) {
   localStorage.setItem("soundEnabled", enabled ? "true" : "false");
 
-  if (enabled) {
-    playThemeMusic(true);
+  if (!enabled) {
+    stopAllThemeMusic();
   } else {
-    stopThemeMusic();
+    tryStartMusic();
   }
 }

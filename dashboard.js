@@ -14,6 +14,12 @@ import {
   setDoc,
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  initSounds,
+  initGlobalClickSound,
+  tryStartMusic,
+  restartThemeMusic
+} from "./sound.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -514,6 +520,7 @@ window.toggleTheme = function() {
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
   updateIcon();
+  restartThemeMusic();
 };
 
 function updateIcon() {
@@ -525,3 +532,10 @@ function updateIcon() {
 }
 
 loadTheme();
+initSounds();
+initGlobalClickSound();
+tryStartMusic();
+
+document.body.addEventListener("click", (e) => {
+  tryStartMusic();
+}, {once: true});

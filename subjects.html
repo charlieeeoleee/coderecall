@@ -18,7 +18,9 @@
     <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="top-section">
-        <h2 class="logo">CODE:RECALL!</h2>
+        <a href="index.html" class="logo-link">
+          <h2 class="logo">CODE:RECALL!</h2>
+        </a>
 
         <nav class="menu">
           <a href="dashboard.html">🏠 Dashboard</a>
@@ -128,6 +130,22 @@
           </button>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- GUEST LOGOUT POPUP -->
+  <div id="guestLogoutPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="guestLogoutTitle">Save Your Progress</h3>
+      <p id="guestLogoutMessage">
+        You are currently using a guest account. Register an account now to save your progress and XP before logging out.
+      </p>
+
+      <div class="popup-actions">
+        <button id="guestPrimaryBtn" onclick="registerGuestAccount()">Register to Save Progress</button>
+        <button id="guestSecondaryBtn" class="secondary-btn" onclick="confirmGuestLogout()">Log Out Anyway</button>
+        <button id="guestCancelBtn" class="secondary-btn" onclick="closeGuestLogoutPopup()">Cancel</button>
       </div>
     </div>
   </div>

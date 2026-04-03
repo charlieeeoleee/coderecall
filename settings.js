@@ -12,11 +12,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 import {
+  initSounds,
   initGlobalClickSound,
-  initThemeMusic,
-  playThemeMusic,
+  tryStartMusic,
   restartThemeMusic,
-  stopThemeMusic,
   handleSoundToggle
 } from "./sound.js";
 
@@ -421,6 +420,6 @@ function updateIcon() {
 }
 
 loadTheme();
+initSounds();
 initGlobalClickSound();
-initThemeMusic();
-playThemeMusic();
+tryStartMusic();

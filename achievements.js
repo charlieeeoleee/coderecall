@@ -11,6 +11,16 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+import {
+  initSounds,
+  initGlobalClickSound,
+  tryStartMusic,
+  restartThemeMusic,
+  playSound,
+  lowerThemeMusic,
+  restoreThemeMusic
+} from "./sound.js";
+
 /* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -105,6 +115,70 @@ function getGuestStreak() {
   return parseInt(localStorage.getItem("guest_streak")) || 0;
 }
 
+function getBadgeStorageKey() {
+  if (currentIsGuest) {
+    return "badge_unlocks_guest";
+  }
+
+  if (currentUser?.uid) {
+    return `badge_unlocks_${currentUser.uid}`;
+  }
+
+  return "badge_unlocks_default";
+}
+
+function getSavedUnlockedBadges() {
+  try {
+    const raw = localStorage.getItem(getBadgeStorageKey());
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveUnlockedBadges(badgeNames) {
+  localStorage.setItem(getBadgeStorageKey(), JSON.stringify(badgeNames));
+}
+
+function getBadgePrioritySound(badgeName) {
+  if (badgeName === "Completionist") return "full";
+  if (badgeName === "Master") return "master";
+  return "badge";
+}
+
+let isCelebrating = false;
+
+function playAutoUnlockCelebration(newlyUnlockedBadges) {
+  // 🚫 stop if walang new badges OR may ongoing celebration
+  if (!newlyUnlockedBadges.length || isCelebrating) return;
+
+  isCelebrating = true;
+
+  const hasCompletionist = newlyUnlockedBadges.some(
+    (badge) => badge.name === "Completionist"
+  );
+
+  if (hasCompletionist) {
+    // 🎉 FINAL SYSTEM COMPLETION
+    playSound("full");
+
+    setTimeout(() => {
+      playSound("confetti");
+    }, 300);
+
+  } else {
+    // 🔔 normal badge unlock
+    playSound("badge");
+  }
+
+  launchConfetti();
+
+  // 🔓 unlock after delay para hindi mag spam
+  setTimeout(() => {
+    isCelebrating = false;
+  }, 2000);
+}
+
 /* =========================
    BADGES DATA
 ========================= */
@@ -121,11 +195,13 @@ function buildBadges(xp, progressObj, isGuest) {
 
   const anyQuiz = hardwareQuiz || electricalQuiz || hardwarePre || electricalPre;
   const anyModule = hardwareModules || electricalModules;
-  const exploredBoth = (hardwarePre || hardwareModules || hardwareQuiz || hardwarePost) &&
-                       (electricalPre || electricalModules || electricalQuiz || electricalPost);
+  const exploredBoth =
+    (hardwarePre || hardwareModules || hardwareQuiz || hardwarePost) &&
+    (electricalPre || electricalModules || electricalQuiz || electricalPost);
   const bothSubjectsCompleted = hardwarePost && electricalPost;
 
   const streak = isGuest ? getGuestStreak() : 0;
+  void streak;
 
   return [
     {
@@ -225,8 +301,8 @@ function buildBadges(xp, progressObj, isGuest) {
       name: "Completionist",
       icon: "🏆",
       description: "Complete both subjects and prove full system dedication.",
-      requirement: "Finish both subjects",
-      rewardText: "Full completion badge",
+      requirement: "Finish the entire system by completing both subjects",
+      rewardText: "100% system completion",
       unlocked: bothSubjectsCompleted,
       progressValue: countCompletedSubjects(hardwarePost, electricalPost),
       progressMax: 2
@@ -293,6 +369,25 @@ function renderBadges(xp, progressObj, isGuest) {
   document.getElementById("xpValue").textContent = xp;
   document.getElementById("progressFill").style.width = `${percent}%`;
   document.getElementById("progressPercent").textContent = `${percent}%`;
+
+  handleNewBadgeUnlocks(badges);
+}
+
+function handleNewBadgeUnlocks(badges) {
+  const currentlyUnlocked = badges.filter((badge) => badge.unlocked);
+  const currentlyUnlockedNames = currentlyUnlocked.map((badge) => badge.name);
+
+  const previouslyUnlockedNames = getSavedUnlockedBadges();
+
+  const newlyUnlockedBadges = currentlyUnlocked.filter(
+    (badge) => !previouslyUnlockedNames.includes(badge.name)
+  );
+
+  if (newlyUnlockedBadges.length > 0) {
+    playAutoUnlockCelebration(newlyUnlockedBadges);
+  }
+
+  saveUnlockedBadges(currentlyUnlockedNames);
 }
 
 /* =========================
@@ -314,20 +409,25 @@ function openBadgeModal(badge) {
   modalState.className = `modal-state ${badge.unlocked ? "" : "locked"}`;
 
   document.getElementById("badgeModal").classList.add("active");
+  lowerThemeMusic(0.12);
 
   if (badge.unlocked) {
+    const soundType = getBadgePrioritySound(badge.name);
+    playSound(soundType);
     launchConfetti();
   }
 }
 
 window.closeBadgeModal = function() {
   document.getElementById("badgeModal").classList.remove("active");
+  restoreThemeMusic();
 };
 
 window.addEventListener("click", (e) => {
   const modal = document.getElementById("badgeModal");
   if (e.target === modal) {
     modal.classList.remove("active");
+    restoreThemeMusic();
   }
 });
 
@@ -337,6 +437,8 @@ window.addEventListener("click", (e) => {
 function launchConfetti() {
   const container = document.getElementById("confettiContainer");
   container.innerHTML = "";
+
+  playSound("confetti");
 
   const colors = ["#ff2e97", "#00e5ff", "#00ffcc", "#ff8c00", "#ffffff"];
 
@@ -477,6 +579,7 @@ window.toggleTheme = function() {
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
   updateIcon();
+  restartThemeMusic();
 };
 
 function loadTheme() {
@@ -494,3 +597,10 @@ function updateIcon() {
 }
 
 loadTheme();
+initSounds();
+initGlobalClickSound();
+tryStartMusic();
+
+document.body.addEventListener("click", () => {
+  tryStartMusic();
+}, { once: true });
