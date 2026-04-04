@@ -126,10 +126,25 @@
         <!-- PROGRESS -->
         <div class="card settings-card">
           <h3>📊 Progress</h3>
+
           <div class="progress-info">
             <p><strong>Total XP:</strong> <span id="totalXP">0</span></p>
+            <div class="progress-bar-container">
+              <div id="xpProgressBar" class="progress-bar xp-bar"></div>
+            </div>
+            <p id="xpProgressText" class="progress-text">0% to next level</p>
+
             <p><strong>Level:</strong> <span id="levelValue">1</span></p>
+            <div class="progress-bar-container">
+              <div id="levelProgressBar" class="progress-bar level-bar"></div>
+            </div>
+            <p id="levelProgressText" class="progress-text">Level 1</p>
+
             <p><strong>Completed Subjects:</strong> <span id="completedSubjects">0</span></p>
+            <div class="progress-bar-container">
+              <div id="subjectProgressBar" class="progress-bar subject-bar"></div>
+            </div>
+            <p id="subjectProgressText" class="progress-text">0% completed</p>
           </div>
         </div>
 

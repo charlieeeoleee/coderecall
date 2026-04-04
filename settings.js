@@ -211,20 +211,47 @@ async function loadXPFromFirestore() {
 }
 
 function renderProgress(xp) {
-  const level = Math.floor(xp / 100) + 1;
+  const xpPerLevel = 100;
+  const level = Math.floor(xp / xpPerLevel) + 1;
+  const currentXP = xp % xpPerLevel;
+  const xpPercent = Math.floor((currentXP / xpPerLevel) * 100);
 
   let completedSubjects = 0;
   const subjects = ["hardware", "electrical"];
+  const totalSubjects = subjects.length;
 
   subjects.forEach(subject => {
     const done = localStorage.getItem(`${subject}_posttest`) === "true";
     if (done) completedSubjects++;
   });
 
+  const subjectPercent = Math.floor((completedSubjects / totalSubjects) * 100);
+
+  // ✅ TEXT VALUES (animated)
   animateNumber(document.getElementById("totalXP"), xp);
   animateNumber(document.getElementById("levelValue"), level);
   animateNumber(document.getElementById("completedSubjects"), completedSubjects);
+
+  // ✅ BARS
+  const xpBar = document.getElementById("xpProgressBar");
+  const levelBar = document.getElementById("levelProgressBar");
+  const subjectBar = document.getElementById("subjectProgressBar");
+
+  if (xpBar) xpBar.style.width = xpPercent + "%";
+  if (levelBar) levelBar.style.width = xpPercent + "%"; // same as XP (progress to next level)
+  if (subjectBar) subjectBar.style.width = subjectPercent + "%";
+
+  // ✅ TEXT UNDER BARS
+  const xpText = document.getElementById("xpProgressText");
+  const levelText = document.getElementById("levelProgressText");
+  const subjectText = document.getElementById("subjectProgressText");
+
+  if (xpText) xpText.textContent = `${xpPercent}% to next level`;
+  if (levelText) levelText.textContent = `Level ${level}`;
+  if (subjectText) subjectText.textContent = `${subjectPercent}% completed`;
 }
+
+window.renderProgress = renderProgress; // expose for external calls
 
 function animateNumber(element, targetValue) {
   if (!element) return;
