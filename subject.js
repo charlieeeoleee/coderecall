@@ -1,3 +1,35 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+import {
+  initSounds,
+  initGlobalClickSound,
+  tryStartMusic,
+  restartThemeMusic
+} from "./sound.js";
+
+/* =========================
+   FIREBASE CONFIG
+========================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
+  authDomain: "gamifiedlearningsystem.firebaseapp.com",
+  projectId: "gamifiedlearningsystem",
+  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
+  messagingSenderId: "516998404507",
+  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+
+/* =========================
+   SUBJECT PARAM
+========================= */
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
 
@@ -21,78 +53,153 @@ const meta = subjectMeta[subject] || {
 document.getElementById("subjectTitle").textContent = meta.title;
 document.getElementById("subjectDesc").textContent = meta.desc;
 
-/* NAVIGATION */
-function goBack(){
+/* =========================
+   NAVIGATION
+========================= */
+window.goBack = function () {
   window.location.href = "dashboard.html";
-}
+};
 
-function openPretest(){
+window.openPretest = function () {
   window.location.href = `quiz.html?subject=${subject}&level=easy&type=pretest`;
-}
+};
 
-function openModules(){
+window.openModules = function () {
   window.location.href = `modules.html?subject=${subject}&level=easy`;
-}
+};
 
-function openQuiz(){
-  window.location.href = `quiz.html?subject=${subject}&level=easy&type=quiz1`;
-}
+window.openQuiz = function () {
+  window.location.href = `quiz-levels.html?subject=${subject}`;
+};
 
-function openPosttest(){
+window.openPosttest = function () {
   window.location.href = `quiz.html?subject=${subject}&level=easy&type=posttest`;
-}
+};
 
-/* LOCK / UNLOCK */
-function getProgressKey(name){
+/* =========================
+   HELPERS
+========================= */
+function getProgressKey(name) {
   return `${subject}_${name}`;
 }
 
-function unlockButton(buttonId){
+function unlockButton(buttonId) {
   const btn = document.getElementById(buttonId);
+  if (!btn) return;
+
   btn.classList.remove("locked");
+
   const badge = btn.querySelector(".lock-icon");
-  if(badge) badge.remove();
+  if (badge) badge.remove();
 }
 
-function loadProgress(){
-  const pretestDone = localStorage.getItem(getProgressKey("pretest")) === "true";
-  const modulesDone = localStorage.getItem(getProgressKey("modules")) === "true";
-  const quizDone = localStorage.getItem(getProgressKey("quiz")) === "true";
+async function ensureUserDoc(uid) {
+  const userRef = doc(db, "users", uid);
+  const snap = await getDoc(userRef);
 
-  if(pretestDone){
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      xp: 0,
+      progress: {},
+      results: {},
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  return userRef;
+}
+
+async function getMergedProgress() {
+  const localProgress = {
+    [getProgressKey("pretest")]: localStorage.getItem(getProgressKey("pretest")) === "true",
+    [getProgressKey("modules")]: localStorage.getItem(getProgressKey("modules")) === "true",
+    [getProgressKey("quiz")]: localStorage.getItem(getProgressKey("quiz")) === "true",
+    [getProgressKey("posttest")]: localStorage.getItem(getProgressKey("posttest")) === "true"
+  };
+
+  if (!currentUser) {
+    return localProgress;
+  }
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  const firebaseProgress = data.progress || {};
+
+  return {
+    [getProgressKey("pretest")]:
+      localProgress[getProgressKey("pretest")] || firebaseProgress[getProgressKey("pretest")] === true,
+
+    [getProgressKey("modules")]:
+      localProgress[getProgressKey("modules")] || firebaseProgress[getProgressKey("modules")] === true,
+
+    [getProgressKey("quiz")]:
+      localProgress[getProgressKey("quiz")] || firebaseProgress[getProgressKey("quiz")] === true,
+
+    [getProgressKey("posttest")]:
+      localProgress[getProgressKey("posttest")] || firebaseProgress[getProgressKey("posttest")] === true
+  };
+}
+
+async function loadProgress() {
+  const progress = await getMergedProgress();
+
+  const pretestDone = progress[getProgressKey("pretest")] === true;
+  const modulesDone = progress[getProgressKey("modules")] === true;
+  const quizDone = progress[getProgressKey("quiz")] === true;
+
+  if (pretestDone) {
     unlockButton("modulesBtn");
   }
 
-  if(modulesDone){
+  if (modulesDone) {
     unlockButton("quizzesBtn");
   }
 
-  if(quizDone){
+  if (quizDone) {
     unlockButton("posttestBtn");
   }
 }
 
-/* THEME */
-function loadTheme(){
+/* =========================
+   THEME
+========================= */
+function updateIcon() {
+  const icon = document.getElementById("themeIcon");
+  if (!icon) return;
+  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+}
+
+function loadTheme() {
   const saved = localStorage.getItem("theme");
-  if(saved === "light"){
+  if (saved === "light") {
     document.body.classList.add("light-mode");
   }
   updateIcon();
 }
 
-function toggleTheme(){
+window.toggleTheme = function () {
   document.body.classList.toggle("light-mode");
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
   updateIcon();
-}
+  restartThemeMusic();
+};
 
-function updateIcon(){
-  const icon = document.getElementById("themeIcon");
-  if(!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
-}
-
+/* =========================
+   INIT
+========================= */
 loadTheme();
-loadProgress();
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user || null;
+  await loadProgress();
+});
+
+initSounds();
+initGlobalClickSound();
+tryStartMusic();
+
+document.body.addEventListener("click", () => {
+  tryStartMusic();
+}, { once: true });

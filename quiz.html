@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="quiz.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <a href="dashboard.html" class="quiz-logo" aria-label="Go to dashboard">
+    <span class="quiz-logo-code">CODE:</span>
+    <span class="quiz-logo-recall">RECALL!</span>
+  </a>
+
+  <button class="theme-toggle quiz-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <main class="quiz-page">
+    <section class="quiz-header card">
+      <div class="quiz-header-glow"></div>
+      <span class="quiz-tag" id="quizTag">ELECTRICAL PRE-TEST</span>
+      <h1 class="quiz-title" id="quizTitle">Electrical Wiring and Electronics Circuit Components</h1>
+      <p class="quiz-subtitle" id="quizSubtitle">Answer all 30 items carefully.</p>
+    </section>
+
+    <section class="quiz-main card">
+      <div class="quiz-topbar">
+        <div class="quiz-counter" id="quizCounter">Question 1 of 30</div>
+        <div class="quiz-score" id="quizScore">Score: 0</div>
+      </div>
+
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-track">
+          <div class="quiz-progress-fill" id="quizProgressFill"></div>
+        </div>
+        <div class="quiz-progress-text" id="quizProgressText">0% Completed</div>
+      </div>
+
+      <div class="question-block">
+        <h2 class="question-text" id="questionText">Loading question...</h2>
+      </div>
+
+      <div class="choices-grid" id="choicesContainer"></div>
+
+      <div class="quiz-actions">
+        <button class="quiz-btn secondary-btn" id="backBtn" onclick="goBackToSubject()">← Back</button>
+        <button class="quiz-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next →</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- WRONG ANSWER RATIONALE MODAL -->
+  <div class="quiz-modal" id="rationaleModal">
+    <div class="quiz-modal-box">
+      <h3>Not Quite</h3>
+      <p id="rationaleText">Rationale goes here.</p>
+      <button class="quiz-btn primary-btn" onclick="closeRationaleAndContinue()">Continue</button>
+    </div>
+  </div>
+
+  <!-- RESULT MODAL -->
+  <div class="quiz-modal" id="resultModal">
+    <div class="quiz-modal-box result-box">
+      <h3 id="resultTitle">Pre-Test Complete</h3>
+      <p id="resultMessage">You scored 0 out of 30.</p>
+      <div class="result-stats">
+        <div class="result-stat">
+          <span class="stat-label">Score</span>
+          <span class="stat-value" id="resultScore">0/30</span>
+        </div>
+        <div class="result-stat">
+          <span class="stat-label">Percentage</span>
+          <span class="stat-value" id="resultPercent">0%</span>
+        </div>
+      </div>
+      <button class="quiz-btn primary-btn" onclick="finishQuizFlow()">Return to Subject</button>
+    </div>
+  </div>
+
+  <script type="module" src="quiz.js"></script>
+</body>
+</html>

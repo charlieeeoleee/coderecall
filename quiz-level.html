@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Level - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="quiz-level.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <a href="dashboard.html" class="level-logo" aria-label="Go to dashboard">
+    <span class="level-logo-code">CODE:</span>
+    <span class="level-logo-recall">RECALL!</span>
+  </a>
+
+  <button class="theme-toggle level-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <main class="level-page">
+    <section class="level-header card">
+      <span class="level-tag" id="levelTag">QUIZ LEVEL</span>
+      <h1 class="level-title" id="levelTitle">Level 1</h1>
+      <p class="level-subtitle" id="levelSubtitle">Answer 3 questions to complete this level and earn 6 XP.</p>
+    </section>
+
+    <section class="level-main card">
+      <div class="level-topbar">
+        <div class="level-counter" id="questionCounter">Question 1 of 3</div>
+        <div class="level-xp">Reward: 6 XP</div>
+      </div>
+
+      <div class="level-progress-wrap">
+        <div class="level-progress-track">
+          <div class="level-progress-fill" id="levelProgressFill"></div>
+        </div>
+        <div class="level-progress-text" id="levelProgressText">0% Completed</div>
+      </div>
+
+      <div class="level-question-block">
+        <h2 class="level-question-text" id="questionText">Loading question...</h2>
+      </div>
+
+      <div class="level-choices-grid" id="choicesContainer"></div>
+
+      <div class="level-actions">
+        <button class="level-btn secondary-btn" onclick="goBackToLevels()">← Back</button>
+        <button class="level-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next →</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="level-modal" id="resultModal">
+    <div class="level-modal-box">
+      <h3>Level Complete</h3>
+      <p id="resultMessage">You finished this level.</p>
+      <button class="level-btn primary-btn" onclick="finishLevelFlow()">Back to Levels</button>
+    </div>
+  </div>
+
+  <script type="module" src="quiz-level.js"></script>
+</body>
+</html>

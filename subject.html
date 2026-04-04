@@ -4,67 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Subject - Code Recall</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
-
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="subject.css">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
-
-  <!-- TOP LEFT LOGO -->
-  <div class="subject-logo">
+  <!-- TEXT LOGO -->
+  <a href="dashboard.html" class="subject-logo" aria-label="Go to dashboard">
     <span class="subject-logo-code">CODE:</span>
     <span class="subject-logo-recall">RECALL!</span>
-  </div>
+  </a>
 
   <!-- THEME TOGGLE -->
-  <button class="theme-toggle" onclick="toggleTheme()">
+  <button class="theme-toggle subject-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
     <span id="themeIcon">🌙</span>
   </button>
 
   <main class="subject-page">
-    <div class="subject-header card">
+    <section class="subject-header card">
+      <div class="subject-header-glow"></div>
       <h1 class="subject-title" id="subjectTitle">
         ELECTRICAL WIRING AND ELECTRONICS CIRCUIT COMPONENTS
       </h1>
       <p class="subject-desc" id="subjectDesc">
         Take the pre-test, study the modules, answer quizzes, and finish the post-test.
       </p>
-    </div>
+    </section>
 
-    <div class="subject-actions">
-      <button class="subject-card card" id="pretestBtn" onclick="openPretest()">
-        <h2>Pre-Test</h2>
-        <p>Take the assessment first</p>
+    <section class="subject-actions">
+      <button class="subject-card card pretest active-card" id="pretestBtn" onclick="openPretest()">
+        <div class="subject-card-glow"></div>
+        <div class="subject-card-inner">
+          <span class="subject-badge">START HERE</span>
+          <h2>Pre-Test</h2>
+          <p>Take the assessment first</p>
+        </div>
       </button>
 
-      <button class="subject-card card locked" id="modulesBtn" onclick="openModules()">
+      <button class="subject-card card modules locked" id="modulesBtn" onclick="openModules()">
         <span class="lock-icon">🔒</span>
-        <h2>Modules</h2>
-        <p>Read the lessons</p>
+        <div class="subject-card-glow"></div>
+        <div class="subject-card-inner">
+          <span class="subject-badge">STEP 2</span>
+          <h2>Modules</h2>
+          <p>Read the lessons</p>
+        </div>
       </button>
 
-      <button class="subject-card card locked" id="quizzesBtn" onclick="openQuiz()">
+      <button class="subject-card card quizzes locked" id="quizzesBtn" onclick="openQuiz()">
         <span class="lock-icon">🔒</span>
-        <h2>Quizzes</h2>
-        <p>Answer module quizzes</p>
+        <div class="subject-card-glow"></div>
+        <div class="subject-card-inner">
+          <span class="subject-badge">STEP 3</span>
+          <h2>Quizzes</h2>
+          <p>Answer module quizzes</p>
+        </div>
       </button>
 
-      <button class="subject-card card locked" id="posttestBtn" onclick="openPosttest()">
+      <button class="subject-card card posttest locked" id="posttestBtn" onclick="openPosttest()">
         <span class="lock-icon">🔒</span>
-        <h2>Post-Test</h2>
-        <p>Final assessment</p>
+        <div class="subject-card-glow"></div>
+        <div class="subject-card-inner">
+          <span class="subject-badge">FINAL</span>
+          <h2>Post-Test</h2>
+          <p>Final assessment</p>
+        </div>
       </button>
-    </div>
+    </section>
   </main>
 
-  <!-- BACK BUTTON -->
   <button class="subject-back-btn" onclick="goBack()">← Back</button>
 
-  <script src="subject.js"></script>
+  <script type="module" src="subject.js"></script>
 </body>
 </html>
