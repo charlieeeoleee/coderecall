@@ -132,9 +132,12 @@ export function playSound(name) {
   if (!sounds[name]) return;
 
   try {
-    const instance = sounds[name].cloneNode();
+    const instance = sounds[name].cloneNode(true);
+    instance.currentTime = 0;
     instance.volume = sounds[name].volume;
+
     instance.play().catch(() => {});
+
   } catch {
     // ignore playback issues
   }
@@ -144,14 +147,41 @@ export function initGlobalClickSound() {
   if (clickSoundInitialized) return;
   clickSoundInitialized = true;
 
+  document.addEventListener("pointerdown", (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const navLink = target.closest(".menu a");
+    if (navLink) return;
+
+    const clickable = target.closest(
+      "button, a, input, label, li, span, .nav-item, .nav-link, .menu-item, .badge-card, .achievement-card, .top-player, .rank-item, .subject-card, .module-card, .theme-toggle, .logout-btn"
+    );
+
+    if (!clickable) return;
+
+    playSound("click");
+  });
+
   document.addEventListener("click", (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
 
-    const clickable = target.closest("button, a, .badge-card, .top-player, .rank-item, .subject-card, .module-card");
-    if (!clickable) return;
+    const navLink = target.closest(".menu a");
+
+    if (!navLink) return;
+    if (!(navLink instanceof HTMLAnchorElement)) return;
+
+    const href = navLink.getAttribute("href");
+    if (!href || href.startsWith("#") || href.startsWith("javascript:")) return;
+
+    e.preventDefault();
 
     playSound("click");
+
+    setTimeout(() => {
+      window.location.href = href;
+    }, 200);
   });
 }
 

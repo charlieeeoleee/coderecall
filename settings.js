@@ -15,7 +15,8 @@ import {
   initGlobalClickSound,
   tryStartMusic,
   restartThemeMusic,
-  handleSoundToggle
+  handleSoundToggle,
+  handleMusicToggle
 } from "./sound.js";
 
 /* =========================
@@ -155,21 +156,34 @@ function loadGuestSettings() {
 function loadPreferences() {
   const soundEnabled = localStorage.getItem("soundEnabled");
   const autoAdvance = localStorage.getItem("autoAdvance");
+  const musicEnabled = localStorage.getItem("musicEnabled");
 
   const soundToggle = document.getElementById("soundToggle");
   const autoAdvanceToggle = document.getElementById("autoAdvanceToggle");
+  const musicToggle = document.getElementById("musicToggle");
 
-  soundToggle.checked = soundEnabled !== "false";
-  autoAdvanceToggle.checked = autoAdvance === "true";
+  if (soundToggle) {
+    soundToggle.checked = soundEnabled !== "false";
+    soundToggle.addEventListener("change", (e) => {
+      handleSoundToggle(e.target.checked);
+    });
+  }
 
-  soundToggle.addEventListener("change", (e) => {
-    handleSoundToggle(e.target.checked);
-  });
+  if (autoAdvanceToggle) {
+    autoAdvanceToggle.checked = autoAdvance === "true";
+    autoAdvanceToggle.addEventListener("change", (e) => {
+      localStorage.setItem("autoAdvance", e.target.checked ? "true" : "false");
+    });
+  }
 
-  autoAdvanceToggle.addEventListener("change", (e) => {
-    localStorage.setItem("autoAdvance", e.target.checked ? "true" : "false");
-  });
+  if (musicToggle) {
+    musicToggle.checked = musicEnabled !== "false";
+    musicToggle.addEventListener("change", (e) => {
+      handleMusicToggle(e.target.checked);
+    });
+  }
 }
+
 
 /* =========================
    PROGRESS
