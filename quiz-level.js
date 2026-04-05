@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { restartThemeMusic, playSound } from "./sound.js";
+import { quizData } from "./quiz-data.js"; 
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -102,7 +103,18 @@ function getPlaceholderQuestions(subjectName, levelNumber) {
 }
 
 function prepareQuestions() {
-  questions = getPlaceholderQuestions(subject, quizLevel).map((item) => ({
+  const levelData = quizData?.[subject]?.easy?.[quizLevel];
+
+  if (!levelData) {
+    console.warn("No quiz data found, using fallback");
+    questions = getPlaceholderQuestions(subject, quizLevel).map((item) => ({
+      ...item,
+      choices: shuffleArray(item.choices)
+    }));
+    return;
+  }
+
+  questions = levelData.map((item) => ({
     ...item,
     choices: shuffleArray(item.choices)
   }));
