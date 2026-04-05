@@ -1,7 +1,15 @@
+/* ================= GLOBAL ================= */
+html, body{
+  margin: 0;
+  min-height: 100%;
+  scroll-behavior: smooth;
+}
+
 body{
   font-family: 'Montserrat', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ================= LOGO ================= */
@@ -19,16 +27,19 @@ body{
   text-decoration: none;
   transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
 }
+
 .subject-logo:hover{
   transform: translateY(-2px) scale(1.04);
   filter: brightness(1.08);
 }
+
 .subject-logo-code{
   color: #ff8a2a;
   text-shadow:
     0 0 6px rgba(255,138,42,0.75),
     0 0 16px rgba(255,138,42,0.45);
 }
+
 .subject-logo-recall{
   color: #ff2e88;
   text-shadow:
@@ -56,14 +67,17 @@ body{
   box-shadow:
     0 10px 30px rgba(0, 229, 255, 0.30),
     0 0 24px rgba(50, 255, 199, 0.22);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
 }
+
 .subject-theme-toggle:hover{
   transform: translateY(-4px) scale(1.06);
   box-shadow:
     0 14px 34px rgba(0, 229, 255, 0.36),
     0 0 28px rgba(50, 255, 199, 0.26);
+  filter: brightness(1.05);
 }
+
 .subject-theme-toggle:active{
   transform: scale(0.95);
 }
@@ -79,6 +93,7 @@ body{
   padding: 120px 0 120px;
   animation: subjectFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
 @keyframes subjectFadeIn{
   from{
     opacity: 0;
@@ -99,13 +114,15 @@ body{
   margin-bottom: 26px;
   padding: 30px 26px;
   isolation: isolate;
+  border-radius: 24px;
 }
+
 .subject-header-glow{
   position: absolute;
-  width: 340px;
-  height: 340px;
+  width: 360px;
+  height: 360px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,229,255,0.16), transparent 68%);
+  background: radial-gradient(circle, rgba(0,229,255,0.18), transparent 68%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -113,6 +130,7 @@ body{
   z-index: -1;
   animation: headerGlowPulse 4.2s ease-in-out infinite;
 }
+
 @keyframes headerGlowPulse{
   0%,100%{
     opacity: 0.72;
@@ -120,9 +138,10 @@ body{
   }
   50%{
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.05);
+    transform: translate(-50%, -50%) scale(1.08);
   }
 }
+
 .subject-title{
   margin: 0 0 10px;
   font-size: clamp(28px, 3vw, 48px);
@@ -131,6 +150,7 @@ body{
   color: #eaf7ff;
   letter-spacing: 0.5px;
 }
+
 .subject-desc{
   margin: 0;
   font-size: 15px;
@@ -160,24 +180,56 @@ body{
   align-items: stretch;
   justify-content: center;
   cursor: pointer;
+  isolation: isolate;
+
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.08);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 10px 28px rgba(0,0,0,0.14);
+
   transition:
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.35s ease,
     background 0.35s ease,
     filter 0.35s ease,
     opacity 0.35s ease,
-    color 0.35s ease;
-  isolation: isolate;
+    color 0.35s ease,
+    border-color 0.35s ease;
+}
 
-  /* IDLE STATE */
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+.subject-card::after{
+  content: "";
+  position: absolute;
+  left: var(--ripple-x, 50%);
+  top: var(--ripple-y, 50%);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.16) 45%, transparent 75%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.subject-card:active::after{
+  width: 260px;
+  height: 260px;
+  opacity: 1;
+  transition:
+    width 0.4s ease,
+    height 0.4s ease,
+    opacity 0.5s ease;
 }
 
 .subject-card-inner{
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   min-height: 100%;
   flex-direction: column;
@@ -188,17 +240,58 @@ body{
 
 .subject-card-glow{
   position: absolute;
-  width: 260px;
-  height: 260px;
+  width: 280px;
+  height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.16), transparent 70%);
+  background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 70%);
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.75);
+  transform: translate(-50%, -50%) scale(0.72);
   opacity: 0;
-  transition: all 0.35s ease;
+  transition: all 0.4s ease;
   z-index: 1;
   pointer-events: none;
+}
+
+/* animated hover gradient layer */
+.subject-card::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  background-size: 200% 200%;
+  transition: opacity 0.35s ease;
+  animation: gradientShift 6s ease infinite;
+}
+
+@keyframes gradientShift{
+  0%{ background-position: 0% 50%; }
+  50%{ background-position: 100% 50%; }
+  100%{ background-position: 0% 50%; }
+}
+
+/* ripple layer */
+.subject-card::after{
+  content: "";
+  position: absolute;
+  left: var(--ripple-x, 50%);
+  top: var(--ripple-y, 50%);
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.18) 35%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.subject-card:active::after{
+  width: 280px;
+  height: 280px;
+  opacity: 1;
+  transition: width 0.45s ease, height 0.45s ease, opacity 0.55s ease;
 }
 
 .subject-card h2{
@@ -230,58 +323,56 @@ body{
   box-shadow: 0 0 10px rgba(255,255,255,0.05);
 }
 
-/* ===== PRETEST ONLY = ALWAYS ACTIVE ===== */
-.pretest{
-  background: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
-  color: white;
-  box-shadow:
-    0 18px 42px rgba(255, 46, 136, 0.22),
-    0 0 28px rgba(0, 229, 255, 0.18);
-}
-
-/* ===== OTHER CARDS = PLAIN IDLE ===== */
+/* plain idle for all cards */
+.pretest,
 .modules,
 .quizzes,
-.posttest{
+.posttest,
+.active-card{
   background: rgba(255,255,255,0.08);
   color: #f4f8ff;
   box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
     0 14px 34px rgba(0,0,0,0.10),
     0 0 20px rgba(255,255,255,0.03);
 }
 
-/* ===== HOVER = SHOW GRADIENT ===== */
+/* gradient definitions */
+.pretest::before,
+.active-card::before{
+  background-image: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
+}
+
+.modules::before{
+  background-image: linear-gradient(135deg, #6d5dfc 0%, #8b7dff 35%, #00d9ff 100%);
+}
+
+.quizzes::before{
+  background-image: linear-gradient(135deg, #ff7a1a 0%, #ff2e88 100%);
+}
+
+.posttest::before{
+  background-image: linear-gradient(135deg, #32ffc7 0%, #00d9ff 100%);
+}
+
+/* hover state */
 .subject-card:not(.locked):hover{
-  transform: translateY(-6px) scale(1.025);
+  transform: translateY(-7px) scale(1.028);
+  color: white;
+  border-color: rgba(255,255,255,0.14);
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.25),
-    0 0 24px rgba(0, 229, 255, 0.18);
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 20px 44px rgba(0, 0, 0, 0.26),
+    0 0 30px rgba(0, 229, 255, 0.18);
 }
 
-/* specific hover gradients */
-.modules:not(.locked):hover{
-  background: linear-gradient(135deg, #6d5dfc 0%, #8b7dff 35%, #00d9ff 100%);
-  color: white;
-}
-
-.quizzes:not(.locked):hover{
-  background: linear-gradient(135deg, #ff7a1a 0%, #ff2e88 100%);
-  color: white;
-}
-
-.posttest:not(.locked):hover{
-  background: linear-gradient(135deg, #32ffc7 0%, #00d9ff 100%);
-  color: white;
-}
-
-.pretest:not(.locked):hover{
-  background: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
-  color: white;
+.subject-card:not(.locked):hover::before{
+  opacity: 1;
 }
 
 .subject-card:not(.locked):hover .subject-card-glow{
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1.02);
 }
 
 .subject-card:not(.locked):hover h2,
@@ -290,35 +381,29 @@ body{
   color: white;
 }
 
-.subject-card:active{
-  transform: scale(0.97);
+.subject-card:not(.locked):hover .subject-badge{
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.20);
 }
 
-.active-card{
-  background: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
-  color: white;
-  box-shadow:
-    0 18px 42px rgba(255, 46, 136, 0.22),
-    0 0 28px rgba(0, 229, 255, 0.18);
-}
-.active-card .subject-badge{
-  background: rgba(255,255,255,0.18);
-  border: 1px solid rgba(255,255,255,0.18);
+.subject-card:active{
+  transform: scale(0.975);
 }
 
 /* ================= LOCK ================= */
 .locked{
-  filter: blur(1.3px) saturate(0.85);
-  opacity: 0.62;
+  filter: blur(1.1px) saturate(0.85);
+  opacity: 0.58;
   pointer-events: none;
   user-select: none;
 }
+
 .lock-icon{
   position: absolute;
   top: 12px;
   right: 14px;
   font-size: 18px;
-  z-index: 3;
+  z-index: 4;
 }
 
 /* ================= BACK BUTTON ================= */
@@ -341,6 +426,7 @@ body{
     0 0 16px rgba(0,217,255,0.2);
   transition: all 0.3s ease;
 }
+
 .subject-back-btn:hover{
   transform: translateY(-3px) scale(1.08);
   box-shadow:
@@ -348,6 +434,7 @@ body{
     0 0 24px rgba(0,217,255,0.35);
   background: linear-gradient(135deg, #ff2e88, #32ffc7);
 }
+
 .subject-back-btn:active{
   transform: scale(0.95);
 }
@@ -356,69 +443,49 @@ body{
 body.light-mode .subject-title{
   color: #111827;
 }
+
 body.light-mode .subject-desc{
   color: rgba(17,24,39,0.72);
 }
+
 body.light-mode .subject-header{
   background: rgba(255,255,255,0.72);
 }
+
 body.light-mode .subject-header-glow{
   background: radial-gradient(circle, rgba(109,93,252,0.13), transparent 68%);
 }
 
-/* light idle = plain */
 body.light-mode .subject-card{
   background: rgba(255,255,255,0.88);
   color: #111827;
+  border-color: rgba(17,24,39,0.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.85),
+    0 12px 28px rgba(17,24,39,0.08),
+    0 0 14px rgba(255,255,255,0.20);
 }
 
 body.light-mode .subject-card p{
   color: rgba(17,24,39,0.72);
 }
 
-/* keep pretest active */
-body.light-mode .pretest{
-  background: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
-  color: white;
-  box-shadow:
-    0 18px 42px rgba(255, 46, 136, 0.20),
-    0 0 28px rgba(0, 229, 255, 0.16);
-}
-
-/* reset others to plain in light mode */
+body.light-mode .pretest,
 body.light-mode .modules,
 body.light-mode .quizzes,
-body.light-mode .posttest{
+body.light-mode .posttest,
+body.light-mode .active-card{
   background: rgba(255,255,255,0.88);
   color: #111827;
-  box-shadow:
-    0 12px 28px rgba(17,24,39,0.08),
-    0 0 14px rgba(255,255,255,0.20);
 }
 
-/* hover still shows gradients */
 body.light-mode .subject-card:not(.locked):hover{
   color: white;
-  transform: translateY(-6px) scale(1.025);
+  transform: translateY(-7px) scale(1.028);
   box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
     0 18px 40px rgba(17,24,39,0.16),
     0 0 24px rgba(0, 229, 255, 0.18);
-}
-
-body.light-mode .modules:not(.locked):hover{
-  background: linear-gradient(135deg, #6d5dfc 0%, #8b7dff 35%, #00d9ff 100%);
-}
-
-body.light-mode .quizzes:not(.locked):hover{
-  background: linear-gradient(135deg, #ff7a1a 0%, #ff2e88 100%);
-}
-
-body.light-mode .posttest:not(.locked):hover{
-  background: linear-gradient(135deg, #32ffc7 0%, #00d9ff 100%);
-}
-
-body.light-mode .pretest:not(.locked):hover{
-  background: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
 }
 
 body.light-mode .subject-card:not(.locked):hover h2,
@@ -431,24 +498,16 @@ body.light-mode .subject-card:not(.locked):hover p{
   color: rgba(255,255,255,0.92);
 }
 
-body.light-mode .active-card{
-  background: linear-gradient(135deg, #ff2e88 0%, #ff6ad5 28%, #00d9ff 72%, #32ffc7 100%);
-  color: white;
-}
-body.light-mode .active-card h2,
-body.light-mode .active-card p,
-body.light-mode .active-card .subject-badge{
-  color: white;
-}
-
 body.light-mode .subject-logo-code{
   color: #ff7a1a;
   text-shadow: none;
 }
+
 body.light-mode .subject-logo-recall{
   color: #ff2e88;
   text-shadow: none;
 }
+
 body.light-mode .subject-back-btn{
   color: white;
   background: linear-gradient(135deg, #6d5dfc, #9d4edd);
@@ -456,9 +515,11 @@ body.light-mode .subject-back-btn{
     0 8px 20px rgba(109,93,252,0.25),
     0 0 16px rgba(157,78,221,0.2);
 }
+
 body.light-mode .subject-back-btn:hover{
   background: linear-gradient(135deg, #6d5dfc, #00d9ff);
 }
+
 body.light-mode .subject-theme-toggle{
   color: white;
   background: linear-gradient(135deg, #6d5dfc, #9d4edd);
@@ -466,14 +527,12 @@ body.light-mode .subject-theme-toggle{
     0 10px 30px rgba(109, 93, 252, 0.25),
     0 0 24px rgba(157, 78, 221, 0.18);
 }
+
 body.light-mode .subject-badge{
   background: rgba(0,0,0,0.05);
   border: 1px solid rgba(0,0,0,0.08);
 }
-body.light-mode .active-card .subject-badge{
-  background: rgba(255,255,255,0.24);
-  border: 1px solid rgba(255,255,255,0.24);
-}
+
 body.light-mode .subject-card:not(.locked):hover .subject-badge{
   background: rgba(255,255,255,0.22);
   border: 1px solid rgba(255,255,255,0.24);
@@ -486,31 +545,38 @@ body.light-mode .subject-card:not(.locked):hover .subject-badge{
     top: 22px;
     left: 18px;
   }
+
   .subject-page{
     width: 94%;
     padding-top: 100px;
     padding-bottom: 110px;
     justify-content: flex-start;
   }
+
   .subject-actions{
     grid-template-columns: 1fr;
   }
+
   .subject-header{
     padding: 24px 18px;
   }
+
   .subject-card{
     min-height: 165px;
     padding: 20px;
   }
+
   .subject-card h2{
     font-size: 28px;
   }
+
   .subject-back-btn{
     left: 18px;
     bottom: 18px;
     padding: 13px 20px;
     font-size: 15px;
   }
+
   .subject-theme-toggle{
     right: 18px;
     bottom: 18px;

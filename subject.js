@@ -203,3 +203,19 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
+window.addEventListener("DOMContentLoaded", () => {
+  const cards = document.querySelectorAll(".subject-card");
+
+  cards.forEach((card) => {
+    card.addEventListener("pointerdown", (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      card.style.setProperty("--ripple-x", `${x}px`);
+      card.style.setProperty("--ripple-y", `${y}px`);
+    });
+  });
+});
+
