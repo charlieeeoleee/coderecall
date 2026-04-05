@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Module Levels - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="module-levels.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <a href="dashboard.html" class="levels-logo" aria-label="Go to dashboard">
+    <span class="levels-logo-code">CODE:</span>
+    <span class="levels-logo-recall">RECALL!</span>
+  </a>
+
+  <button class="theme-toggle levels-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <main class="levels-page">
+    <section class="levels-header card">
+      <div class="levels-header-glow"></div>
+      <span class="levels-tag" id="levelsTag">MODULE LEVELS</span>
+      <h1 class="levels-title" id="levelsTitle">Electrical Module Levels</h1>
+      <p class="levels-subtitle" id="levelsSubtitle">Complete all module levels to finish this difficulty.</p>
+    </section>
+
+    <section class="levels-summary card">
+      <div class="summary-box">
+        <span class="summary-label">Completed</span>
+        <span class="summary-value" id="completedLevelsText">0 / 5</span>
+      </div>
+      <div class="summary-box">
+        <span class="summary-label">Difficulty</span>
+        <span class="summary-value" id="difficultyText">Easy</span>
+      </div>
+      <div class="summary-box">
+        <span class="summary-label">Progress</span>
+        <span class="summary-value" id="levelsPercentText">0%</span>
+      </div>
+    </section>
+
+    <section class="levels-grid-wrap card">
+      <div class="levels-grid" id="levelsGrid"></div>
+    </section>
+
+    <div class="levels-actions">
+      <button class="levels-btn secondary-btn" onclick="goBackToDifficulty()">← Back</button>
+    </div>
+  </main>
+
+  <script type="module" src="module-levels.js"></script>
+</body>
+</html>

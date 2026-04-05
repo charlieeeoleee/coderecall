@@ -65,11 +65,11 @@ window.openPretest = function () {
 };
 
 window.openModules = function () {
-  window.location.href = `modules.html?subject=${subject}&level=easy`;
+  window.location.href = `module-difficulty.html?subject=${subject}`;
 };
 
 window.openQuiz = function () {
-  window.location.href = `quiz-levels.html?subject=${subject}`;
+  window.location.href = `quiz-difficulty.html?subject=${subject}`;
 };
 
 window.openPosttest = function () {

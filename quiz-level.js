@@ -1,7 +1,15 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { restartThemeMusic, playSound } from "./sound.js";
+
+import { 
+  initSounds,
+  initGlobalClickSound,
+  tryStartMusic,
+  restartThemeMusic, 
+  playSound 
+} from "./sound.js";
+
 import { quizData } from "./quiz-data.js"; 
 
 const firebaseConfig = {
@@ -19,6 +27,7 @@ const db = getFirestore(app);
 
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
+const difficulty = params.get("difficulty") || "easy";
 const quizLevel = parseInt(params.get("quizLevel") || "1", 10);
 
 const XP_PER_LEVEL = 6;
@@ -103,21 +112,26 @@ function getPlaceholderQuestions(subjectName, levelNumber) {
 }
 
 function prepareQuestions() {
-  const levelData = quizData?.[subject]?.easy?.[quizLevel];
+  const levelData = quizData?.[subject]?.[difficulty]?.[quizLevel];
 
   if (!levelData) {
     console.warn("No quiz data found, using fallback");
-    questions = getPlaceholderQuestions(subject, quizLevel).map((item) => ({
+
+    questions = shuffleArray([...getPlaceholderQuestions(subject, quizLevel)]).map((item) => ({
       ...item,
-      choices: shuffleArray(item.choices)
+      choices: shuffleArray([...item.choices])
     }));
+
+    console.log("Prepared fallback questions:", questions);
     return;
   }
 
-  questions = levelData.map((item) => ({
+  questions = shuffleArray([...levelData]).map((item) => ({
     ...item,
-    choices: shuffleArray(item.choices)
+    choices: shuffleArray([...item.choices])
   }));
+
+  console.log("Prepared real questions:", questions);
 }
 
 function renderHeader() {
@@ -240,27 +254,30 @@ async function saveLevelCompletion() {
 }
 
 async function awardLevelXPOnce() {
-  if (xpAwarded) return;
+  if (xpAwarded) return 0;
 
   const alreadyDone = localStorage.getItem(getLevelDoneKey()) === "true";
   if (alreadyDone) {
     xpAwarded = true;
-    return;
+    return 0;
   }
 
-  await addXP(XP_PER_LEVEL);
+  const earnedXP = score * 2;
+  await addXP(earnedXP);
   xpAwarded = true;
+
+  return earnedXP;
 }
 
 async function finishLevel() {
   document.getElementById("levelProgressFill").style.width = "100%";
   document.getElementById("levelProgressText").textContent = "100% Completed";
 
-  await awardLevelXPOnce();
+  const earnedXP = await awardLevelXPOnce();
   await saveLevelCompletion();
 
   document.getElementById("resultMessage").textContent =
-    `You completed Level ${quizLevel} and earned ${XP_PER_LEVEL} XP.`;
+    `You completed Level ${quizLevel} with a score of ${score}/${questions.length} and earned ${earnedXP} XP.`;
 
   document.getElementById("resultModal").classList.add("active");
 }
@@ -280,14 +297,8 @@ window.handleNext = function () {
 
   currentIndex++;
 
-  if (currentIndex < questions.length) {
-    renderQuestion();
-  } else {
-    finishLevel().catch((error) => {
-      console.error("Error finishing level:", error);
-      document.getElementById("resultModal").classList.add("active");
-    });
-  }
+  // 👇 IMPORTANT
+  showRationale(isCorrect, currentQuestion.rationale);
 };
 
 onAuthStateChanged(auth, (user) => {
@@ -298,3 +309,31 @@ loadTheme();
 renderHeader();
 prepareQuestions();
 renderQuestion();
+
+initSounds();
+initGlobalClickSound();
+tryStartMusic();
+
+document.body.addEventListener("click", () => {
+  tryStartMusic();
+}, { once: true });
+
+function showRationale(isCorrect, rationale) {
+  document.getElementById("rationaleTitle").textContent =
+    isCorrect ? "Correct ✅" : "Wrong ❌";
+
+  document.getElementById("rationaleText").textContent =
+    rationale || "Review the concept related to this question.";
+
+  document.getElementById("rationaleModal").classList.add("active");
+}
+
+window.closeRationale = function () {
+  document.getElementById("rationaleModal").classList.remove("active");
+
+  if (currentIndex < questions.length) {
+    renderQuestion();
+  } else {
+    finishLevel();
+  }
+};

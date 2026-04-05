@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Module Difficulty - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="module-difficulty.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <a href="dashboard.html" class="difficulty-logo" aria-label="Go to dashboard">
+    <span class="difficulty-logo-code">CODE:</span>
+    <span class="difficulty-logo-recall">RECALL!</span>
+  </a>
+
+  <button class="theme-toggle difficulty-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="themeIcon">🌙</span>
+  </button>
+
+  <main class="difficulty-page">
+    <section class="difficulty-header card">
+      <div class="difficulty-header-glow"></div>
+      <span class="difficulty-tag">MODULE DIFFICULTY</span>
+      <h1 class="difficulty-title" id="difficultyTitle">Choose Module Difficulty</h1>
+      <p class="difficulty-subtitle" id="difficultySubtitle">
+        Select a difficulty before opening the modules.
+      </p>
+    </section>
+
+    <section class="difficulty-grid">
+      <button class="difficulty-card difficulty-easy card" onclick="openDifficulty('easy')">
+        <div class="difficulty-card-glow"></div>
+        <div class="difficulty-card-inner">
+          <span class="difficulty-badge">BEGINNER</span>
+          <h2>Easy</h2>
+          <p>Basic concepts and simple lessons.</p>
+        </div>
+      </button>
+
+      <button class="difficulty-card difficulty-medium card locked" id="mediumBtn">
+        <div class="difficulty-card-glow"></div>
+        <div class="difficulty-card-inner">
+          <span class="difficulty-badge">INTERMEDIATE</span>
+          <h2>Medium</h2>
+          <p>Unlocks after finishing Easy modules.</p>
+        </div>
+      </button>
+
+      <button class="difficulty-card difficulty-hard card locked" id="hardBtn">
+        <div class="difficulty-card-glow"></div>
+        <div class="difficulty-card-inner">
+          <span class="difficulty-badge">ADVANCED</span>
+          <h2>Hard</h2>
+          <p>Unlocks after finishing Medium modules.</p>
+        </div>
+      </button>
+    </section>
+  </main>
+
+  <button class="difficulty-back-btn" onclick="goBack()">← Back</button>
+
+  <script type="module" src="module-difficulty.js"></script>
+</body>
+</html>
