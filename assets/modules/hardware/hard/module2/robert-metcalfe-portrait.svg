@@ -1,0 +1,21 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <rect width="1200" height="1200" rx="48" fill="#172333"/>
+  <circle cx="980" cy="180" r="150" fill="#7c5cff" opacity="0.16"/>
+  <rect x="72" y="70" width="170" height="48" rx="24" fill="#7c5cff" opacity="0.22" stroke="#7c5cff"/>
+  <text x="157" y="102" text-anchor="middle" fill="#f7fbff" font-family="Montserrat,Arial,sans-serif" font-size="24" font-weight="700">History</text>
+  <text x="72" y="170" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="58" font-weight="800">Robert Metcalfe</text>
+  <text x="72" y="225" fill="#c3b4ff" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="600">Ethernet and networking</text>
+  <circle cx="600" cy="560" r="210" fill="#efc4a1"/>
+  <path d="M418 530c20-110 90-190 184-190 103 0 172 75 180 190v60H418z" fill="#715238"/>
+  <rect x="475" y="710" width="250" height="270" rx="120" fill="#121c2e"/>
+  <circle cx="522" cy="560" r="18" fill="#231811"/>
+  <circle cx="676" cy="560" r="18" fill="#231811"/>
+  <path d="M546 642c36 20 72 20 108 0" stroke="#965243" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <rect x="385" y="770" width="430" height="300" rx="32" fill="#223452"/>
+  <path d="M455 845h290" stroke="#7c5cff" stroke-width="16" stroke-linecap="round"/>
+  <path d="M455 915h290" stroke="#7c5cff" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="455" cy="845" r="22" fill="#50e3c2"/>
+  <circle cx="600" cy="915" r="22" fill="#50e3c2"/>
+  <circle cx="745" cy="845" r="22" fill="#50e3c2"/>
+  <text x="72" y="1125" fill="#eef7ff" font-family="Montserrat,Arial,sans-serif" font-size="26">Robert Metcalfe co-invented Ethernet, a networking technology that became essential to modern connected computing.</text>
+</svg>

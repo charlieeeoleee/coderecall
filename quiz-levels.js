@@ -35,13 +35,22 @@ const subjectLabels = {
   hardware: "Computer Hardware Quiz Levels"
 };
 
-document.getElementById("levelsTitle").textContent = subjectLabels[subject] || "Quiz Levels";
+document.getElementById("levelsTitle").textContent =
+  `${subjectLabels[subject] || "Quiz Levels"} - ${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)}`;
 
 function getLevelKey(level) {
+  return `${subject}_${difficulty}_quiz_level_${level}_done`;
+}
+
+function getLegacyLevelKey(level) {
   return `${subject}_quiz_level_${level}_done`;
 }
 
 function getOverallQuizKey() {
+  return `${subject}_${difficulty}_quiz`;
+}
+
+function getLegacyOverallQuizKey() {
   return `${subject}_quiz`;
 }
 
@@ -68,8 +77,7 @@ window.toggleTheme = function () {
 };
 
 window.goBackToSubject = function () {
-  window.location.href = `quiz-difficulty.html?subject=${subject}
-  &difficulty=${difficulty}`;
+  window.location.href = `quiz-difficulty.html?subject=${subject}`;
 };
 
 async function ensureUserDoc(uid) {
@@ -92,10 +100,14 @@ async function getUserProgress() {
   const progress = {};
 
   for (let i = 1; i <= TOTAL_LEVELS; i++) {
-    progress[getLevelKey(i)] = localStorage.getItem(getLevelKey(i)) === "true";
+    progress[getLevelKey(i)] =
+      localStorage.getItem(getLevelKey(i)) === "true" ||
+      (difficulty === "easy" && localStorage.getItem(getLegacyLevelKey(i)) === "true");
   }
 
-  progress[getOverallQuizKey()] = localStorage.getItem(getOverallQuizKey()) === "true";
+  progress[getOverallQuizKey()] =
+    localStorage.getItem(getOverallQuizKey()) === "true" ||
+    (difficulty === "easy" && localStorage.getItem(getLegacyOverallQuizKey()) === "true");
 
   if (!currentUser) return progress;
 
@@ -105,12 +117,18 @@ async function getUserProgress() {
   const firebaseProgress = data.progress || {};
 
   for (let i = 1; i <= TOTAL_LEVELS; i++) {
-    if (firebaseProgress[getLevelKey(i)] === true) {
+    if (
+      firebaseProgress[getLevelKey(i)] === true ||
+      (difficulty === "easy" && firebaseProgress[getLegacyLevelKey(i)] === true)
+    ) {
       progress[getLevelKey(i)] = true;
     }
   }
 
-  if (firebaseProgress[getOverallQuizKey()] === true) {
+  if (
+    firebaseProgress[getOverallQuizKey()] === true ||
+    (difficulty === "easy" && firebaseProgress[getLegacyOverallQuizKey()] === true)
+  ) {
     progress[getOverallQuizKey()] = true;
   }
 
@@ -124,6 +142,9 @@ async function syncOverallQuizCompletion(progress) {
   if (!allDone) return;
 
   localStorage.setItem(getOverallQuizKey(), "true");
+  if (difficulty === "easy") {
+    localStorage.setItem(getLegacyOverallQuizKey(), "true");
+  }
 
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
@@ -131,6 +152,9 @@ async function syncOverallQuizCompletion(progress) {
     const data = snap.data() || {};
     const existingProgress = data.progress || {};
     existingProgress[getOverallQuizKey()] = true;
+    if (difficulty === "easy") {
+      existingProgress[getLegacyOverallQuizKey()] = true;
+    }
 
     await updateDoc(userRef, {
       progress: existingProgress
@@ -172,7 +196,7 @@ async function renderLevels() {
 
     if (unlocked) {
       card.addEventListener("click", () => {
-        window.location.href = `quiz-level.html?subject=${subject}&quizLevel=${level}`;
+        window.location.href = `quiz-level.html?subject=${subject}&difficulty=${difficulty}&quizLevel=${level}`;
       });
     }
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -46,15 +46,38 @@
       </div>
     </section>
 
+    <section class="levels-progress card">
+      <div class="levels-progress-head">
+        <h2>Mission Progress</h2>
+        <span class="levels-progress-chip" id="levelsStatusText">Start Module 1 to begin</span>
+      </div>
+      <div class="levels-progress-bar">
+        <div class="levels-progress-fill" id="levelsProgressFill"></div>
+      </div>
+      <p class="levels-progress-note" id="levelsProgressNote">
+        Finish each module in order to unlock the next lesson in this difficulty.
+      </p>
+    </section>
+
+    <section class="levels-celebration card" id="levelsCelebration" hidden>
+      <div class="levels-celebration-badge">Mission Update</div>
+      <h2 class="levels-celebration-title" id="levelsCelebrationTitle">Module cleared</h2>
+      <p class="levels-celebration-copy" id="levelsCelebrationCopy">
+        Your latest completed module is highlighted below.
+      </p>
+    </section>
+
     <section class="levels-grid-wrap card">
       <div class="levels-grid" id="levelsGrid"></div>
     </section>
 
     <div class="levels-actions">
-      <button class="levels-btn secondary-btn" onclick="goBackToDifficulty()">← Back</button>
+      <button class="levels-btn secondary-btn" onclick="goBackToDifficulty()">Back</button>
+      <button class="levels-btn primary-btn" id="nextDifficultyBtn" hidden>Next Difficulty</button>
     </div>
   </main>
 
   <script type="module" src="module-levels.js"></script>
 </body>
 </html>
+

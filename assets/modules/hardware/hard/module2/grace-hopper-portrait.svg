@@ -1,0 +1,25 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <rect width="1200" height="1200" rx="48" fill="#1a2238"/>
+  <circle cx="980" cy="180" r="150" fill="#50e3c2" opacity="0.16"/>
+  <circle cx="220" cy="1020" r="120" fill="#8c5bff" opacity="0.12"/>
+  <rect x="72" y="70" width="170" height="48" rx="24" fill="#1ec997" opacity="0.22" stroke="#1ec997"/>
+  <text x="157" y="102" text-anchor="middle" fill="#f7fbff" font-family="Montserrat,Arial,sans-serif" font-size="24" font-weight="700">History</text>
+  <text x="72" y="170" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="64" font-weight="800">Grace Hopper</text>
+  <text x="72" y="225" fill="#9fd1ff" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="600">Programming languages and compilers</text>
+  <circle cx="600" cy="560" r="210" fill="#f0c7a6"/>
+  <path d="M410 520c15-170 385-175 385 0v88H410z" fill="#1b2439"/>
+  <rect x="478" y="700" width="244" height="270" rx="120" fill="#101b2f"/>
+  <path d="M470 690c32 44 93 72 130 72 62 0 112-25 140-72v96H470z" fill="#e2b88f"/>
+  <rect x="405" y="760" width="390" height="320" rx="40" fill="#243b63"/>
+  <rect x="455" y="810" width="290" height="210" rx="24" fill="#172745" stroke="#4fd5b2" stroke-opacity="0.35"/>
+  <rect x="525" y="800" width="150" height="30" rx="15" fill="#ffdd57"/>
+  <path d="M455 880h290" stroke="#9fd1ff" stroke-width="10" opacity="0.65"/>
+  <path d="M455 930h290" stroke="#9fd1ff" stroke-width="10" opacity="0.65"/>
+  <path d="M455 980h290" stroke="#9fd1ff" stroke-width="10" opacity="0.65"/>
+  <circle cx="525" cy="555" r="20" fill="#2b1d16"/>
+  <circle cx="675" cy="555" r="20" fill="#2b1d16"/>
+  <path d="M545 640c36 22 74 22 110 0" stroke="#9e4f42" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <path d="M520 500c28-16 56-18 82-7" stroke="#56453f" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M598 493c31-10 60-8 88 7" stroke="#56453f" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <text x="72" y="1125" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="26">Grace Hopper advanced compiler thinking and helped make programming languages more practical and powerful.</text>
+</svg>

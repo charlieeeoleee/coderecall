@@ -18,6 +18,7 @@ import {
   restartThemeMusic,
   playSound
 } from "./sound.js";
+import { electricalPosttestQuestions } from "./electrical-posttest-data.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -350,6 +351,13 @@ const electricalPretestQuestions = [
   }
 ];
 
+const questionBanks = {
+  electrical: {
+    pretest: electricalPretestQuestions,
+    posttest: electricalPosttestQuestions
+  }
+};
+
 /* =========================
    QUIZ STATE
 ========================= */
@@ -398,14 +406,11 @@ function getQuizXPReward() {
 }
 
 function prepareQuestions() {
-  let source = [];
-
-  if (subject === "electrical" && type === "pretest") {
-    source = electricalPretestQuestions;
-  }
+  const source = questionBanks[subject]?.[type] || [];
 
   if (!source.length) {
-    source = electricalPretestQuestions;
+    quizQuestions = [];
+    return;
   }
 
   const selected = shuffleArray(source).slice(0, 30);
@@ -428,13 +433,20 @@ function updateProgress() {
 
 function renderQuestion() {
   selectedChoice = null;
-  document.getElementById("nextBtn").disabled = true;
+  const nextBtn = document.getElementById("nextBtn");
+  nextBtn.disabled = true;
 
   const currentQuestion = quizQuestions[currentIndex];
 
   if (!currentQuestion) {
-    document.getElementById("questionText").textContent = "No questions found.";
+    document.getElementById("quizCounter").textContent = "Quiz unavailable";
+    document.getElementById("quizScore").textContent = "Score: --";
+    document.getElementById("quizProgressFill").style.width = "0%";
+    document.getElementById("quizProgressText").textContent = "Content unavailable";
+    document.getElementById("questionText").textContent =
+      "This quiz content is not available yet for the selected subject and test type.";
     document.getElementById("choicesContainer").innerHTML = "";
+    nextBtn.textContent = "Unavailable";
     return;
   }
 
@@ -456,19 +468,63 @@ function renderQuestion() {
 
       btn.classList.add("selected");
       selectedChoice = choice;
-      document.getElementById("nextBtn").disabled = false;
+      nextBtn.disabled = false;
     });
 
     choicesContainer.appendChild(btn);
   });
 
-  const nextBtn = document.getElementById("nextBtn");
-  nextBtn.textContent = currentIndex === quizQuestions.length - 1 ? "Submit" : "Next →";
+  nextBtn.textContent = currentIndex === quizQuestions.length - 1 ? "Submit" : "Next";
 }
 
 function showRationale(message) {
   document.getElementById("rationaleText").textContent = message;
   document.getElementById("rationaleModal").classList.add("active");
+}
+
+function buildFallbackQuizRationale(question) {
+  const prompt = String(question?.question || "").toLowerCase();
+
+  const rationaleLibrary = [
+    {
+      patterns: ["current", "resistance", "24v", "12ω", "100w", "power in a circuit", "what is the resistance"],
+      text: "Review the core electrical relationships that connect voltage, current, resistance, and power before choosing the best match."
+    },
+    {
+      patterns: ["parallel", "series", "closed circuit", "one bulb burns out"],
+      text: "Focus on how current paths behave in series and parallel circuits, and what happens when one part of the path opens."
+    },
+    {
+      patterns: ["circuit breaker", "fuse"],
+      text: "Think about how protective devices respond to faults and whether they are meant to be replaced or reset."
+    },
+    {
+      patterns: ["magnetic field", "inductor", "capacitor", "diode"],
+      text: "This item compares the basic job of common components, especially which ones store energy and how they affect current flow."
+    },
+    {
+      patterns: ["neutral wire", "home electricity supply", "awg", "wire insulation", "conduit", "pigtail splice"],
+      text: "Review practical wiring concepts by matching each material, method, or conductor role to its common use in installation work."
+    },
+    {
+      patterns: ["electrons", "static electricity", "watts"],
+      text: "Return to the basic electrical definitions, including what moves, what gets measured, and what each unit represents."
+    },
+    {
+      patterns: ["arc flash", "ppe", "test for voltage"],
+      text: "This is testing electrical safety practice, so focus on hazard prevention and the correct sequence before touching equipment."
+    },
+    {
+      patterns: ["yellow, violet, and orange", "red", "resistor color code", "potentiometer", "polarized capacitors"],
+      text: "Review component identification and handling by connecting the physical feature, code, or polarity rule to its proper application."
+    }
+  ];
+
+  const matched = rationaleLibrary.find((entry) =>
+    entry.patterns.some((pattern) => prompt.includes(pattern))
+  );
+
+  return matched?.text || "Review the concept being tested here and match the component, formula, or wiring rule to its actual function.";
 }
 
 window.closeRationaleAndContinue = function () {
@@ -501,6 +557,7 @@ async function ensureUserDoc(uid) {
       xp: 0,
       xpWeekly: 0,
       xpChange: 0,
+      lastWeeklyReset: getWeekKey(),
       progress: {},
       results: {},
       createdAt: new Date().toISOString()
@@ -512,26 +569,32 @@ async function ensureUserDoc(uid) {
 
 async function addXP(amount) {
   if (!amount || amount <= 0) return;
-
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
     const snap = await getDoc(userRef);
     const data = snap.data() || {};
+    const currentWeek = getWeekKey();
+    const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
     const currentXP = Number(data.xp || 0);
+    const currentWeeklyXP =
+      lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
     const newXP = currentXP + amount;
-
+    const newWeeklyXP = currentWeeklyXP + amount;
     await updateDoc(userRef, {
-      xp: newXP
+      xp: newXP,
+      xpWeekly: newWeeklyXP,
+      xpChange: amount,
+      lastWeeklyReset: currentWeek
     });
-
     console.log("Firebase XP updated:", newXP);
     return;
   }
-
   const guestXP = parseInt(localStorage.getItem("guest_xp") || "0", 10);
+  const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
   const newXP = guestXP + amount;
-
+  const newWeeklyXP = guestWeeklyXP + amount;
   localStorage.setItem("guest_xp", String(newXP));
+  localStorage.setItem("guest_xpWeekly", String(newWeeklyXP));
   console.log("Guest XP updated:", newXP);
 }
 
@@ -634,7 +697,7 @@ window.handleNext = function () {
   } else {
     playSound("wrong");
     pendingContinue = continueToNext;
-    showRationale(currentQuestion.rationale);
+    showRationale(currentQuestion.rationale || buildFallbackQuizRationale(currentQuestion));
   }
 };
 
@@ -661,6 +724,14 @@ function continueToNext() {
   }
 }
 
+function getWeekKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const firstDay = new Date(year, 0, 1);
+  const pastDays = Math.floor((now - firstDay) / 86400000);
+  const week = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+  return `${year}-W${week}`;
+}
 /* =========================
    THEME
 ========================= */
@@ -718,3 +789,4 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+

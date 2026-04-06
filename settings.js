@@ -190,27 +190,45 @@ function loadPreferences() {
 ========================= */
 function loadProgress() {
   if (currentUser) {
-    loadXPFromFirestore();
+    loadProgressFromFirestore();
     return;
   }
 
   const xp = parseInt(localStorage.getItem("guest_xp")) || 0;
-  renderProgress(xp);
+  const progress = getLocalProgressState();
+  renderProgress(xp, progress);
 }
 
-async function loadXPFromFirestore() {
+function getLocalProgressState() {
+  const progress = {};
+  ["hardware", "electrical"].forEach((subject) => {
+    progress[`${subject}_pretest`] = localStorage.getItem(`${subject}_pretest`) === "true";
+    progress[`${subject}_modules`] = localStorage.getItem(`${subject}_modules`) === "true";
+    progress[`${subject}_quiz`] = localStorage.getItem(`${subject}_quiz`) === "true";
+    progress[`${subject}_posttest`] = localStorage.getItem(`${subject}_posttest`) === "true";
+  });
+  return progress;
+}
+
+async function loadProgressFromFirestore() {
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
 
   let xp = 0;
+  let progress = getLocalProgressState();
   if (docSnap.exists()) {
-    xp = docSnap.data().xp || 0;
+    const data = docSnap.data();
+    xp = data.xp || 0;
+    progress = {
+      ...progress,
+      ...(data.progress || {})
+    };
   }
 
-  renderProgress(xp);
+  renderProgress(xp, progress);
 }
 
-function renderProgress(xp) {
+function renderProgress(xp, progress = getLocalProgressState()) {
   const xpPerLevel = 100;
   const level = Math.floor(xp / xpPerLevel) + 1;
   const currentXP = xp % xpPerLevel;
@@ -221,7 +239,7 @@ function renderProgress(xp) {
   const totalSubjects = subjects.length;
 
   subjects.forEach(subject => {
-    const done = localStorage.getItem(`${subject}_posttest`) === "true";
+    const done = progress[`${subject}_posttest`] === true;
     if (done) completedSubjects++;
   });
 
@@ -308,7 +326,9 @@ window.resetProgress = function() {
             ...data,
             xp: 0,
             xpWeekly: 0,
-            xpChange: 0
+            xpChange: 0,
+            progress: {},
+            results: {}
           });
         }
       }

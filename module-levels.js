@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -7,6 +7,7 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
+import { MODULE_CATALOG, MODULE_STRUCTURE } from "./module-data.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -25,8 +26,6 @@ const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
 const difficulty = params.get("difficulty") || "easy";
 
-const TOTAL_LEVELS = 5;
-
 let currentUser = null;
 
 const subjectLabels = {
@@ -35,8 +34,25 @@ const subjectLabels = {
 };
 
 document.getElementById("levelsTitle").textContent = subjectLabels[subject] || "Module Levels";
-document.getElementById("difficultyText").textContent =
-  difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+document.getElementById("difficultyText").textContent = formatDifficultyLabel(difficulty);
+
+const TOTAL_LEVELS = MODULE_STRUCTURE[subject]?.[difficulty] || 0;
+const MODULE_XP_REWARD = 5;
+const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
+const DIFFICULTY_ORDER = ["easy", "medium", "hard"];
+
+function formatDifficultyLabel(level) {
+  return level === "hard" ? "Difficult" : level.charAt(0).toUpperCase() + level.slice(1);
+}
+
+function getNextDifficulty(currentDifficulty) {
+  const currentIndex = DIFFICULTY_ORDER.indexOf(currentDifficulty);
+  if (currentIndex === -1 || currentIndex >= DIFFICULTY_ORDER.length - 1) {
+    return null;
+  }
+
+  return DIFFICULTY_ORDER[currentIndex + 1];
+}
 
 function getLevelKey(level) {
   return `${subject}_${difficulty}_module_${level}_done`;
@@ -46,12 +62,31 @@ function getOverallModulesKey() {
   return `${subject}_${difficulty}_modules_done`;
 }
 
+function getRecentCompletion() {
+  const raw = localStorage.getItem(RECENT_MODULE_COMPLETION_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.subject === subject && parsed?.difficulty === difficulty) {
+      return parsed;
+    }
+  } catch (error) {
+    console.warn("Failed to parse recent module completion.", error);
+  }
+
+  return null;
+}
+
+function clearRecentCompletion() {
+  localStorage.removeItem(RECENT_MODULE_COMPLETION_KEY);
+}
+
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
   icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
-
 function loadTheme() {
   const saved = localStorage.getItem("theme");
   if (saved === "light") {
@@ -70,6 +105,12 @@ window.toggleTheme = function () {
 
 window.goBackToDifficulty = function () {
   window.location.href = `module-difficulty.html?subject=${subject}`;
+};
+
+window.goToNextDifficulty = function () {
+  const nextDifficulty = getNextDifficulty(difficulty);
+  if (!nextDifficulty) return;
+  window.location.href = `module-levels.html?subject=${subject}&difficulty=${nextDifficulty}`;
 };
 
 async function ensureUserDoc(uid) {
@@ -157,8 +198,31 @@ async function syncOverallModulesCompletion(progress) {
 
 async function renderLevels() {
   const progress = await getUserProgress();
+  const recentCompletion = getRecentCompletion();
   const grid = document.getElementById("levelsGrid");
   grid.innerHTML = "";
+  const progressFill = document.getElementById("levelsProgressFill");
+  const statusText = document.getElementById("levelsStatusText");
+  const progressNote = document.getElementById("levelsProgressNote");
+  const celebration = document.getElementById("levelsCelebration");
+  const celebrationTitle = document.getElementById("levelsCelebrationTitle");
+  const celebrationCopy = document.getElementById("levelsCelebrationCopy");
+  const nextDifficultyBtn = document.getElementById("nextDifficultyBtn");
+  const nextDifficulty = getNextDifficulty(difficulty);
+
+  if (!TOTAL_LEVELS) {
+    document.getElementById("completedLevelsText").textContent = "0 / 0";
+    document.getElementById("levelsPercentText").textContent = "0%";
+    progressFill.style.width = "0%";
+    statusText.textContent = "No modules ready";
+    progressNote.textContent = "This difficulty does not have any configured modules yet.";
+    celebration.hidden = true;
+    if (nextDifficultyBtn) {
+      nextDifficultyBtn.hidden = true;
+    }
+    grid.innerHTML = `<div class="level-empty">No modules are configured for this difficulty yet.</div>`;
+    return;
+  }
 
   let completedCount = 0;
 
@@ -171,18 +235,80 @@ async function renderLevels() {
 
   document.getElementById("completedLevelsText").textContent = `${completedCount} / ${TOTAL_LEVELS}`;
   document.getElementById("levelsPercentText").textContent = `${percent}%`;
+  progressFill.style.width = `${percent}%`;
+
+  const nextUnlockedLevel = Array.from({ length: TOTAL_LEVELS }, (_, idx) => idx + 1)
+    .find((level) => progress[getLevelKey(level)] !== true);
+
+  if (completedCount === TOTAL_LEVELS) {
+    statusText.textContent = "Difficulty cleared";
+    progressNote.textContent = `All ${TOTAL_LEVELS} modules in this difficulty are complete. You can review any lesson or move to the next challenge.`;
+  } else if (nextUnlockedLevel) {
+    statusText.textContent = `Module ${nextUnlockedLevel} is ready`;
+    progressNote.textContent = `Complete modules in order. Finishing Module ${nextUnlockedLevel} will keep your mission going and rewards ${MODULE_XP_REWARD} XP.`;
+  } else {
+    statusText.textContent = "Keep progressing";
+    progressNote.textContent = "Finish the next available module to continue this difficulty path.";
+  }
+
+  if (nextDifficultyBtn) {
+    if (nextDifficulty) {
+      nextDifficultyBtn.hidden = false;
+      nextDifficultyBtn.disabled = completedCount !== TOTAL_LEVELS;
+      nextDifficultyBtn.textContent = completedCount === TOTAL_LEVELS
+        ? `Next: ${formatDifficultyLabel(nextDifficulty)}`
+        : `Unlock ${formatDifficultyLabel(nextDifficulty)}`;
+      nextDifficultyBtn.onclick = () => {
+        if (completedCount === TOTAL_LEVELS) {
+          goToNextDifficulty();
+        }
+      };
+    } else {
+      nextDifficultyBtn.hidden = true;
+    }
+  }
+
+  if (recentCompletion) {
+    celebration.hidden = false;
+    celebrationTitle.textContent = `${recentCompletion.title || `Module ${recentCompletion.module}`} cleared`;
+    celebrationCopy.textContent = `Great work. Module ${recentCompletion.module} is complete and ${recentCompletion.xp || MODULE_XP_REWARD} XP has been added to the learner's progress.`;
+  } else {
+    celebration.hidden = true;
+  }
 
   for (let level = 1; level <= TOTAL_LEVELS; level++) {
     const done = progress[getLevelKey(level)] === true;
     const unlocked = level === 1 || progress[getLevelKey(level - 1)] === true;
+    const moduleData = MODULE_CATALOG[subject]?.[difficulty]?.[`module${level}`];
+    const stateLabel = done ? "Cleared" : unlocked ? "Ready" : "Locked";
+    const statusLine = done ? "Mission Complete" : unlocked ? "Open Lesson" : "Locked Path";
+    const stateCopy = done
+      ? "Checkpoint complete. Open this lesson any time if you want to review the material."
+      : unlocked
+        ? "This module is available now. Open it, read through the lesson, and reach the end to auto-clear the checkpoint."
+        : `Finish Module ${level - 1} first to unlock this lesson.`;
+    const actionLabel = done ? "Review" : unlocked ? "Start" : "Locked";
 
     const card = document.createElement("button");
     card.className = `level-card ${done ? "completed" : unlocked ? "unlocked" : "locked"}`;
+    if (recentCompletion?.module === level && done) {
+      card.classList.add("recent-complete");
+    }
+    card.type = "button";
+    card.disabled = !unlocked;
 
     card.innerHTML = `
-      <div class="level-status">${done ? "✅" : unlocked ? "📘" : "🔒"}</div>
+      <div class="level-topline">
+        <span class="level-badge">${stateLabel}</span>
+        <span class="level-status">${statusLine}</span>
+      </div>
       <div class="level-number">Module ${level}</div>
-      <div class="level-meta">Lesson Content</div>
+      <div class="level-meta">${moduleData?.title || "Lesson Content"}</div>
+      <div class="level-state-copy">${stateCopy}</div>
+      <div class="level-footer">
+        <span class="level-xp">+${MODULE_XP_REWARD} XP</span>
+        <span class="level-action">${actionLabel}</span>
+      </div>
     `;
 
     if (unlocked) {
@@ -195,6 +321,12 @@ async function renderLevels() {
   }
 
   await syncOverallModulesCompletion(progress);
+
+  if (recentCompletion) {
+    setTimeout(() => {
+      clearRecentCompletion();
+    }, 1200);
+  }
 }
 
 onAuthStateChanged(auth, async (user) => {
@@ -211,3 +343,4 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+

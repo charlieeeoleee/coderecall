@@ -1,33 +1,160 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Module - Code Recall</title>
-<link rel="stylesheet" href="module.css">
-<link rel="icon" href="assets/favicon.png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Module - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="module.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
-
 <body>
+  <a href="dashboard.html" class="module-logo" aria-label="Go to dashboard">
+    <span class="module-logo-code">CODE:</span>
+    <span class="module-logo-recall">RECALL!</span>
+  </a>
 
-<!-- THEME TOGGLE -->
-<button class="theme-toggle" onclick="toggleTheme()">
-  <span id="themeIcon">🌙</span>
-</button>
-
-<div class="module-container">
-
-  <h1 id="title">Loading...</h1>
-
-  <div class="content-box">
-    <p id="content"></p>
-  </div>
-
-  <button onclick="startQuiz()" class="start-btn">
-    Start Quiz
+  <button class="theme-toggle module-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="themeIcon">🌙</span>
   </button>
 
-</div>
+  <main class="module-page">
+    <section class="module-header card">
+      <div class="module-header-glow"></div>
+      <span class="module-tag" id="moduleTag">MODULE LESSON</span>
+      <h1 class="module-title" id="title">Loading module...</h1>
+      <p class="module-subtitle" id="moduleSubtitle">Preparing your lesson content.</p>
+    </section>
 
-<script type="module" src="module.js"></script>
+    <section class="module-meta-grid">
+      <article class="module-meta-card card">
+        <span class="module-meta-label">Subject</span>
+        <span class="module-meta-value" id="moduleSubject">Electrical</span>
+      </article>
+      <article class="module-meta-card card">
+        <span class="module-meta-label">Difficulty</span>
+        <span class="module-meta-value" id="moduleDifficulty">Easy</span>
+      </article>
+      <article class="module-meta-card card">
+        <span class="module-meta-label">Module</span>
+        <span class="module-meta-value" id="moduleNumber">Module 1</span>
+      </article>
+      <article class="module-meta-card card">
+        <span class="module-meta-label">Status</span>
+        <span class="module-meta-value" id="moduleProgressState">In Progress</span>
+      </article>
+    </section>
+
+    <section class="module-content card">
+      <div class="module-content-head">
+        <h2>Mission Brief</h2>
+        <span class="module-content-chip" id="moduleStatusChip">Ready to study</span>
+      </div>
+      <div class="module-copy" id="content">Loading lesson content...</div>
+    </section>
+
+    <section class="module-objectives card">
+      <div class="module-content-head">
+        <h2>Objectives</h2>
+        <span class="module-content-chip">Level Goals</span>
+      </div>
+      <div class="module-pill-list" id="moduleObjectives"></div>
+    </section>
+
+    <section class="module-sections card">
+      <div class="module-content-head">
+        <h2>Lesson Path</h2>
+        <span class="module-content-chip">Core Concepts</span>
+      </div>
+      <div class="module-section-list" id="moduleSections"></div>
+    </section>
+
+    <section class="module-form-factors card" id="moduleFormFactorSection" hidden>
+      <div class="module-content-head">
+        <h2>Motherboard Form Factors</h2>
+        <span class="module-content-chip" id="moduleFormFactorChip">4 form factors</span>
+      </div>
+      <div class="module-form-factor-grid" id="moduleFormFactorGrid"></div>
+      <p class="module-gallery-note" id="moduleFormFactorNote">
+        These cards separate the common motherboard form factors into clear, one-by-one containers.
+      </p>
+    </section>
+
+    <section class="module-gallery card" id="moduleGallerySection">
+      <div class="module-content-head">
+        <h2>Module Images</h2>
+        <span class="module-content-chip" id="moduleGalleryChip">Image support ready</span>
+      </div>
+      <div class="module-gallery-grid" id="moduleGallery"></div>
+      <p class="module-gallery-note" id="moduleGalleryNote">
+        Embedded visuals from the original PDFs can be added here once the image files are exported into the project.
+      </p>
+    </section>
+
+    <section class="module-process card" id="moduleProcessSection" hidden>
+      <div class="module-content-head">
+        <h2 id="moduleProcessTitle">Step by Step</h2>
+        <span class="module-content-chip" id="moduleProcessChip">Guided Flow</span>
+      </div>
+      <div class="module-gallery-grid-single" id="moduleProcessGrid"></div>
+      <p class="module-gallery-note" id="moduleProcessNote">
+        Follow the process in order before moving to the next activity.
+      </p>
+    </section>
+
+    <section class="module-circuits card" id="moduleCircuitsSection" hidden>
+      <div class="module-content-head">
+        <h2 id="moduleCircuitsTitle">Sample Circuit Diagrams</h2>
+        <span class="module-content-chip" id="moduleCircuitsChip">Reference Circuits</span>
+      </div>
+      <div class="module-circuit-grid" id="moduleCircuitsGrid"></div>
+      <p class="module-gallery-note" id="moduleCircuitsNote">
+        Review these simple sample circuits to connect each passive component to a practical use.
+      </p>
+    </section>
+
+    <section class="module-timeline card" id="moduleTimelineSection" hidden>
+      <div class="module-content-head">
+        <h2>Computer History Timeline</h2>
+        <span class="module-content-chip">Timeline View</span>
+      </div>
+      <div class="module-timeline-visual" id="moduleTimelineVisual"></div>
+      <div class="module-timeline-strip" id="moduleTimelineStrip"></div>
+      <p class="module-gallery-note" id="moduleTimelineNote">
+        Review the people and milestones in order to connect each major figure to the progress of computing.
+      </p>
+    </section>
+
+    <section class="module-tip card">
+      <h3>Study Tip</h3>
+      <p id="studyTip">
+        Read carefully, take notes on key terms, and finish the lesson before moving to the next activity.
+      </p>
+    </section>
+
+    <section class="module-challenge card">
+      <div class="module-content-head">
+        <h2 id="challengeTitle">Challenge</h2>
+        <span class="module-content-chip">Quick Check</span>
+      </div>
+      <p class="module-challenge-prompt" id="challengePrompt">
+        Review the lesson and answer the challenge before continuing.
+      </p>
+      <div class="module-pill-list" id="challengePoints"></div>
+    </section>
+
+    <div class="module-actions">
+      <button class="module-btn secondary-btn" onclick="goBackToLevels()">Back to Modules</button>
+      <button class="module-btn success-btn" id="moduleCheckpointBtn" disabled>Checkpoint clears after reading</button>
+      <button class="module-btn primary-btn" onclick="startQuiz()" id="moduleActionBtn">Continue</button>
+    </div>
+  </main>
+
+  <script type="module" src="module.js"></script>
 </body>
 </html>

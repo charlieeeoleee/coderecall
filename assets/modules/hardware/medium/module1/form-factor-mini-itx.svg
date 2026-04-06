@@ -1,0 +1,19 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <rect width="1200" height="900" rx="42" fill="#162338"/>
+  <circle cx="1000" cy="140" r="135" fill="#a855f7" opacity="0.16"/>
+  <rect x="70" y="70" width="220" height="48" rx="24" fill="#a855f7" opacity="0.22" stroke="#a855f7"/>
+  <text x="180" y="102" text-anchor="middle" fill="#f7fbff" font-family="Montserrat,Arial,sans-serif" font-size="24" font-weight="700">Form Factor</text>
+  <text x="70" y="180" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="62" font-weight="800">Mini-ITX</text>
+  <text x="70" y="232" fill="#b7d9ff" font-family="Montserrat,Arial,sans-serif" font-size="28" font-weight="600">Compact and space-saving board</text>
+  <rect x="90" y="290" width="1020" height="370" rx="28" fill="#0f1b2d" stroke="#a855f7" stroke-opacity="0.28"/>
+  <rect x="315" y="335" width="300" height="220" rx="24" fill="#2d8a5f" stroke="#d9f7ea" stroke-opacity="0.55" stroke-width="5"/>
+  <rect x="365" y="385" width="150" height="115" rx="18" fill="#1b2d4a"/>
+  <rect x="540" y="385" width="230" height="36" rx="12" fill="#c7d8f2" opacity="0.95"/>
+  <rect x="540" y="436" width="230" height="36" rx="12" fill="#c7d8f2" opacity="0.78"/>
+  <rect x="540" y="487" width="230" height="36" rx="12" fill="#c7d8f2" opacity="0.6"/>
+  <rect x="800" y="385" width="120" height="170" rx="18" fill="#243e67"/>
+  <circle cx="890" cy="565" r="18" fill="#ffcf85"/>
+  <text x="120" y="740" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="800">Literal size note</text>
+  <text x="120" y="785" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="24">Board size example: 300 by 220</text>
+  <text x="120" y="822" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="24">Common use: Small form factor and energy-efficient builds</text>
+</svg>

@@ -1,0 +1,27 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <rect width="1200" height="1200" rx="48" fill="#182435"/>
+  <circle cx="960" cy="180" r="150" fill="#ffb84d" opacity="0.16"/>
+  <rect x="72" y="70" width="170" height="48" rx="24" fill="#ffb84d" opacity="0.22" stroke="#ffb84d"/>
+  <text x="157" y="102" text-anchor="middle" fill="#f7fbff" font-family="Montserrat,Arial,sans-serif" font-size="24" font-weight="700">History</text>
+  <text x="72" y="170" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="60" font-weight="800">Konrad Zuse</text>
+  <text x="72" y="225" fill="#ffd8a3" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="600">Early programmable machines</text>
+  <circle cx="600" cy="560" r="210" fill="#efc29d"/>
+  <path d="M420 540c18-138 110-198 190-198 105 0 170 71 170 198v52H420z" fill="#4b3a2d"/>
+  <rect x="475" y="710" width="250" height="275" rx="122" fill="#0f182b"/>
+  <circle cx="520" cy="560" r="18" fill="#231811"/>
+  <circle cx="678" cy="560" r="18" fill="#231811"/>
+  <path d="M546 642c36 18 72 18 108 0" stroke="#9d5346" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <rect x="400" y="770" width="400" height="300" rx="30" fill="#20324e"/>
+  <rect x="448" y="820" width="304" height="180" rx="20" fill="#111d30" stroke="#ffb84d" stroke-opacity="0.35"/>
+  <g fill="#ffcf85">
+    <rect x="490" y="860" width="36" height="36" rx="6"/>
+    <rect x="540" y="860" width="36" height="36" rx="6"/>
+    <rect x="590" y="860" width="36" height="36" rx="6"/>
+    <rect x="640" y="860" width="36" height="36" rx="6"/>
+    <rect x="490" y="912" width="36" height="36" rx="6"/>
+    <rect x="540" y="912" width="36" height="36" rx="6"/>
+    <rect x="590" y="912" width="36" height="36" rx="6"/>
+    <rect x="640" y="912" width="36" height="36" rx="6"/>
+  </g>
+  <text x="72" y="1125" fill="#eef7ff" font-family="Montserrat,Arial,sans-serif" font-size="26">Konrad Zuse is associated with some of the earliest programmable computers, including the Z3.</text>
+</svg>
