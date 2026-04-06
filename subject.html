@@ -78,8 +78,34 @@
 
   <button class="subject-back-btn" onclick="goBack()">Back</button>
 
-  <script type="module" src="scripts/subject.js"></script>
-  <script src="scripts/loading.js" defer></script>
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const subject = params.get("subject") || "electrical";
+
+      window.openPretest = function () {
+        window.location.href = `quiz.html?subject=${subject}&level=easy&type=pretest`;
+      };
+
+      window.openModules = function () {
+        window.location.href = `module-difficulty.html?subject=${subject}`;
+      };
+
+      window.openQuiz = function () {
+        window.location.href = `quiz-difficulty.html?subject=${subject}`;
+      };
+
+      window.openPosttest = function () {
+        window.location.href = `quiz.html?subject=${subject}&level=easy&type=posttest`;
+      };
+
+      window.goBack = function () {
+        window.location.href = "dashboard.html";
+      };
+    })();
+  </script>
+  <script type="module" src="scripts/subject.js?v=20260407b"></script>
+  <script src="scripts/loading.js?v=20260407b" defer></script>
 </body>
 </html>
 

@@ -9,8 +9,6 @@ import {
   collection,
   getDocs,
   addDoc,
-  doc,
-  updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -20,6 +18,14 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, roleMeetsMinimum, syncUserRole } from "./role-utils.js";
+import {
+  fetchModuleDrafts,
+  fetchQuizDrafts,
+  saveModuleDraft as saveModuleDraftToSupabase,
+  saveQuizDraft as saveQuizDraftToSupabase,
+  reviewModuleDraft,
+  reviewQuizDraft
+} from "./supabase-content.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -58,15 +64,13 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadAdminDashboard() {
-  const [usersSnap, moduleDraftsSnap, quizDraftsSnap] = await Promise.all([
+  const [usersSnap, moduleDrafts, quizDrafts] = await Promise.all([
     getDocs(collection(db, "users")),
-    getDocs(collection(db, "moduleDrafts")),
-    getDocs(collection(db, "quizDrafts"))
+    safeSupabaseRead("module drafts", fetchModuleDrafts),
+    safeSupabaseRead("quiz drafts", fetchQuizDrafts)
   ]);
 
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const moduleDrafts = moduleDraftsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const quizDrafts = quizDraftsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
   learnersCache = users.filter((user) => getRoleFromUserData(user) === "user");
 
@@ -76,6 +80,15 @@ async function loadAdminDashboard() {
   renderStudentTable(learnersCache);
   renderDraftReviews(moduleDrafts, quizDrafts);
   wireBuilderForms();
+}
+
+async function safeSupabaseRead(label, reader) {
+  try {
+    return await reader();
+  } catch (error) {
+    console.error(`Admin Supabase read failed for ${label}:`, error);
+    return [];
+  }
 }
 
 function renderOverview(learners) {
@@ -248,11 +261,12 @@ function bindDraftActions(container, collectionName) {
 }
 
 async function updateDraftStatus(collectionName, draftId, status) {
-  await updateDoc(doc(db, collectionName, draftId), {
-    status,
-    reviewedAt: serverTimestamp(),
-    reviewedBy: currentUser.email || ""
-  });
+  if (collectionName === "moduleDrafts") {
+    await reviewModuleDraft(draftId, status, currentUser.email || "");
+  } else {
+    await reviewQuizDraft(draftId, status, currentUser.email || "");
+  }
+
   await writeAuditLog("draft_review", `${status} ${collectionName} entry ${draftId}`);
   await loadAdminDashboard();
 }
@@ -331,7 +345,7 @@ async function saveModuleDraft(event) {
   const imageDataUrl = await fileToDataUrl(document.getElementById("moduleImageInput")?.files?.[0]);
   const status = document.getElementById("moduleDraftStatus");
 
-  await addDoc(collection(db, "moduleDrafts"), {
+  await saveModuleDraftToSupabase({
     subject: document.getElementById("moduleSubject").value,
     difficulty: document.getElementById("moduleDifficulty").value,
     title: document.getElementById("moduleTitleInput").value.trim(),
@@ -340,8 +354,7 @@ async function saveModuleDraft(event) {
     imageDataUrl,
     status: "pending",
     createdBy: currentUser.uid,
-    createdByEmail: currentUser.email || "",
-    createdAt: serverTimestamp()
+    createdByEmail: currentUser.email || ""
   });
 
   await writeAuditLog("module_draft_created", `Created module draft: ${document.getElementById("moduleTitleInput").value.trim()}`);
@@ -366,7 +379,7 @@ async function saveQuizDraft(event) {
   const answerLetter = document.getElementById("quizAnswer").value;
   const answerIndex = { A: 0, B: 1, C: 2, D: 3 }[answerLetter];
 
-  await addDoc(collection(db, "quizDrafts"), {
+  await saveQuizDraftToSupabase({
     subject: document.getElementById("quizSubject").value,
     quizType: document.getElementById("quizType").value,
     question: document.getElementById("quizQuestionInput").value.trim(),
@@ -377,8 +390,7 @@ async function saveQuizDraft(event) {
     imageDataUrl,
     status: "pending",
     createdBy: currentUser.uid,
-    createdByEmail: currentUser.email || "",
-    createdAt: serverTimestamp()
+    createdByEmail: currentUser.email || ""
   });
 
   await writeAuditLog("quiz_draft_created", `Created quiz draft for ${document.getElementById("quizType").value}`);

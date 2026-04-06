@@ -26,7 +26,14 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
-import { fetchPublishedModules, fetchPublishedQuizzes } from "./published-content.js";
+import {
+  fetchModuleDrafts,
+  fetchQuizDrafts,
+  fetchPublishedModules,
+  fetchPublishedQuizzes,
+  publishModuleDraft as publishModuleDraftToSupabase,
+  publishQuizDraft as publishQuizDraftToSupabase
+} from "./supabase-content.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -68,20 +75,20 @@ async function loadSuperAdminDashboard() {
     usersSnap,
     grantsSnap,
     pendingUsersSnap,
-    moduleDraftsSnap,
-    quizDraftsSnap,
-    publishedModulesSnap,
-    publishedQuizzesSnap,
+    moduleDrafts,
+    quizDrafts,
+    publishedModules,
+    publishedQuizzes,
     notesSnap,
     auditSnap
   ] = await Promise.all([
     safeGetDocs("users", collection(db, "users")),
     safeGetDocs("accessRoles", collection(db, "accessRoles")),
     safeGetDocs("pendingUsers", collection(db, "pendingUsers")),
-    safeGetDocs("moduleDrafts", collection(db, "moduleDrafts")),
-    safeGetDocs("quizDrafts", collection(db, "quizDrafts")),
-    safeGetDocs("publishedModules", collection(db, "publishedModules")),
-    safeGetDocs("publishedQuizzes", collection(db, "publishedQuizzes")),
+    safeSupabaseRead("module drafts", fetchModuleDrafts),
+    safeSupabaseRead("quiz drafts", fetchQuizDrafts),
+    safeSupabaseRead("published modules", fetchPublishedModules),
+    safeSupabaseRead("published quizzes", fetchPublishedQuizzes),
     safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
     safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12)))
   ]);
@@ -89,10 +96,6 @@ async function loadSuperAdminDashboard() {
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const grants = grantsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const moduleDrafts = moduleDraftsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const quizDrafts = quizDraftsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const publishedModules = publishedModulesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const publishedQuizzes = publishedQuizzesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
@@ -136,6 +139,15 @@ async function safeGetDocs(label, source) {
   } catch (error) {
     console.error(`Super Admin read blocked for collection/query: ${label}`, error);
     return { docs: [] };
+  }
+}
+
+async function safeSupabaseRead(label, reader) {
+  try {
+    return await reader();
+  } catch (error) {
+    console.error(`Super Admin Supabase read failed for ${label}:`, error);
+    return [];
   }
 }
 
@@ -267,72 +279,12 @@ function bindPublishActions(container, drafts, type) {
 }
 
 async function publishModuleDraft(draft) {
-  const publishedModules = await fetchPublishedModules(db, {
-    subject: draft.subject,
-    difficulty: draft.difficulty
-  });
-
-  const nextOrder = publishedModules.length + 1;
-  const publishedRef = doc(collection(db, "publishedModules"));
-
-  await setDoc(publishedRef, {
-    sourceDraftId: draft.id,
-    subject: draft.subject,
-    difficulty: draft.difficulty,
-    title: draft.title || `Published Module ${nextOrder}`,
-    content: draft.content || "",
-    tip: draft.tip || "",
-    imageDataUrl: draft.imageDataUrl || "",
-    publishedOrder: nextOrder,
-    publishedAt: serverTimestamp(),
-    publishedBy: currentUser.email || "",
-    createdBy: draft.createdBy || "",
-    createdByEmail: draft.createdByEmail || ""
-  });
-
-  await updateDoc(doc(db, "moduleDrafts", draft.id), {
-    status: "published",
-    publishedAt: serverTimestamp(),
-    publishedBy: currentUser.email || "",
-    publishedDocId: publishedRef.id
-  });
-
+  await publishModuleDraftToSupabase(draft, currentUser.email || "");
   await writeAuditLog("module_draft_published", `Published module draft ${draft.id} to live content.`);
 }
 
 async function publishQuizDraft(draft) {
-  const publishedQuizzes = await fetchPublishedQuizzes(db, {
-    subject: draft.subject,
-    quizType: draft.quizType
-  });
-
-  const nextOrder = publishedQuizzes.length + 1;
-  const publishedRef = doc(collection(db, "publishedQuizzes"));
-
-  await setDoc(publishedRef, {
-    sourceDraftId: draft.id,
-    subject: draft.subject,
-    quizType: draft.quizType,
-    question: draft.question || "",
-    choices: Array.isArray(draft.choices) ? draft.choices : [],
-    answerLetter: draft.answerLetter || "",
-    answerText: draft.answerText || "",
-    rationale: draft.rationale || "",
-    imageDataUrl: draft.imageDataUrl || "",
-    publishedOrder: nextOrder,
-    publishedAt: serverTimestamp(),
-    publishedBy: currentUser.email || "",
-    createdBy: draft.createdBy || "",
-    createdByEmail: draft.createdByEmail || ""
-  });
-
-  await updateDoc(doc(db, "quizDrafts", draft.id), {
-    status: "published",
-    publishedAt: serverTimestamp(),
-    publishedBy: currentUser.email || "",
-    publishedDocId: publishedRef.id
-  });
-
+  await publishQuizDraftToSupabase(draft, currentUser.email || "");
   await writeAuditLog("quiz_draft_published", `Published quiz draft ${draft.id} to live content.`);
 }
 

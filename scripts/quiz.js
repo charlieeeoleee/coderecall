@@ -18,16 +18,12 @@ import {
   restartThemeMusic,
   playSound
 } from "./sound.js";
-import { fetchPublishedQuizzes } from "./published-content.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import {
   hardwarePretestQuestions,
   hardwarePosttestQuestions
 } from "../data/hardware-assessment-data.js";
 
-/* =========================
-   FIREBASE CONFIG
-========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
   authDomain: "gamifiedlearningsystem.firebaseapp.com",
@@ -41,32 +37,26 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* =========================
-   AUTH / SESSION
-========================= */
 let currentUser = null;
-let currentIsGuest = false;
+let currentIsGuest = localStorage.getItem("guest") === "true";
+let quizQuestions = [];
+let currentIndex = 0;
+let score = 0;
+let selectedChoice = null;
+let pendingContinue = null;
+let xpAwardedThisAttempt = false;
 
-/* =========================
-   PARAMS
-========================= */
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
 const level = params.get("level") || "easy";
 const type = params.get("type") || "pretest";
 
-/* =========================
-   XP BREAKDOWN
-========================= */
 const XP_RULES = {
   pretest: 1,
   posttest: 50,
   quizLevel: 6
 };
 
-/* =========================
-   QUIZ META
-========================= */
 const quizMeta = {
   electrical: {
     pretest: {
@@ -104,20 +94,16 @@ const quizMeta = {
   }
 };
 
-const currentMeta =
-  quizMeta[subject]?.[type] || {
-    tag: "QUIZ",
-    title: "Quiz",
-    subtitle: "Answer all items carefully."
-  };
+const currentMeta = quizMeta[subject]?.[type] || {
+  tag: "QUIZ",
+  title: "Quiz",
+  subtitle: "Answer all items carefully."
+};
 
 document.getElementById("quizTag").textContent = currentMeta.tag;
 document.getElementById("quizTitle").textContent = currentMeta.title;
 document.getElementById("quizSubtitle").textContent = currentMeta.subtitle;
 
-/* =========================
-   ELECTRICAL PRE-TEST DATA
-========================= */
 const electricalPretestQuestions = [
   {
     question: "What is the basic unit of electric current?",
@@ -356,28 +342,6 @@ const electricalPretestQuestions = [
   }
 ];
 
-function normalizeStandardQuestion(question) {
-  if (!question) return question;
-
-  const normalizedChoices = Array.isArray(question.choices) ? [...question.choices] : [];
-  let normalizedAnswer = question.answer;
-
-  if (
-    typeof normalizedAnswer === "string" &&
-    /^[A-D]$/i.test(normalizedAnswer.trim()) &&
-    normalizedChoices.length >= 4
-  ) {
-    const answerIndex = normalizedAnswer.trim().toUpperCase().charCodeAt(0) - 65;
-    normalizedAnswer = normalizedChoices[answerIndex];
-  }
-
-  return {
-    ...question,
-    choices: normalizedChoices,
-    answer: normalizedAnswer
-  };
-}
-
 const questionBanks = {
   electrical: {
     pretest: electricalPretestQuestions,
@@ -389,44 +353,30 @@ const questionBanks = {
   }
 };
 
-async function loadPublishedQuizQuestions() {
-  const publishedItems = await fetchPublishedQuizzes(db, {
-    subject,
-    quizType: type
-  });
+function normalizeStandardQuestion(question) {
+  if (!question) return question;
 
-  publishedQuizQuestions = publishedItems
-    .filter((item) => Array.isArray(item.choices) && item.choices.length >= 2)
-    .map((item) => normalizeStandardQuestion({
-      question: item.question || "",
-      choices: [...item.choices],
-      answer: item.answerText || item.answer || item.answerLetter || "",
-      rationale: item.rationale || "",
-      image: item.imageDataUrl || ""
-    }));
+  const choices = Array.isArray(question.choices) ? [...question.choices] : [];
+  let answer = question.answer;
+
+  if (typeof answer === "string" && /^[A-D]$/i.test(answer.trim()) && choices.length >= 4) {
+    const answerIndex = answer.trim().toUpperCase().charCodeAt(0) - 65;
+    answer = choices[answerIndex];
+  }
+
+  return {
+    ...question,
+    choices,
+    answer
+  };
 }
 
-/* =========================
-   QUIZ STATE
-========================= */
-let quizQuestions = [];
-let currentIndex = 0;
-let score = 0;
-let selectedChoice = null;
-let pendingContinue = null;
-let xpAwardedThisAttempt = false;
-let hasInitializedPage = false;
-let publishedQuizQuestions = [];
-
-/* =========================
-   HELPERS
-========================= */
 function shuffleArray(array) {
   const cloned = [...array];
 
-  for (let i = cloned.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [cloned[i], cloned[j]] = [cloned[j], cloned[i]];
+  for (let index = cloned.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [cloned[index], cloned[randomIndex]] = [cloned[randomIndex], cloned[index]];
   }
 
   return cloned;
@@ -449,64 +399,29 @@ function getResultDocKey() {
   return `${subject}_${type}`;
 }
 
-function goToSubjectPage() {
-  window.location.href = `subject.html?subject=${subject}`;
-}
-
 function getQuizXPReward() {
   if (type === "pretest") return XP_RULES.pretest;
   if (type === "posttest") return XP_RULES.posttest;
   return XP_RULES.quizLevel;
 }
 
-async function hasLockedAttempt() {
-  if (type !== "pretest") return false;
-
-  const flags = getProgressFlags();
-  const localAttemptDone = localStorage.getItem(getQuizStorageKey()) === "true";
-  const localProgressDone = localStorage.getItem(flags.pretestKey) === "true";
-
-  if (localAttemptDone || localProgressDone) {
-    return true;
-  }
-
-  if (!currentUser) {
-    return false;
-  }
-
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
-  const progress = data.progress || {};
-  const results = data.results || {};
-  const storedResult = results[getResultDocKey()];
-  const isLocked = Boolean(progress[flags.pretestKey] || storedResult);
-
-  if (isLocked) {
-    localStorage.setItem(flags.pretestKey, "true");
-    localStorage.setItem(getQuizStorageKey(), "true");
-  }
-
-  return isLocked;
+function goToSubjectPage() {
+  window.location.href = `subject.html?subject=${subject}`;
 }
 
-async function initializeQuizPage() {
-  if (await hasLockedAttempt()) {
-    window.alert("You already completed this pre-test and cannot take it again.");
-    goToSubjectPage();
-    return;
-  }
+window.goBackToSubject = function () {
+  goToSubjectPage();
+};
 
-  await loadPublishedQuizQuestions();
-  prepareQuestions();
-  renderQuestion();
-}
+window.finishQuizFlow = function () {
+  document.getElementById("resultModal").classList.remove("active");
+  goToSubjectPage();
+};
+
+document.getElementById("backBtn")?.addEventListener("click", goToSubjectPage);
 
 function prepareQuestions() {
-  const source = [
-    ...(questionBanks[subject]?.[type] || []),
-    ...publishedQuizQuestions
-  ];
+  const source = questionBanks[subject]?.[type] || [];
 
   if (!source.length) {
     quizQuestions = [];
@@ -514,38 +429,34 @@ function prepareQuestions() {
   }
 
   const selected = shuffleArray(source.map(normalizeStandardQuestion)).slice(0, 30);
-
-  quizQuestions = selected.map((q) => ({
-    ...q,
-    choices: shuffleArray([...q.choices])
+  quizQuestions = selected.map((question) => ({
+    ...question,
+    choices: shuffleArray([...question.choices])
   }));
 }
 
 function updateProgress() {
-  const total = quizQuestions.length;
+  const total = quizQuestions.length || 1;
   const percent = Math.floor((currentIndex / total) * 100);
 
-  document.getElementById("quizCounter").textContent = `Question ${currentIndex + 1} of ${total}`;
+  document.getElementById("quizCounter").textContent = `Question ${currentIndex + 1} of ${quizQuestions.length}`;
   document.getElementById("quizScore").textContent = `Score: ${score}`;
   document.getElementById("quizProgressFill").style.width = `${percent}%`;
   document.getElementById("quizProgressText").textContent = `${percent}% Completed`;
 }
 
 function renderQuestion() {
-  selectedChoice = null;
   const nextBtn = document.getElementById("nextBtn");
+  selectedChoice = null;
   nextBtn.disabled = true;
 
   const currentQuestion = quizQuestions[currentIndex];
 
   if (!currentQuestion) {
-    document.getElementById("quizCounter").textContent = "Quiz unavailable";
-    document.getElementById("quizScore").textContent = "Score: --";
-    document.getElementById("quizProgressFill").style.width = "0%";
-    document.getElementById("quizProgressText").textContent = "Content unavailable";
-    document.getElementById("questionText").textContent =
-      "This quiz content is not available yet for the selected subject and test type.";
+    document.getElementById("questionText").textContent = "Quiz content is not available yet.";
     document.getElementById("choicesContainer").innerHTML = "";
+    document.getElementById("quizCounter").textContent = "Quiz unavailable";
+    document.getElementById("quizProgressText").textContent = "Content unavailable";
     nextBtn.textContent = "Unavailable";
     return;
   }
@@ -558,7 +469,7 @@ function renderQuestion() {
     media = document.createElement("div");
     media.id = "questionMedia";
     media.className = "quiz-question-media";
-    document.querySelector(".question-box")?.appendChild(media);
+    document.querySelector(".question-block")?.appendChild(media);
   }
 
   media.innerHTML = currentQuestion.image
@@ -569,21 +480,18 @@ function renderQuestion() {
   choicesContainer.innerHTML = "";
 
   currentQuestion.choices.forEach((choice) => {
-    const btn = document.createElement("button");
-    btn.className = "choice-btn";
-    btn.textContent = choice;
+    const button = document.createElement("button");
+    button.className = "choice-btn";
+    button.textContent = choice;
 
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".choice-btn").forEach((item) => {
-        item.classList.remove("selected");
-      });
-
-      btn.classList.add("selected");
+    button.addEventListener("click", () => {
+      document.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
+      button.classList.add("selected");
       selectedChoice = choice;
       nextBtn.disabled = false;
     });
 
-    choicesContainer.appendChild(btn);
+    choicesContainer.appendChild(button);
   });
 
   nextBtn.textContent = currentIndex === quizQuestions.length - 1 ? "Submit" : "Next";
@@ -613,26 +521,6 @@ function buildFallbackQuizRationale(question) {
     {
       patterns: ["circuit breaker", "fuse"],
       text: "Think about how protective devices respond to faults and whether they are meant to be replaced or reset."
-    },
-    {
-      patterns: ["magnetic field", "inductor", "capacitor", "diode"],
-      text: "This item compares the basic job of common components, especially which ones store energy and how they affect current flow."
-    },
-    {
-      patterns: ["neutral wire", "home electricity supply", "awg", "wire insulation", "conduit", "pigtail splice"],
-      text: "Review practical wiring concepts by matching each material, method, or conductor role to its common use in installation work."
-    },
-    {
-      patterns: ["electrons", "static electricity", "watts"],
-      text: "Return to the basic electrical definitions, including what moves, what gets measured, and what each unit represents."
-    },
-    {
-      patterns: ["arc flash", "ppe", "test for voltage"],
-      text: "This is testing electrical safety practice, so focus on hazard prevention and the correct sequence before touching equipment."
-    },
-    {
-      patterns: ["yellow, violet, and orange", "red", "resistor color code", "potentiometer", "polarized capacitors"],
-      text: "Review component identification and handling by connecting the physical feature, code, or polarity rule to its proper application."
     }
   ];
 
@@ -648,14 +536,11 @@ function buildReviewRationale(question) {
   const correctAnswer = getCorrectAnswerText(question);
 
   if (type === "pretest") {
-    return correctAnswer
-      ? `Correct answer: ${correctAnswer}.`
-      : "Review the correct answer for this item.";
+    return correctAnswer ? `Correct answer: ${correctAnswer}.` : "Review the correct answer for this item.";
   }
 
   if (type === "posttest") {
-    return baseExplanation ||
-      "Review the concept behind this item and revisit the related module before trying similar questions again.";
+    return baseExplanation || "Review the concept behind this item and revisit the related module before trying similar questions again.";
   }
 
   return baseExplanation;
@@ -663,6 +548,7 @@ function buildReviewRationale(question) {
 
 window.closeRationaleAndContinue = function () {
   document.getElementById("rationaleModal").classList.remove("active");
+
   if (typeof pendingContinue === "function") {
     pendingContinue();
     pendingContinue = null;
@@ -670,7 +556,7 @@ window.closeRationaleAndContinue = function () {
 };
 
 function showResult() {
-  const total = quizQuestions.length;
+  const total = quizQuestions.length || 1;
   const percent = Math.round((score / total) * 100);
 
   document.getElementById("resultScore").textContent = `${score}/${total}`;
@@ -679,9 +565,6 @@ function showResult() {
   document.getElementById("resultModal").classList.add("active");
 }
 
-/* =========================
-   FIREBASE / SAVE HELPERS
-========================= */
 async function ensureUserDoc(uid) {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
@@ -701,8 +584,18 @@ async function ensureUserDoc(uid) {
   return userRef;
 }
 
+function getWeekKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const firstDay = new Date(year, 0, 1);
+  const pastDays = Math.floor((now - firstDay) / 86400000);
+  const week = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+  return `${year}-W${week}`;
+}
+
 async function addXP(amount) {
   if (!amount || amount <= 0) return;
+
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
     const snap = await getDoc(userRef);
@@ -710,30 +603,26 @@ async function addXP(amount) {
     const currentWeek = getWeekKey();
     const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
     const currentXP = Number(data.xp || 0);
-    const currentWeeklyXP =
-      lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
-    const newXP = currentXP + amount;
-    const newWeeklyXP = currentWeeklyXP + amount;
+    const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
+
     await updateDoc(userRef, {
-      xp: newXP,
-      xpWeekly: newWeeklyXP,
+      xp: currentXP + amount,
+      xpWeekly: currentWeeklyXP + amount,
       xpChange: amount,
       lastWeeklyReset: currentWeek
     });
-    console.log("Firebase XP updated:", newXP);
+
     return;
   }
+
   const guestXP = parseInt(localStorage.getItem("guest_xp") || "0", 10);
   const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
-  const newXP = guestXP + amount;
-  const newWeeklyXP = guestWeeklyXP + amount;
-  localStorage.setItem("guest_xp", String(newXP));
-  localStorage.setItem("guest_xpWeekly", String(newWeeklyXP));
-  console.log("Guest XP updated:", newXP);
+  localStorage.setItem("guest_xp", String(guestXP + amount));
+  localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + amount));
 }
 
 async function saveQuizResultToStorageAndFirestore() {
-  const total = quizQuestions.length;
+  const total = quizQuestions.length || 1;
   const percent = Math.round((score / total) * 100);
   const resultKey = getResultDocKey();
   const flags = getProgressFlags();
@@ -778,45 +667,44 @@ async function saveQuizResultToStorageAndFirestore() {
   }
 
   results[resultKey] = resultPayload;
-
-  await updateDoc(userRef, {
-    progress,
-    results
-  });
+  await updateDoc(userRef, { progress, results });
 }
 
 async function awardQuizXPOnce() {
-  if (xpAwardedThisAttempt) {
-    console.log("XP already awarded in current session.");
-    return;
-  }
+  if (xpAwardedThisAttempt) return;
 
   const attemptDone = localStorage.getItem(getQuizStorageKey()) === "true";
-  const reward = getQuizXPReward();
-
   if (attemptDone) {
-    console.log("Attempt already completed before. Skipping XP.");
     xpAwardedThisAttempt = true;
     return;
   }
 
-  await addXP(reward);
-  console.log("Awarded XP:", reward);
-
+  await addXP(getQuizXPReward());
   xpAwardedThisAttempt = true;
 }
 
-/* =========================
-   QUIZ FLOW
-========================= */
-window.finishQuizFlow = async function () {
-  document.getElementById("resultModal").classList.remove("active");
-  goToSubjectPage();
-};
+async function finishAttempt() {
+  document.getElementById("quizProgressFill").style.width = "100%";
+  document.getElementById("quizProgressText").textContent = "100% Completed";
 
-window.goBackToSubject = function () {
-  goToSubjectPage();
-};
+  await awardQuizXPOnce();
+  await saveQuizResultToStorageAndFirestore();
+  showResult();
+}
+
+function continueToNext() {
+  currentIndex += 1;
+
+  if (currentIndex < quizQuestions.length) {
+    renderQuestion();
+    return;
+  }
+
+  finishAttempt().catch((error) => {
+    console.error("Error finishing quiz attempt:", error);
+    showResult();
+  });
+}
 
 window.handleNext = function () {
   if (!selectedChoice) return;
@@ -825,54 +713,21 @@ window.handleNext = function () {
   const isCorrect = selectedChoice === currentQuestion.answer;
 
   if (isCorrect) {
-    score++;
+    score += 1;
     playSound("correct");
     continueToNext();
-  } else {
-    playSound("wrong");
-    pendingContinue = continueToNext;
-    showRationale(buildReviewRationale(currentQuestion));
+    return;
   }
+
+  playSound("wrong");
+  pendingContinue = continueToNext;
+  showRationale(buildReviewRationale(currentQuestion));
 };
 
-async function finishAttempt() {
-  document.getElementById("quizProgressFill").style.width = "100%";
-  document.getElementById("quizProgressText").textContent = "100% Completed";
-
-  await awardQuizXPOnce();
-  await saveQuizResultToStorageAndFirestore();
-
-  showResult();
-}
-
-function continueToNext() {
-  currentIndex++;
-
-  if (currentIndex < quizQuestions.length) {
-    renderQuestion();
-  } else {
-    finishAttempt().catch((error) => {
-      console.error("Error finishing quiz attempt:", error);
-      showResult();
-    });
-  }
-}
-
-function getWeekKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const firstDay = new Date(year, 0, 1);
-  const pastDays = Math.floor((now - firstDay) / 86400000);
-  const week = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
-  return `${year}-W${week}`;
-}
-/* =========================
-   THEME
-========================= */
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
 function loadTheme() {
@@ -891,43 +746,14 @@ window.toggleTheme = function () {
   restartThemeMusic();
 };
 
-function updateIcon() {
-  const icon = document.getElementById("themeIcon");
-  if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
-}
-
-/* =========================
-   AUTH INIT
-========================= */
-onAuthStateChanged(auth, (user) => {
-  if (hasInitializedPage) return;
-
-  const isGuest = localStorage.getItem("guest") === "true";
-
-  if (user) {
-    currentUser = user;
-    currentIsGuest = false;
-  } else if (isGuest) {
-    currentUser = null;
-    currentIsGuest = true;
-  } else {
-    currentUser = null;
-    currentIsGuest = false;
-  }
-
-  hasInitializedPage = true;
-  initializeQuizPage().catch((error) => {
-    console.error("Error initializing quiz page:", error);
-    prepareQuestions();
-    renderQuestion();
-  });
-});
-
-/* =========================
-   INIT
-========================= */
+prepareQuestions();
 loadTheme();
+renderQuestion();
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user || null;
+  currentIsGuest = !user && localStorage.getItem("guest") === "true";
+});
 
 initSounds();
 initGlobalClickSound();
@@ -936,5 +762,3 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
-
-
