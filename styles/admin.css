@@ -75,7 +75,23 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .profile-section { padding: 16px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
 .profile-section h4 { margin: 0 0 12px; }
 .profile-list { display: grid; gap: 10px; }
-.profile-row { display: flex; justify-content: space-between; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; }
+.profile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: 8px;
+}
+.profile-row > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.profile-row > :last-child {
+  white-space: nowrap;
+  text-align: right;
+}
 .notes-block { margin-top: 18px; }
 .admin-modal { position: fixed; inset: 0; background: rgba(8, 10, 26, 0.72); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 80; }
 .admin-modal.active { display: flex; }
@@ -133,4 +149,26 @@ body.light-mode .inline-select {
 }
 .form-status { margin: 0; font-size: 13px; min-height: 20px; color: #8df6cb; }
 .theme-toggle { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; background: linear-gradient(90deg, #ff2e97, #22d3ee); color: white; font-size: 22px; box-shadow: 0 0 25px rgba(0, 255, 200, 0.35); }
-@media (max-width: 1100px) { .overview-grid, .admin-grid, .bottleneck-grid, .analytics-grid, .review-grid, .profile-stats, .profile-columns { grid-template-columns: 1fr; } .layout { flex-direction: column; } .sidebar { width: 100%; min-height: auto; } }
+@media (max-width: 1100px) {
+  .overview-grid,
+  .admin-grid,
+  .bottleneck-grid,
+  .analytics-grid,
+  .review-grid,
+  .profile-stats,
+  .profile-columns { grid-template-columns: 1fr; }
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; min-height: auto; }
+}
+
+@media (max-width: 720px) {
+  .profile-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .profile-row > :last-child {
+    white-space: normal;
+    text-align: left;
+  }
+}
