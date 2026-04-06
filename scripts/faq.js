@@ -1,14 +1,14 @@
-function loadTheme(){
+function loadTheme() {
   const saved = localStorage.getItem("theme");
 
-  if(saved === "light"){
+  if (saved === "light") {
     document.body.classList.add("light-mode");
   }
 
   updateIcon();
 }
 
-window.toggleTheme = function(){
+window.toggleTheme = function() {
   document.body.classList.toggle("light-mode");
 
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
@@ -17,23 +17,23 @@ window.toggleTheme = function(){
   updateIcon();
 };
 
-function updateIcon(){
+function updateIcon() {
   const icon = document.getElementById("themeIcon");
-  if(!icon) return;
+  if (!icon) return;
 
   icon.textContent =
-    document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+    document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
-window.goToAuth = function(){
+window.goToAuth = function() {
   window.location.href = "auth.html";
 };
 
-window.goToHome = function(){
+window.goToHome = function() {
   window.location.href = "index.html";
 };
 
-window.toggleFaq = function(button){
+window.toggleFaq = function(button) {
   const currentItem = button.parentElement;
   const currentAnswer = currentItem.querySelector(".faq-answer");
   const allItems = document.querySelectorAll(".faq-item");
@@ -41,7 +41,7 @@ window.toggleFaq = function(button){
   allItems.forEach(item => {
     const answer = item.querySelector(".faq-answer");
 
-    if(item !== currentItem){
+    if (item !== currentItem) {
       item.classList.remove("active");
       answer.style.maxHeight = null;
     }
@@ -49,14 +49,14 @@ window.toggleFaq = function(button){
 
   currentItem.classList.toggle("active");
 
-  if(currentItem.classList.contains("active")){
+  if (currentItem.classList.contains("active")) {
     currentAnswer.style.maxHeight = currentAnswer.scrollHeight + "px";
   } else {
     currentAnswer.style.maxHeight = null;
   }
 };
 
-window.filterFaqs = function(){
+window.filterFaqs = function() {
   const searchValue = document.getElementById("faqSearch").value.toLowerCase().trim();
   const items = document.querySelectorAll(".faq-item");
   const noResults = document.getElementById("noResults");
@@ -69,7 +69,7 @@ window.filterFaqs = function(){
 
     const matches = questionText.includes(searchValue) || answerText.includes(searchValue);
 
-    if(matches){
+    if (matches) {
       item.style.display = "";
       visibleCount++;
     } else {
@@ -83,4 +83,3 @@ window.filterFaqs = function(){
 };
 
 loadTheme();
-

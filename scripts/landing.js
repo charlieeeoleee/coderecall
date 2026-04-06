@@ -1,14 +1,14 @@
-function loadTheme(){
+function loadTheme() {
   const saved = localStorage.getItem("theme");
 
-  if(saved === "light"){
+  if (saved === "light") {
     document.body.classList.add("light-mode");
   }
 
   updateIcon();
 }
 
-window.toggleTheme = function(){
+window.toggleTheme = function() {
   document.body.classList.toggle("light-mode");
 
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
@@ -17,26 +17,25 @@ window.toggleTheme = function(){
   updateIcon();
 };
 
-function updateIcon(){
+function updateIcon() {
   const icon = document.getElementById("themeIcon");
-  if(!icon) return;
+  if (!icon) return;
 
   icon.textContent =
-    document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+    document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
-window.goToAuth = function(){
+window.goToAuth = function() {
   window.location.href = "auth.html";
 };
 
-window.playGuest = function(){
+window.playGuest = function() {
   localStorage.setItem("guest", "true");
   window.location.href = "dashboard.html";
 };
 
-window.goToAbout = function(){
+window.goToAbout = function() {
   window.location.href = "about.html";
 };
 
 loadTheme();
-

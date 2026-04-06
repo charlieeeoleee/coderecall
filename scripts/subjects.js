@@ -18,9 +18,6 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 
-/* =========================
-   FIREBASE CONFIG
-========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
   authDomain: "gamifiedlearningsystem.firebaseapp.com",
@@ -37,9 +34,6 @@ const db = getFirestore(app);
 let currentUser = null;
 let currentIsGuest = false;
 
-/* =========================
-   AUTH STATE
-========================= */
 onAuthStateChanged(auth, async (user) => {
   const isGuest = localStorage.getItem("guest") === "true";
 
@@ -60,9 +54,6 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-/* =========================
-   LOAD REAL USER
-========================= */
 async function loadUserUI() {
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
@@ -89,17 +80,11 @@ async function loadUserUI() {
   document.getElementById("userPhoto").src = photo;
 }
 
-/* =========================
-   LOAD GUEST
-========================= */
 function loadGuestUI() {
   document.getElementById("username").textContent = "Guest";
   document.getElementById("userPhoto").src = "https://i.pravatar.cc/40?img=8";
 }
 
-/* =========================
-   SUBJECT PROGRESS
-========================= */
 function loadSubjectStats() {
   const subjects = ["hardware", "electrical"];
   let completedCount = 0;
@@ -176,16 +161,10 @@ function animateNumber(element, targetValue) {
   requestAnimationFrame(update);
 }
 
-/* =========================
-   OPEN SUBJECT
-========================= */
 window.openSubject = function(subject) {
   window.location.href = `subject.html?subject=${subject}`;
 };
 
-/* =========================
-   GUEST LOGOUT
-========================= */
 function hasGuestProgress() {
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
 
@@ -277,18 +256,15 @@ function clearGuestSession() {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 }
 
-/* =========================
-   LOGOUT
-========================= */
 window.logout = async function() {
   if (currentIsGuest) {
     if (hasGuestProgress()) {
       openGuestLogoutPopup(true);
       return;
-    } else {
-      openGuestLogoutPopup(false);
-      return;
     }
+
+    openGuestLogoutPopup(false);
+    return;
   }
 
   localStorage.removeItem("guest");
@@ -300,9 +276,6 @@ window.logout = async function() {
   window.location.href = "auth.html";
 };
 
-/* =========================
-   THEME
-========================= */
 function loadTheme() {
   const saved = localStorage.getItem("theme");
   if (saved === "light") {
@@ -322,12 +295,9 @@ window.toggleTheme = function() {
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
-/* =========================
-   INIT
-========================= */
 loadTheme();
 initSounds();
 initGlobalClickSound();
