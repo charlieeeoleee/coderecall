@@ -1,3 +1,12 @@
+function goHome(){
+  window.location.href = "index.html";
+}
+
+function goDashboard(){
+  window.location.href = "dashboard.html";
+}
+
+/* THEME */
 function loadTheme(){
   const saved = localStorage.getItem("theme");
 
@@ -8,29 +17,22 @@ function loadTheme(){
   updateIcon();
 }
 
-window.toggleTheme = function(){
+function toggleTheme(){
   document.body.classList.toggle("light-mode");
 
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
 
   updateIcon();
-};
+}
 
 function updateIcon(){
   const icon = document.getElementById("themeIcon");
+
   if(!icon) return;
 
   icon.textContent =
     document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
-
-window.goToAuth = function(){
-  window.location.href = "auth.html";
-};
-
-window.goToHome = function(){
-  window.location.href = "index.html";
-};
 
 loadTheme();

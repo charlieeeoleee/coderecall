@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -7,7 +7,7 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
-import { MODULE_CATALOG, MODULE_STRUCTURE } from "./module-data.js";
+import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -85,7 +85,7 @@ function clearRecentCompletion() {
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "??" : "??";
 }
 function loadTheme() {
   const saved = localStorage.getItem("theme");
@@ -343,4 +343,5 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
 

@@ -10,8 +10,8 @@ import {
   playSound 
 } from "./sound.js";
 
-import { quizData } from "./quiz-data.js"; 
-import { electricalExtraQuizData } from "./quiz-data-electrical-extra.js";
+import { quizData } from "../data/quiz-data.js"; 
+import { electricalExtraQuizData } from "../data/quiz-data-electrical-extra.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -536,6 +536,7 @@ function getWeekKey() {
   const week = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
   return `${year}-W${week}`;
 }
+
 
 
 

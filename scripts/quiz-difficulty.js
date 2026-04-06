@@ -8,21 +8,25 @@ import {
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
 
+window.selectDifficulty = function (difficulty) {
+  window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
+}
+
 const subjectTitles = {
-  electrical: "Electrical Module Difficulty",
-  hardware: "Computer Hardware Module Difficulty"
+  electrical: "Electrical Quiz Difficulty",
+  hardware: "Computer Hardware Quiz Difficulty"
 };
 
 const subjectDescriptions = {
-  electrical: "Choose the difficulty for the Electrical modules before opening the lessons.",
-  hardware: "Choose the difficulty for the Computer Hardware modules before opening the lessons."
+  electrical: "Choose the difficulty for the Electrical quiz before opening the levels.",
+  hardware: "Choose the difficulty for the Computer Hardware quiz before opening the levels."
 };
 
 document.getElementById("difficultyTitle").textContent =
-  subjectTitles[subject] || "Choose Module Difficulty";
+  subjectTitles[subject] || "Choose Difficulty";
 
 document.getElementById("difficultySubtitle").textContent =
-  subjectDescriptions[subject] || "Select a difficulty before opening the modules.";
+  subjectDescriptions[subject] || "Select a difficulty before starting the quiz.";
 
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
@@ -51,31 +55,10 @@ window.goBack = function () {
 };
 
 window.openDifficulty = function (difficulty) {
-  window.location.href = `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
+  window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
 };
 
-function unlockDifficultyIfReady() {
-  const mediumBtn = document.getElementById("mediumBtn");
-  const hardBtn = document.getElementById("hardBtn");
-
-  const easyDone = localStorage.getItem(`${subject}_easy_modules_done`) === "true";
-  const mediumDone = localStorage.getItem(`${subject}_medium_modules_done`) === "true";
-
-  if (easyDone) {
-    mediumBtn.classList.remove("locked");
-    mediumBtn.onclick = () => openDifficulty("medium");
-    mediumBtn.querySelector("p").textContent = "More advanced lessons and deeper understanding.";
-  }
-
-  if (mediumDone) {
-    hardBtn.classList.remove("locked");
-    hardBtn.onclick = () => openDifficulty("hard");
-    hardBtn.querySelector("p").textContent = "Advanced and challenging lessons for mastery.";
-  }
-}
-
 loadTheme();
-unlockDifficultyIfReady();
 
 initSounds();
 initGlobalClickSound();
@@ -84,3 +67,4 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+

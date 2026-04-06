@@ -29,13 +29,8 @@ window.goToAuth = function(){
   window.location.href = "auth.html";
 };
 
-window.playGuest = function(){
-  localStorage.setItem("guest", "true");
-  window.location.href = "dashboard.html";
-};
-
-window.goToAbout = function(){
-  window.location.href = "about.html";
+window.goToHome = function(){
+  window.location.href = "index.html";
 };
 
 loadTheme();

@@ -517,3 +517,4 @@ loadTheme();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();
+

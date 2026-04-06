@@ -18,7 +18,7 @@ import {
   restartThemeMusic,
   playSound
 } from "./sound.js";
-import { electricalPosttestQuestions } from "./electrical-posttest-data.js";
+import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -789,4 +789,5 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
 

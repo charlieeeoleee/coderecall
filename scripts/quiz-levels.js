@@ -220,3 +220,4 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
     tryStartMusic();
 }, { once: true });
+

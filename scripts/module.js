@@ -7,9 +7,9 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
-import { MODULE_CATALOG, MODULE_STRUCTURE } from "./module-data.js";
-import { MODULE_IMAGES } from "./module-images.js";
-import { MODULE_SUPPLEMENTAL_IMAGES } from "./module-supplemental-images.js";
+import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
+import { MODULE_IMAGES } from "../data/module-images.js";
+import { MODULE_SUPPLEMENTAL_IMAGES } from "../data/module-supplemental-images.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -2329,3 +2329,4 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
