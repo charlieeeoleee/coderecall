@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - Code Recall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/admin.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="top-section">
+        <a href="index.html" class="logo-link">
+          <h2 class="logo">CODE:RECALL!</h2>
+        </a>
+        <nav class="menu">
+          <a href="dashboard.html">&#127968; Dashboard</a>
+          <a href="subjects.html">&#128218; Subjects</a>
+          <a href="achievements.html">&#127942; Badges</a>
+          <a href="leaderboard.html">&#129351; Leaderboard</a>
+          <a href="settings.html">&#9881; Settings</a>
+          <a href="admin.html" class="active-link" data-role-link="admin">&#128736; Admin</a>
+          <a href="super-admin.html" data-role-link="super_admin" hidden>&#128081; Super Admin</a>
+        </nav>
+      </div>
+      <div class="bottom-section">
+        <button onclick="logout()" class="logout-btn">Logout</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h2 class="page-title">Admin Panel</h2>
+          <p class="page-subtitle">Monitor student progress, identify learning bottlenecks, and draft new content for the pilot system.</p>
+        </div>
+        <div class="user-top">
+          <span id="username">Admin</span>
+          <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="overview-card"><h3>Total Learners</h3><p id="adminTotalLearners">0</p></div>
+        <div class="overview-card"><h3>Students Needing Help</h3><p id="adminNeedsHelp">0</p></div>
+        <div class="overview-card"><h3>Average XP</h3><p id="adminAverageXp">0</p></div>
+        <div class="overview-card"><h3>Modules Cleared</h3><p id="adminModulesCleared">0 / 18</p></div>
+      </div>
+
+      <div class="admin-grid">
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Learning Bottlenecks</h3>
+              <p>See where learners are slowing down across both subjects.</p>
+            </div>
+          </div>
+          <div class="bottleneck-grid" id="bottleneckGrid"></div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Difficulty Analytics</h3>
+              <p>Spot where learners are slowing down by challenge level and subject path.</p>
+            </div>
+          </div>
+          <div class="analytics-grid" id="difficultyAnalytics"></div>
+        </section>
+
+        <section class="panel-card wide">
+          <div class="panel-header">
+            <div>
+              <h3>Student Progress Monitor</h3>
+              <p>Track subject status, XP, likely difficulty points, and open a full learner profile.</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>XP</th>
+                  <th>Electrical</th>
+                  <th>Hardware</th>
+                  <th>Needs Review</th>
+                  <th>Profile</th>
+                </tr>
+              </thead>
+              <tbody id="studentTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Module Builder</h3>
+              <p>Add a prototype module draft with lesson text and one image.</p>
+            </div>
+          </div>
+          <form id="moduleDraftForm" class="admin-form">
+            <label>Subject<select id="moduleSubject" required><option value="hardware">Computer Hardware</option><option value="electrical">Electrical</option></select></label>
+            <label>Difficulty<select id="moduleDifficulty" required><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Difficult</option></select></label>
+            <label>Module Title<input id="moduleTitleInput" type="text" required /></label>
+            <label>Lesson Text<textarea id="moduleContentInput" rows="6" required></textarea></label>
+            <label>Study Tip<input id="moduleTipInput" type="text" /></label>
+            <label>Upload Image<input id="moduleImageInput" type="file" accept="image/*" /></label>
+            <img id="moduleImagePreview" class="upload-preview" alt="Module preview" hidden />
+            <button type="submit" class="primary-action">Save Module Draft</button>
+            <p id="moduleDraftStatus" class="form-status"></p>
+          </form>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Quiz Builder</h3>
+              <p>Add a prototype question draft for pretest, quiz, or posttest.</p>
+            </div>
+          </div>
+          <form id="quizDraftForm" class="admin-form">
+            <label>Subject<select id="quizSubject" required><option value="hardware">Computer Hardware</option><option value="electrical">Electrical</option></select></label>
+            <label>Quiz Type<select id="quizType" required><option value="pretest">Pretest</option><option value="easy">Easy Quiz</option><option value="medium">Medium Quiz</option><option value="hard">Hard Quiz</option><option value="posttest">Posttest</option></select></label>
+            <label>Question<textarea id="quizQuestionInput" rows="4" required></textarea></label>
+            <label>Choice A<input id="quizChoiceA" type="text" required /></label>
+            <label>Choice B<input id="quizChoiceB" type="text" required /></label>
+            <label>Choice C<input id="quizChoiceC" type="text" required /></label>
+            <label>Choice D<input id="quizChoiceD" type="text" required /></label>
+            <label>Correct Answer<select id="quizAnswer" required><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></label>
+            <label>Rationale<textarea id="quizRationaleInput" rows="3"></textarea></label>
+            <label>Upload Question Image<input id="quizImageInput" type="file" accept="image/*" /></label>
+            <img id="quizImagePreview" class="upload-preview" alt="Quiz preview" hidden />
+            <button type="submit" class="primary-action">Save Quiz Draft</button>
+            <p id="quizDraftStatus" class="form-status"></p>
+          </form>
+        </section>
+
+        <section class="panel-card wide">
+          <div class="panel-header">
+            <div>
+              <h3>Content Approval Workflow</h3>
+              <p>Review draft content from admins before it becomes part of the live learning system.</p>
+            </div>
+          </div>
+          <div class="review-grid">
+            <div class="review-column">
+              <h4>Module Drafts</h4>
+              <div id="moduleDraftReviewList" class="review-list"></div>
+            </div>
+            <div class="review-column">
+              <h4>Quiz Drafts</h4>
+              <div id="quizDraftReviewList" class="review-list"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="studentProfileModal" class="admin-modal">
+    <div class="admin-modal-box">
+      <div class="admin-modal-head">
+        <div>
+          <h3 id="studentProfileTitle">Learner Profile</h3>
+          <p id="studentProfileSubtitle">Detailed learner progress</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeStudentProfile()">Close</button>
+      </div>
+      <div id="studentProfileBody" class="profile-layout"></div>
+      <form id="feedbackNoteForm" class="admin-form">
+        <input type="hidden" id="feedbackStudentId" />
+        <label>Support Note<textarea id="feedbackNoteInput" rows="4" placeholder="Add a learning support note for this student." required></textarea></label>
+        <button type="submit" class="primary-action">Save Support Note</button>
+        <p id="feedbackNoteStatus" class="form-status"></p>
+      </form>
+      <div class="notes-block">
+        <h4>Recent Notes</h4>
+        <div id="feedbackNotesList" class="review-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
+  <script type="module" src="scripts/admin.js"></script>
+  <script src="scripts/loading.js" defer></script>
+</body>
+</html>
+

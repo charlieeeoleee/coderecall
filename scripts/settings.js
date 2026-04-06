@@ -8,7 +8,8 @@ import {
   getFirestore,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
   initSounds,
@@ -18,6 +19,7 @@ import {
   handleSoundToggle,
   handleMusicToggle
 } from "./sound.js";
+import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -37,6 +39,7 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let currentIsGuest = false;
+let pendingProfilePhotoDataUrl = "";
 
 /* =========================
    AUTH STATE
@@ -47,12 +50,14 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     currentIsGuest = false;
+    applyRoleNavigation(await resolveUserRole(db, user), "settings.html");
     await loadUserSettings();
     loadPreferences();
     loadProgress();
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
+    applyRoleNavigation("guest", "settings.html");
     loadGuestSettings();
     loadPreferences();
     loadProgress();
@@ -126,6 +131,11 @@ async function loadUserSettings() {
   document.getElementById("profilePhoto").src = photo;
   document.getElementById("loginType").textContent = loginType;
 
+  const editName = document.getElementById("editProfileName");
+  const editPhotoUrl = document.getElementById("editProfilePhotoUrl");
+  if (editName) editName.value = name;
+  if (editPhotoUrl) editPhotoUrl.value = dataOrEmpty(docSnap, "photo");
+
   const verificationStatus = document.getElementById("verificationStatus");
   verificationStatus.textContent = verificationText;
   verificationStatus.className = `status-pill ${verificationClass}`;
@@ -145,9 +155,34 @@ function loadGuestSettings() {
   document.getElementById("profilePhoto").src = guestPhoto;
   document.getElementById("loginType").textContent = "Guest Mode";
 
+  const editName = document.getElementById("editProfileName");
+  const editPhotoUrl = document.getElementById("editProfilePhotoUrl");
+  const editPhotoFile = document.getElementById("editProfilePhotoFile");
+  const profileStatus = document.getElementById("profileEditStatus");
+  const profileForm = document.getElementById("profileEditForm");
+
+  if (editName) editName.value = "Guest";
+  if (editPhotoUrl) editPhotoUrl.value = "";
+  if (editName) editName.disabled = true;
+  if (editPhotoUrl) editPhotoUrl.disabled = true;
+  if (editPhotoFile) editPhotoFile.disabled = true;
+  if (profileForm) {
+    const submitButton = profileForm.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+  }
+  if (profileStatus) {
+    profileStatus.textContent = "Profile editing is available for signed-in accounts.";
+  }
+
   const verificationStatus = document.getElementById("verificationStatus");
   verificationStatus.textContent = "Guest Session";
   verificationStatus.className = "status-pill locked";
+}
+
+function dataOrEmpty(docSnap, key) {
+  if (!docSnap?.exists()) return "";
+  const value = docSnap.data()?.[key];
+  return typeof value === "string" ? value : "";
 }
 
 /* =========================
@@ -210,12 +245,29 @@ function getLocalProgressState() {
   return progress;
 }
 
+function getSavedProgress(progressObj, key) {
+  return progressObj?.[key] === true || localStorage.getItem(key) === "true";
+}
+
+function isSubjectCompleted(progressObj, resultsObj, subjectName) {
+  const posttestKey = `${subjectName}_posttest`;
+  const resultKey = `${subjectName}_posttest`;
+  const resultDoneKey = `${resultKey}_done`;
+
+  return (
+    getSavedProgress(progressObj, posttestKey) ||
+    resultsObj?.[resultKey] != null ||
+    localStorage.getItem(resultDoneKey) === "true"
+  );
+}
+
 async function loadProgressFromFirestore() {
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
 
   let xp = 0;
   let progress = getLocalProgressState();
+  let results = {};
   if (docSnap.exists()) {
     const data = docSnap.data();
     xp = data.xp || 0;
@@ -223,12 +275,13 @@ async function loadProgressFromFirestore() {
       ...progress,
       ...(data.progress || {})
     };
+    results = data.results || {};
   }
 
-  renderProgress(xp, progress);
+  renderProgress(xp, progress, results);
 }
 
-function renderProgress(xp, progress = getLocalProgressState()) {
+function renderProgress(xp, progress = getLocalProgressState(), results = {}) {
   const xpPerLevel = 100;
   const level = Math.floor(xp / xpPerLevel) + 1;
   const currentXP = xp % xpPerLevel;
@@ -239,7 +292,7 @@ function renderProgress(xp, progress = getLocalProgressState()) {
   const totalSubjects = subjects.length;
 
   subjects.forEach(subject => {
-    const done = progress[`${subject}_posttest`] === true;
+    const done = isSubjectCompleted(progress, results, subject);
     if (done) completedSubjects++;
   });
 
@@ -291,6 +344,67 @@ function animateNumber(element, targetValue) {
   }
 
   requestAnimationFrame(update);
+}
+
+function wireProfileEditor() {
+  const form = document.getElementById("profileEditForm");
+  const fileInput = document.getElementById("editProfilePhotoFile");
+  const statusEl = document.getElementById("profileEditStatus");
+
+  if (fileInput) {
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files?.[0];
+      pendingProfilePhotoDataUrl = "";
+
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingProfilePhotoDataUrl = typeof reader.result === "string" ? reader.result : "";
+        if (statusEl && pendingProfilePhotoDataUrl) {
+          statusEl.textContent = "Image ready. Save profile to apply it.";
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if (!form) return;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!currentUser) {
+      if (statusEl) statusEl.textContent = "Please sign in to edit your profile.";
+      return;
+    }
+
+    const nameInput = document.getElementById("editProfileName");
+    const photoUrlInput = document.getElementById("editProfilePhotoUrl");
+
+    const nextName = nameInput?.value.trim() || "User";
+    const nextPhoto = pendingProfilePhotoDataUrl || photoUrlInput?.value.trim() || document.getElementById("profilePhoto").src;
+
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        name: nextName,
+        photo: nextPhoto
+      });
+
+      document.getElementById("usernameTop").textContent = nextName;
+      document.getElementById("userPhotoTop").src = nextPhoto;
+      document.getElementById("profileName").textContent = nextName;
+      document.getElementById("profilePhoto").src = nextPhoto;
+
+      pendingProfilePhotoDataUrl = "";
+      if (fileInput) fileInput.value = "";
+      if (statusEl) statusEl.textContent = "Profile updated successfully.";
+    } catch (error) {
+      console.error("Profile update error:", error);
+      if (statusEl) statusEl.textContent = "Unable to save profile changes right now.";
+    }
+  });
 }
 
 /* =========================
@@ -514,6 +628,7 @@ function updateIcon() {
    INIT
 ========================= */
 loadTheme();
+wireProfileEditor();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();

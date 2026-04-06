@@ -25,7 +25,12 @@ const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
 const difficulty = params.get("difficulty") || "easy";
 
-const TOTAL_LEVELS = 25;
+const QUIZ_LEVEL_COUNTS = {
+  electrical: { easy: 25, medium: 25, hard: 25 },
+  hardware: { easy: 23, medium: 7, hard: 25 }
+};
+
+const TOTAL_LEVELS = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;
 const XP_PER_LEVEL = 6;
 
 let currentUser = null;

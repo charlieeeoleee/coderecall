@@ -17,6 +17,7 @@ import {
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { resolveUserRole, syncUserRole } from "./role-utils.js";
 
 /* FIREBASE CONFIG */
 const firebaseConfig = {
@@ -32,6 +33,14 @@ const db = getFirestore(app);
 
 const pendingGoogleKey = "pendingGoogleRegistration";
 let isHandlingAuthFlow = false;
+
+async function getLandingPageForUser(user) {
+  const role = await resolveUserRole(db, user);
+  await syncUserRole(db, user, role);
+  if (role === "super_admin") return "super-admin.html";
+  if (role === "admin") return "admin.html";
+  return "dashboard.html";
+}
 
 /* AUTH STATE */
 onAuthStateChanged(auth, async (user) => {
@@ -57,7 +66,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   if ((docSnap.exists() || isGoogleUser) && window.location.pathname.includes("auth.html")) {
-    window.location.replace("dashboard.html");
+    window.location.replace(await getLandingPageForUser(user));
   }
 });
 
@@ -113,7 +122,7 @@ window.login = async function(){
 
     await transferGuestProgressIfNeeded(cred.user.uid);
 
-    window.location.replace("dashboard.html");
+    window.location.replace(await getLandingPageForUser(cred.user));
   }catch(error){
     isHandlingAuthFlow = false;
     showPopup("Login Error", error.message);
@@ -150,6 +159,7 @@ window.register = async function(){
         email: pending.email,
         photo: pending.photo || "https://i.pravatar.cc/40?img=12",
         provider: "google",
+        role: existingData.role || "user",
         createdAt: existingData.createdAt || Date.now(),
         progress: existingData.progress || {}
       });
@@ -157,7 +167,7 @@ window.register = async function(){
       await transferGuestProgressIfNeeded(pending.uid);
 
       localStorage.removeItem(pendingGoogleKey);
-      window.location.replace("dashboard.html");
+      window.location.replace(await getLandingPageForUser(auth.currentUser));
       return;
     }
 
@@ -177,6 +187,7 @@ window.register = async function(){
       email,
       photo: "https://i.pravatar.cc/40?img=12",
       provider: "password",
+      role: "user",
       createdAt: Date.now(),
       progress: {}
     });
@@ -237,7 +248,7 @@ window.googleLogin = async function(){
     if (docSnap.exists()) {
       await transferGuestProgressIfNeeded(user.uid);
       localStorage.removeItem(pendingGoogleKey);
-      window.location.replace("dashboard.html");
+      window.location.replace(await getLandingPageForUser(user));
       return;
     }
 
@@ -476,10 +487,10 @@ function updateIcon(){
   const logo = document.querySelector(".main-logo");
 
   if(document.body.classList.contains("light-mode")){
-    if(icon) icon.textContent = "☀️";
+    if(icon) icon.textContent = "\u2600\uFE0F";
     if(logo) logo.src = "assets/logo-light.png";
   } else {
-    if(icon) icon.textContent = "🌙";
+    if(icon) icon.textContent = "\uD83C\uDF19";
     if(logo) logo.src = "assets/logo-dark.png";
   }
 }
@@ -491,3 +502,4 @@ window.togglePassword = function(id){
 };
 
 loadSavedTheme();
+

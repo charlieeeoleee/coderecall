@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -22,11 +22,13 @@
         </a>
 
         <nav class="menu">
-          <a href="dashboard.html">🏠 Dashboard</a>
-          <a href="subjects.html">📚 Subjects</a>
-          <a href="achievements.html">🏆 Badges</a>
-          <a href="leaderboard.html">🥇 Leaderboard</a>
-          <a href="settings.html" class="active-link">⚙ Settings</a>
+          <a href="dashboard.html">&#127968; Dashboard</a>
+          <a href="subjects.html">&#128218; Subjects</a>
+          <a href="achievements.html">&#127942; Badges</a>
+          <a href="leaderboard.html">&#129351; Leaderboard</a>
+          <a href="settings.html" class="active-link">&#9881; Settings</a>
+          <a href="admin.html" data-role-link="admin" hidden>&#128736; Admin</a>
+          <a href="super-admin.html" data-role-link="super_admin" hidden>&#128081; Super Admin</a>
         </nav>
       </div>
 
@@ -52,7 +54,7 @@
       <div class="settings-grid">
         <!-- ACCOUNT -->
         <div class="card settings-card">
-          <h3>👤 Account</h3>
+          <h3>&#128100; Account</h3>
           <div class="account-box">
             <img id="profilePhoto" src="https://i.pravatar.cc/80?img=12" alt="Profile Photo">
 
@@ -63,11 +65,34 @@
               <p><strong>Verification:</strong> <span id="verificationStatus" class="status-pill locked">Unknown</span></p>
             </div>
           </div>
+
+          <form id="profileEditForm" class="profile-edit-form">
+            <div class="profile-form-grid">
+              <label>
+                <span>Display Name</span>
+                <input type="text" id="editProfileName" placeholder="Enter your display name">
+              </label>
+              <label>
+                <span>Profile Image URL</span>
+                <input type="url" id="editProfilePhotoUrl" placeholder="https://example.com/profile.jpg">
+              </label>
+            </div>
+
+            <label class="profile-upload-field">
+              <span>Or Upload a Profile Image</span>
+              <input type="file" id="editProfilePhotoFile" accept="image/*">
+            </label>
+
+            <div class="profile-edit-actions">
+              <button type="submit" class="action-btn">Save Profile</button>
+              <p id="profileEditStatus" class="profile-edit-status"></p>
+            </div>
+          </form>
         </div>
 
         <!-- APPEARANCE -->
         <div class="card settings-card">
-          <h3>🎨 Appearance</h3>
+          <h3>&#127912; Appearance</h3>
 
           <div class="setting-row">
             <div>
@@ -83,7 +108,7 @@
 
         <!-- LEARNING PREFERENCES -->
         <div class="card settings-card">
-          <h3>🎮 Learning Preferences</h3>
+          <h3>&#127918; Learning Preferences</h3>
 
           <div class="setting-row">
             <div>
@@ -125,7 +150,7 @@
 
         <!-- PROGRESS -->
         <div class="card settings-card">
-          <h3>📊 Progress</h3>
+          <h3>&#128202; Progress</h3>
 
           <div class="progress-info">
             <p><strong>Total XP:</strong> <span id="totalXP">0</span></p>
@@ -150,7 +175,7 @@
 
         <!-- SYSTEM ACTIONS -->
         <div class="card settings-card full-width">
-          <h3>⚙ System Actions</h3>
+          <h3>&#9881; System Actions</h3>
 
           <div class="system-actions">
             <button class="action-btn logout-action" onclick="logout()">Logout</button>
@@ -164,7 +189,7 @@
 
   <!-- THEME BUTTON -->
   <button class="theme-toggle" onclick="toggleTheme()">
-    <span id="themeIcon">🌙</span>
+    <span id="themeIcon">&#127769;</span>
   </button>
 
   <!-- GUEST LOGOUT POPUP -->
@@ -206,5 +231,8 @@
   </div>
 
   <script type="module" src="scripts/settings.js"></script>
+  <script src="scripts/loading.js" defer></script>
 </body>
 </html>
+
+

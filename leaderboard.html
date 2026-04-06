@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -22,11 +22,13 @@
         </a>
 
         <nav class="menu">
-          <a href="dashboard.html">🏠 Dashboard</a>
-          <a href="subjects.html">📚 Subjects</a>
-          <a href="achievements.html">🏆 Badges</a>
-          <a href="leaderboard.html" class="active-link">🥇 Leaderboard</a>
-          <a href="settings.html">⚙ Settings</a>
+          <a href="dashboard.html">&#127968; Dashboard</a>
+          <a href="subjects.html">&#128218; Subjects</a>
+          <a href="achievements.html">&#127942; Badges</a>
+          <a href="leaderboard.html" class="active-link">&#129351; Leaderboard</a>
+          <a href="settings.html">&#9881; Settings</a>
+          <a href="admin.html" data-role-link="admin" hidden>&#128736; Admin</a>
+          <a href="super-admin.html" data-role-link="super_admin" hidden>&#128081; Super Admin</a>
         </nav>
       </div>
 
@@ -126,9 +128,12 @@
 
   <!-- THEME BUTTON -->
   <button class="theme-toggle" onclick="toggleTheme()">
-    <span id="themeIcon">🌙</span>
+    <span id="themeIcon">ðŸŒ™</span>
   </button>
 
   <script type="module" src="scripts/leaderboard.js"></script>
+  <script src="scripts/loading.js" defer></script>
 </body>
 </html>
+
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -20,7 +20,7 @@
 
   <!-- THEME TOGGLE -->
   <button class="theme-toggle subject-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-    <span id="themeIcon">🌙</span>
+    <span id="themeIcon">&#127769;</span>
   </button>
 
   <main class="subject-page">
@@ -45,7 +45,7 @@
       </button>
 
       <button class="subject-card card modules locked" id="modulesBtn" onclick="openModules()">
-        <span class="lock-icon">🔒</span>
+        <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
         <div class="subject-card-inner">
           <span class="subject-badge">STEP 2</span>
@@ -55,7 +55,7 @@
       </button>
 
       <button class="subject-card card quizzes locked" id="quizzesBtn" onclick="openQuiz()">
-        <span class="lock-icon">🔒</span>
+        <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
         <div class="subject-card-inner">
           <span class="subject-badge">STEP 3</span>
@@ -65,7 +65,7 @@
       </button>
 
       <button class="subject-card card posttest locked" id="posttestBtn" onclick="openPosttest()">
-        <span class="lock-icon">🔒</span>
+        <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
         <div class="subject-card-inner">
           <span class="subject-badge">FINAL</span>
@@ -76,8 +76,11 @@
     </section>
   </main>
 
-  <button class="subject-back-btn" onclick="goBack()">← Back</button>
+  <button class="subject-back-btn" onclick="goBack()">Back</button>
 
   <script type="module" src="scripts/subject.js"></script>
+  <script src="scripts/loading.js" defer></script>
 </body>
 </html>
+
+

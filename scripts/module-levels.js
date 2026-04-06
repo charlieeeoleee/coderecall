@@ -85,7 +85,7 @@ function clearRecentCompletion() {
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "??" : "??";
+  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
 }
 function loadTheme() {
   const saved = localStorage.getItem("theme");

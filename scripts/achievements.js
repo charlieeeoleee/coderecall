@@ -19,6 +19,8 @@ import {
   lowerThemeMusic,
   restoreThemeMusic
 } from "./sound.js";
+import { MODULE_STRUCTURE } from "../data/module-data.js";
+import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -49,10 +51,12 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     currentIsGuest = false;
+    applyRoleNavigation(await resolveUserRole(db, user), "achievements.html");
     await loadRealUser(user);
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
+    applyRoleNavigation("guest", "achievements.html");
     loadGuestUser();
   } else {
     window.location.href = "auth.html";
@@ -144,7 +148,7 @@ function saveUnlockedBadges(badgeNames) {
 
 function getBadgePrioritySound(badgeName) {
   if (badgeName === "Completionist") return "full";
-  if (badgeName === "Master") return "master";
+  if (["Master", "Grandmaster", "Legend"].includes(badgeName)) return "master";
   return "badge";
 }
 
@@ -191,13 +195,25 @@ function buildBadges(xp, progressObj, isGuest) {
   const electricalQuiz = getSavedProgress(progressObj, "electrical_quiz");
   const electricalPost = getSavedProgress(progressObj, "electrical_posttest");
 
-  const anyQuiz = hardwareQuiz || electricalQuiz || hardwarePre || electricalPre;
+  const anyAssessment = hardwareQuiz || electricalQuiz || hardwarePre || electricalPre || hardwarePost || electricalPost;
   const anyModule = hardwareModules || electricalModules;
+  const hardwareStarted = hardwarePre || hardwareModules || hardwareQuiz || hardwarePost;
+  const electricalStarted = electricalPre || electricalModules || electricalQuiz || electricalPost;
   const exploredBoth =
-    (hardwarePre || hardwareModules || hardwareQuiz || hardwarePost) &&
-    (electricalPre || electricalModules || electricalQuiz || electricalPost);
+    hardwareStarted && electricalStarted;
 
   const bothSubjectsCompleted = hardwarePost && electricalPost;
+  const moduleCounts = getModuleCompletionCounts(progressObj);
+  const totalCoreProgress = countTruthy([
+    hardwarePre,
+    hardwareModules,
+    hardwareQuiz,
+    hardwarePost,
+    electricalPre,
+    electricalModules,
+    electricalQuiz,
+    electricalPost
+  ]);
   const streak = isGuest ? getGuestStreak() : 0;
   void streak;
 
@@ -263,13 +279,33 @@ function buildBadges(xp, progressObj, isGuest) {
       progressMax: 500
     },
     {
-      name: "Finisher",
+      name: "Grandmaster",
+      icon: "✨",
+      description: "Your progress now feels elite. You are deep into the full learning journey.",
+      requirement: "Reach 750 XP",
+      rewardText: "750 XP milestone",
+      unlocked: xp >= 750,
+      progressValue: Math.min(xp, 750),
+      progressMax: 750
+    },
+    {
+      name: "Legend",
+      icon: "🌟",
+      description: "Reach the pilot cap and prove complete mastery of the prototype system.",
+      requirement: "Reach 1000 XP",
+      rewardText: "1000 XP milestone",
+      unlocked: xp >= 1000,
+      progressValue: Math.min(xp, 1000),
+      progressMax: 1000
+    },
+    {
+      name: "First Checkpoint",
       icon: "🏁",
       description: "Complete your first quiz or test-related activity.",
       requirement: "Finish your first quiz or test",
       rewardText: "First completion badge",
-      unlocked: anyQuiz,
-      progressValue: anyQuiz ? 1 : 0,
+      unlocked: anyAssessment,
+      progressValue: anyAssessment ? 1 : 0,
       progressMax: 1
     },
     {
@@ -280,6 +316,56 @@ function buildBadges(xp, progressObj, isGuest) {
       rewardText: "Module milestone",
       unlocked: anyModule,
       progressValue: anyModule ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "Module Scout",
+      icon: "🧭",
+      description: "Build confidence by clearing your first set of lessons across the system.",
+      requirement: "Complete 6 modules",
+      rewardText: "Module progress badge",
+      unlocked: moduleCounts.total >= 6,
+      progressValue: Math.min(moduleCounts.total, 6),
+      progressMax: 6
+    },
+    {
+      name: "Module Vanguard",
+      icon: "🛡️",
+      description: "You are no longer sampling lessons. You are moving through the curriculum with intent.",
+      requirement: "Complete 12 modules",
+      rewardText: "Advanced module badge",
+      unlocked: moduleCounts.total >= 12,
+      progressValue: Math.min(moduleCounts.total, 12),
+      progressMax: 12
+    },
+    {
+      name: "Module Legend",
+      icon: "📚",
+      description: "Finish every module in both subjects and turn reading into mastery.",
+      requirement: "Complete all 18 modules",
+      rewardText: "Full module completion",
+      unlocked: moduleCounts.total >= moduleCounts.max,
+      progressValue: moduleCounts.total,
+      progressMax: moduleCounts.max
+    },
+    {
+      name: "Electrical Explorer",
+      icon: "⚡",
+      description: "Step into the electrical side and begin building your circuit knowledge.",
+      requirement: "Complete any Electrical activity",
+      rewardText: "Electrical journey badge",
+      unlocked: electricalStarted,
+      progressValue: electricalStarted ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "Hardware Explorer",
+      icon: "🖥️",
+      description: "Step into the hardware side and begin building your computer servicing knowledge.",
+      requirement: "Complete any Hardware activity",
+      rewardText: "Hardware journey badge",
+      unlocked: hardwareStarted,
+      progressValue: hardwareStarted ? 1 : 0,
       progressMax: 1
     },
     {
@@ -294,6 +380,46 @@ function buildBadges(xp, progressObj, isGuest) {
         electricalPre || electricalModules || electricalQuiz || electricalPost
       ),
       progressMax: 2
+    },
+    {
+      name: "Pathfinder",
+      icon: "🗺️",
+      description: "Push beyond one subject flow and start covering the core stages of the whole system.",
+      requirement: "Complete 4 major stage milestones",
+      rewardText: "Core path badge",
+      unlocked: totalCoreProgress >= 4,
+      progressValue: Math.min(totalCoreProgress, 4),
+      progressMax: 4
+    },
+    {
+      name: "Dual Path",
+      icon: "🔀",
+      description: "Clear the full quiz track for both subjects and prove balanced growth.",
+      requirement: "Complete both subject quiz tracks",
+      rewardText: "Dual quiz completion",
+      unlocked: hardwareQuiz && electricalQuiz,
+      progressValue: countCompletedSubjects(hardwareQuiz, electricalQuiz),
+      progressMax: 2
+    },
+    {
+      name: "Electrical Graduate",
+      icon: "🔌",
+      description: "Finish the full Electrical subject from pre-test to post-test.",
+      requirement: "Complete Electrical post-test",
+      rewardText: "Electrical subject complete",
+      unlocked: electricalPost,
+      progressValue: electricalPost ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "Hardware Graduate",
+      icon: "💻",
+      description: "Finish the full Hardware subject from pre-test to post-test.",
+      requirement: "Complete Hardware post-test",
+      rewardText: "Hardware subject complete",
+      unlocked: hardwarePost,
+      progressValue: hardwarePost ? 1 : 0,
+      progressMax: 1
     },
     {
       name: "Completionist",
@@ -320,6 +446,31 @@ function countCompletedSubjects(hardwareDone, electricalDone) {
   if (hardwareDone) count++;
   if (electricalDone) count++;
   return count;
+}
+
+function countTruthy(values) {
+  return values.filter(Boolean).length;
+}
+
+function getModuleCompletionCounts(progressObj) {
+  let completed = 0;
+  let total = 0;
+
+  Object.entries(MODULE_STRUCTURE).forEach(([subjectKey, difficulties]) => {
+    Object.entries(difficulties).forEach(([difficultyKey, count]) => {
+      for (let index = 1; index <= count; index++) {
+        total++;
+        if (getSavedProgress(progressObj, `${subjectKey}_${difficultyKey}_module_${index}_done`)) {
+          completed++;
+        }
+      }
+    });
+  });
+
+  return {
+    total: completed,
+    max: total
+  };
 }
 
 /* =========================

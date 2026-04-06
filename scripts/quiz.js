@@ -19,6 +19,10 @@ import {
   playSound
 } from "./sound.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
+import {
+  hardwarePretestQuestions,
+  hardwarePosttestQuestions
+} from "../data/hardware-assessment-data.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -54,7 +58,7 @@ const type = params.get("type") || "pretest";
    XP BREAKDOWN
 ========================= */
 const XP_RULES = {
-  pretest: 20,
+  pretest: 1,
   posttest: 50,
   quizLevel: 6
 };
@@ -351,10 +355,36 @@ const electricalPretestQuestions = [
   }
 ];
 
+function normalizeStandardQuestion(question) {
+  if (!question) return question;
+
+  const normalizedChoices = Array.isArray(question.choices) ? [...question.choices] : [];
+  let normalizedAnswer = question.answer;
+
+  if (
+    typeof normalizedAnswer === "string" &&
+    /^[A-D]$/i.test(normalizedAnswer.trim()) &&
+    normalizedChoices.length >= 4
+  ) {
+    const answerIndex = normalizedAnswer.trim().toUpperCase().charCodeAt(0) - 65;
+    normalizedAnswer = normalizedChoices[answerIndex];
+  }
+
+  return {
+    ...question,
+    choices: normalizedChoices,
+    answer: normalizedAnswer
+  };
+}
+
 const questionBanks = {
   electrical: {
     pretest: electricalPretestQuestions,
     posttest: electricalPosttestQuestions
+  },
+  hardware: {
+    pretest: hardwarePretestQuestions,
+    posttest: hardwarePosttestQuestions
   }
 };
 
@@ -367,6 +397,7 @@ let score = 0;
 let selectedChoice = null;
 let pendingContinue = null;
 let xpAwardedThisAttempt = false;
+let hasInitializedPage = false;
 
 /* =========================
    HELPERS
@@ -399,10 +430,56 @@ function getResultDocKey() {
   return `${subject}_${type}`;
 }
 
+function goToSubjectPage() {
+  window.location.href = `subject.html?subject=${subject}`;
+}
+
 function getQuizXPReward() {
   if (type === "pretest") return XP_RULES.pretest;
   if (type === "posttest") return XP_RULES.posttest;
   return XP_RULES.quizLevel;
+}
+
+async function hasLockedAttempt() {
+  if (type !== "pretest") return false;
+
+  const flags = getProgressFlags();
+  const localAttemptDone = localStorage.getItem(getQuizStorageKey()) === "true";
+  const localProgressDone = localStorage.getItem(flags.pretestKey) === "true";
+
+  if (localAttemptDone || localProgressDone) {
+    return true;
+  }
+
+  if (!currentUser) {
+    return false;
+  }
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  const progress = data.progress || {};
+  const results = data.results || {};
+  const storedResult = results[getResultDocKey()];
+  const isLocked = Boolean(progress[flags.pretestKey] || storedResult);
+
+  if (isLocked) {
+    localStorage.setItem(flags.pretestKey, "true");
+    localStorage.setItem(getQuizStorageKey(), "true");
+  }
+
+  return isLocked;
+}
+
+async function initializeQuizPage() {
+  if (await hasLockedAttempt()) {
+    window.alert("You already completed this pre-test and cannot take it again.");
+    goToSubjectPage();
+    return;
+  }
+
+  prepareQuestions();
+  renderQuestion();
 }
 
 function prepareQuestions() {
@@ -413,7 +490,7 @@ function prepareQuestions() {
     return;
   }
 
-  const selected = shuffleArray(source).slice(0, 30);
+  const selected = shuffleArray(source.map(normalizeStandardQuestion)).slice(0, 30);
 
   quizQuestions = selected.map((q) => ({
     ...q,
@@ -482,6 +559,10 @@ function showRationale(message) {
   document.getElementById("rationaleModal").classList.add("active");
 }
 
+function getCorrectAnswerText(question) {
+  return String(question?.answer || "").trim();
+}
+
 function buildFallbackQuizRationale(question) {
   const prompt = String(question?.question || "").toLowerCase();
 
@@ -525,6 +606,24 @@ function buildFallbackQuizRationale(question) {
   );
 
   return matched?.text || "Review the concept being tested here and match the component, formula, or wiring rule to its actual function.";
+}
+
+function buildReviewRationale(question) {
+  const baseExplanation = String(question?.rationale || buildFallbackQuizRationale(question)).trim();
+  const correctAnswer = getCorrectAnswerText(question);
+
+  if (type === "pretest") {
+    return correctAnswer
+      ? `Correct answer: ${correctAnswer}.`
+      : "Review the correct answer for this item.";
+  }
+
+  if (type === "posttest") {
+    return baseExplanation ||
+      "Review the concept behind this item and revisit the related module before trying similar questions again.";
+  }
+
+  return baseExplanation;
 }
 
 window.closeRationaleAndContinue = function () {
@@ -677,11 +776,11 @@ async function awardQuizXPOnce() {
 ========================= */
 window.finishQuizFlow = async function () {
   document.getElementById("resultModal").classList.remove("active");
-  window.location.href = `subject.html?subject=${subject}`;
+  goToSubjectPage();
 };
 
 window.goBackToSubject = function () {
-  window.location.href = `subject.html?subject=${subject}`;
+  goToSubjectPage();
 };
 
 window.handleNext = function () {
@@ -697,7 +796,7 @@ window.handleNext = function () {
   } else {
     playSound("wrong");
     pendingContinue = continueToNext;
-    showRationale(currentQuestion.rationale || buildFallbackQuizRationale(currentQuestion));
+    showRationale(buildReviewRationale(currentQuestion));
   }
 };
 
@@ -761,6 +860,8 @@ window.toggleTheme = function () {
    AUTH INIT
 ========================= */
 onAuthStateChanged(auth, (user) => {
+  if (hasInitializedPage) return;
+
   const isGuest = localStorage.getItem("guest") === "true";
 
   if (user) {
@@ -773,14 +874,19 @@ onAuthStateChanged(auth, (user) => {
     currentUser = null;
     currentIsGuest = false;
   }
+
+  hasInitializedPage = true;
+  initializeQuizPage().catch((error) => {
+    console.error("Error initializing quiz page:", error);
+    prepareQuestions();
+    renderQuestion();
+  });
 });
 
 /* =========================
    INIT
 ========================= */
 loadTheme();
-prepareQuestions();
-renderQuestion();
 
 initSounds();
 initGlobalClickSound();

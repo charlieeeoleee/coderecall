@@ -36,3 +36,4 @@ function updateIcon(){
 }
 
 loadTheme();
+

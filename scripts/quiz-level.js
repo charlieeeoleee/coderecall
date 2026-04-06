@@ -10,8 +10,9 @@ import {
   playSound 
 } from "./sound.js";
 
-import { quizData } from "../data/quiz-data.js"; 
+import { quizData } from "../data/quiz-data.js";
 import { electricalExtraQuizData } from "../data/quiz-data-electrical-extra.js";
+import { hardwareQuizData } from "../data/quiz-data-hardware-extra.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -40,11 +41,240 @@ let selectedChoice = null;
 let score = 0;
 let xpAwarded = false;
 
+const HARDWARE_DOC_IMAGE_BASE = "assets/quizzes/hardware/docx";
+
+const QUIZ_LEVEL_COUNTS = {
+  electrical: { easy: 25, medium: 25, hard: 25 },
+  hardware: { easy: 23, medium: 7, hard: 25 }
+};
+
+const HARDWARE_QUIZ_OVERRIDES = {
+  easy: {
+    "1.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image10.png` },
+    "6.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image5.png` },
+    "7.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image17.png` },
+    "8.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image25.png` },
+    "9.2": { image: `${HARDWARE_DOC_IMAGE_BASE}/image13.png` },
+    "10.2": { image: `${HARDWARE_DOC_IMAGE_BASE}/image19.png` },
+    "12.1": {
+      question: "It is used to turn any physical document into a digital one.",
+      choices: ["Plotter", "Printer", "Photo Printer", "Scanner"],
+      answer: "Scanner"
+    },
+    "12.2": {
+      question: "It is used to turn any physical document into a digital one.",
+      choices: ["Word File", "Printer", "Microsoft", "Scanner"],
+      answer: "Scanner"
+    },
+    "12.3": {
+      question: "Which of the following is a microphone?",
+      choices: ["Option A", "Option B", "Option C", "Option D"],
+      choiceImages: [
+        `${HARDWARE_DOC_IMAGE_BASE}/image7.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image23.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image14.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image12.png`
+      ],
+      answer: "Option A"
+    },
+    "13.1": {
+      question: "Which of the following is used to capture pictures or record videos on a computer?",
+      choices: ["Microphone", "DSLR Camera", "Webcam", "Instax Camera"],
+      answer: "Webcam"
+    },
+    "13.2": {
+      question: "This input device is used to capture sounds, audio, or voices which are commonly used on meetings or audio recording.",
+      choices: ["Microphone", "Headset", "Speaker", "Microphone Cable"],
+      answer: "Microphone"
+    },
+    "13.3": {
+      question: "Which of the following is a webcam?",
+      choices: ["Option A", "Option B", "Option C", "Option D"],
+      choiceImages: [
+        `${HARDWARE_DOC_IMAGE_BASE}/image3.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image9.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image20.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image2.png`
+      ],
+      answer: "Option D"
+    },
+    "16.3": {
+      question: "What is the main function of anti-static gloves?",
+      choices: [
+        "To protect components from electrostatic discharge while handling them",
+        "To tighten screws more firmly",
+        "To improve internet speed during repair",
+        "To cool the processor during disassembly"
+      ],
+      answer: "To protect components from electrostatic discharge while handling them"
+    },
+    "17.3": {
+      question: "Which of the following is an anti-static wrist strap?",
+      choices: ["Option A", "Option B", "Option C", "Option D"],
+      choiceImages: [
+        `${HARDWARE_DOC_IMAGE_BASE}/image11.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image24.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image18.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image1.png`
+      ],
+      answer: "Option A"
+    },
+    "18.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image26.png` },
+    "19.3": {
+      question: "What is the main function of an anti-static mat?",
+      choices: [
+        "To decorate the workstation",
+        "To prevent electrostatic discharge while placing components on the table",
+        "To replace the need for a screwdriver",
+        "To increase airflow inside the system unit"
+      ],
+      answer: "To prevent electrostatic discharge while placing components on the table"
+    },
+    "20.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image16.png` },
+    "21.2": {
+      question: "Which of the following should you do when using any equipment or tools?",
+      choices: [
+        "Read and follow the proper instructions before use",
+        "Use it anyway even if it is damaged",
+        "Repair it or buy a new one without reporting the damage",
+        "Use something else that is not suitable to the task"
+      ],
+      answer: "Read and follow the proper instructions before use"
+    },
+    "21.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image8.png` },
+    "24.1": {
+      choices: [
+        "Using your computer",
+        "Eating",
+        "Organizing your things",
+        "Taking notes"
+      ],
+      answer: "Eating"
+    },
+    "24.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image21.png` },
+    "25.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image6.png` }
+  },
+  medium: {
+    "2.3": {
+      image: `${HARDWARE_DOC_IMAGE_BASE}/image15.png`,
+      choices: ["Hard Disk Drive (HDD)", "Floppy Disk", "Solid State Drive", "SATA"],
+      answer: "Hard Disk Drive (HDD)"
+    },
+    "3.3": {
+      question: "The term UEFI means:",
+      choices: [
+        "Unified extension firmware interface",
+        "Unity extension firmware internet",
+        "Unified extensible firmware interface",
+        "Unity extensive frostwire interconnect"
+      ],
+      answer: "Unified extensible firmware interface"
+    },
+    "4.1": {
+      choices: ["PCIe", "Integrated Drive Electronics", "Network Interface Card (NIC)", "HDMI"],
+      answer: "Network Interface Card (NIC)"
+    },
+    "7.2": {
+      choices: [
+        "The chipset executes software instructions and calculations, while the CPU manages the power distribution to the motherboard.",
+        "The CPU acts as the brain that processes data and executes instructions, while the chipset acts as the traffic controller managing data flow between the CPU and other components.",
+        "The CPU is responsible for long-term storage of files, while the chipset provides the temporary memory (RAM) for active applications.",
+        "The chipset is a software driver that allows the operating system to run, while the CPU is the physical hardware component that plugs into the socket."
+      ],
+      answer: "The CPU acts as the brain that processes data and executes instructions, while the chipset acts as the traffic controller managing data flow between the CPU and other components."
+    }
+  },
+  hard: {
+    "15.2": {
+      choices: [
+        "Both ends use the T568B wiring standard.",
+        "One end uses T568A and the other end uses T568B.",
+        "Both ends use T568A.",
+        "The cable crosses the power wires only."
+      ],
+      answer: "One end uses T568A and the other end uses T568B."
+    },
+    "21.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image4.png` },
+    "25.3": { image: `${HARDWARE_DOC_IMAGE_BASE}/image22.png` }
+  }
+};
+
+function normalizeAnswer(question) {
+  const choices = Array.isArray(question.choices) ? question.choices.filter(Boolean) : [];
+  let answer = question.answer;
+
+  if (typeof answer === "string" && /^[A-D]$/i.test(answer.trim()) && choices.length >= 4) {
+    answer = choices[answer.trim().toUpperCase().charCodeAt(0) - 65];
+  }
+
+  return {
+    ...question,
+    choices,
+    answer
+  };
+}
+
+function normalizeHardwareDifficulty(rawQuestions, difficultyName) {
+  const overrides = HARDWARE_QUIZ_OVERRIDES[difficultyName] || {};
+  const deduped = rawQuestions.reduce((map, item) => {
+    const key = `${item.level}.${item.sub}`;
+    const existing = map.get(key);
+    const itemChoiceCount = Array.isArray(item.choices) ? item.choices.filter(Boolean).length : 0;
+    const existingChoiceCount = existing && Array.isArray(existing.choices)
+      ? existing.choices.filter(Boolean).length
+      : -1;
+
+    if (!existing || itemChoiceCount > existingChoiceCount) {
+      map.set(key, item);
+    }
+
+    return map;
+  }, new Map());
+
+  const levelOrder = [...new Set([...deduped.values()].map((item) => item.level))];
+  const levelMap = {};
+  levelOrder.forEach((originalLevel, index) => {
+    levelMap[originalLevel] = index + 1;
+  });
+
+  const normalized = {};
+
+  [...deduped.values()]
+    .sort((a, b) => a.level - b.level || a.sub - b.sub)
+    .forEach((item) => {
+      const originalKey = `${item.level}.${item.sub}`;
+      const override = overrides[originalKey] || {};
+      const targetLevel = levelMap[item.level];
+      const baseQuestion = normalizeAnswer({
+        ...item,
+        ...override,
+        choices: override.choices || item.choices
+      });
+
+      if (!normalized[targetLevel]) normalized[targetLevel] = [];
+      normalized[targetLevel].push({
+        question: override.question || item.question,
+        choices: baseQuestion.choices,
+        answer: baseQuestion.answer,
+        rationale: override.rationale,
+        image: override.image,
+        choiceImages: override.choiceImages
+      });
+    });
+
+  return normalized;
+}
+
 const mergedQuizData = {
   ...quizData,
   electrical: {
     ...(quizData.electrical || {}),
     ...(electricalExtraQuizData.electrical || {})
+  },
+  hardware: {
+    easy: normalizeHardwareDifficulty(hardwareQuizData.hardware.easy || [], "easy"),
+    medium: normalizeHardwareDifficulty(hardwareQuizData.hardware.medium || [], "medium"),
+    hard: normalizeHardwareDifficulty(hardwareQuizData.hardware.hard || [], "hard")
   }
 };
 
@@ -138,7 +368,7 @@ function prepareQuestions() {
   if (!levelData) {
     console.warn("No quiz data found, using fallback");
 
-    questions = shuffleArray([...getPlaceholderQuestions(subject, quizLevel)]).map((item) => ({
+    questions = shuffleArray([...getPlaceholderQuestions(subject, quizLevel)]).map((item) => normalizeAnswer({
       ...item,
       choices: [...item.choices]
     }));
@@ -147,7 +377,7 @@ function prepareQuestions() {
     return;
   }
 
-  questions = shuffleArray([...levelData]).map((item) => ({
+  questions = shuffleArray([...levelData]).map((item) => normalizeAnswer({
     ...item,
     choices: [...item.choices]
   }));
@@ -177,14 +407,34 @@ function renderQuestion() {
 
   updateProgress();
   document.getElementById("questionText").textContent = currentQuestion.question;
+  let media = document.getElementById("questionMedia");
+  if (!media) {
+    media = document.createElement("div");
+    media.id = "questionMedia";
+    media.className = "level-question-media";
+    document.querySelector(".level-question-block").appendChild(media);
+  }
+
+  media.innerHTML = currentQuestion.image
+    ? `<img src="${currentQuestion.image}" alt="Question visual" class="level-question-image">`
+    : "";
 
   const container = document.getElementById("choicesContainer");
   container.innerHTML = "";
 
-  currentQuestion.choices.forEach((choice) => {
+  currentQuestion.choices.forEach((choice, index) => {
     const btn = document.createElement("button");
     btn.className = "choice-btn";
-    btn.textContent = choice;
+    if (currentQuestion.choiceImages?.[index]) {
+      btn.innerHTML = `
+        <span class="choice-media-wrap">
+          <img src="${currentQuestion.choiceImages[index]}" alt="Choice ${index + 1}" class="choice-media-image">
+        </span>
+        <span class="choice-media-label">${choice}</span>
+      `;
+    } else {
+      btn.textContent = choice;
+    }
 
     btn.addEventListener("click", () => {
       document.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
@@ -392,6 +642,8 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
+window.QUIZ_LEVEL_COUNTS = QUIZ_LEVEL_COUNTS;
 
 function buildFallbackRationale(question, selectedAnswer, isCorrect) {
   if (!question) {

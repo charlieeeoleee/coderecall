@@ -136,6 +136,39 @@ h2{
   margin:0 0 4px;
 }
 
+.role-access-note{
+  margin:0 0 6px;
+  color:var(--text-color);
+  opacity:.82;
+  font-size:12px;
+  line-height:1.55;
+  text-align:center;
+}
+
+.role-panel{
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-top:2px;
+}
+
+.role-chip{
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  color:var(--text-color);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.02em;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.light-mode .role-chip{
+  background:rgba(108,76,255,.08);
+  border-color:rgba(108,76,255,.18);
+}
+
 input{
   width:100%;
   box-sizing:border-box;

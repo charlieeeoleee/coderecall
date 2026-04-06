@@ -34,3 +34,4 @@ window.goToHome = function(){
 };
 
 loadTheme();
+

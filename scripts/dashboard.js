@@ -25,6 +25,7 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
+import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -57,11 +58,13 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     currentIsGuest = false;
+    applyRoleNavigation(await resolveUserRole(db, user), "dashboard.html");
     await updateUserStreak();
     await loadDashboard();
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
+    applyRoleNavigation("guest", "dashboard.html");
     updateGuestStreak();
     loadGuestDashboard();
   } else {
@@ -676,3 +679,4 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+

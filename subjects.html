@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -22,11 +22,13 @@
         </a>
 
         <nav class="menu">
-          <a href="dashboard.html">🏠 Dashboard</a>
-          <a href="subjects.html" class="active-link">📚 Subjects</a>
-          <a href="achievements.html">🏆 Badges</a>
-          <a href="leaderboard.html">🥇 Leaderboard</a>
-          <a href="settings.html">⚙ Settings</a>
+          <a href="dashboard.html">&#127968; Dashboard</a>
+          <a href="subjects.html" class="active-link">&#128218; Subjects</a>
+          <a href="achievements.html">&#127942; Badges</a>
+          <a href="leaderboard.html">&#129351; Leaderboard</a>
+          <a href="settings.html">&#9881; Settings</a>
+          <a href="admin.html" data-role-link="admin" hidden>&#128736; Admin</a>
+          <a href="super-admin.html" data-role-link="super_admin" hidden>&#128081; Super Admin</a>
         </nav>
       </div>
 
@@ -71,7 +73,7 @@
       <div class="subjects-grid">
         <div class="card subject-card" onclick="openSubject('hardware')">
           <div class="subject-card-top">
-            <div class="subject-icon">🖥</div>
+            <div class="subject-icon">&#128421;</div>
             <div class="subject-badge">Core</div>
           </div>
 
@@ -109,7 +111,7 @@
 
         <div class="card subject-card" onclick="openSubject('electrical')">
           <div class="subject-card-top">
-            <div class="subject-icon">⚡</div>
+            <div class="subject-icon">&#9889;</div>
             <div class="subject-badge">Core</div>
           </div>
 
@@ -165,9 +167,12 @@
 
   <!-- THEME BUTTON -->
   <button class="theme-toggle" onclick="toggleTheme()">
-    <span id="themeIcon">🌙</span>
+    <span id="themeIcon">ðŸŒ™</span>
   </button>
 
   <script type="module" src="scripts/subjects.js"></script>
+  <script src="scripts/loading.js" defer></script>
 </body>
 </html>
+
+

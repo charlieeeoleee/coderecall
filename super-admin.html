@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Admin - Code Recall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/admin.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="top-section">
+        <a href="index.html" class="logo-link"><h2 class="logo">CODE:RECALL!</h2></a>
+        <nav class="menu">
+          <a href="dashboard.html">&#127968; Dashboard</a>
+          <a href="subjects.html">&#128218; Subjects</a>
+          <a href="achievements.html">&#127942; Badges</a>
+          <a href="leaderboard.html">&#129351; Leaderboard</a>
+          <a href="settings.html">&#9881; Settings</a>
+          <a href="admin.html" data-role-link="admin">&#128736; Admin</a>
+          <a href="super-admin.html" class="active-link" data-role-link="super_admin">&#128081; Super Admin</a>
+        </nav>
+      </div>
+      <div class="bottom-section"><button onclick="logout()" class="logout-btn">Logout</button></div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h2 class="page-title">Super Admin</h2>
+          <p class="page-subtitle">Manage roles, review the whole system, and control app user records for the prototype.</p>
+        </div>
+        <div class="user-top">
+          <span id="username">Super Admin</span>
+          <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
+        </div>
+      </div>
+
+      <div class="overview-grid">
+        <div class="overview-card"><h3>Total Users</h3><p id="superTotalUsers">0</p></div>
+        <div class="overview-card"><h3>Admins</h3><p id="superAdminCount">0</p></div>
+        <div class="overview-card"><h3>Super Admins</h3><p id="superSuperCount">0</p></div>
+        <div class="overview-card"><h3>Average XP</h3><p id="superAverageXp">0</p></div>
+      </div>
+
+      <div class="admin-grid">
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Email Access Control</h3>
+              <p>Grant admin or super admin access by email without editing project files.</p>
+            </div>
+          </div>
+          <form id="accessGrantForm" class="admin-form">
+            <label>Email Address<input id="accessEmailInput" type="email" placeholder="name@example.com" required /></label>
+            <label>Access Role
+              <select id="accessRoleInput" required>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            </label>
+            <button type="submit" class="primary-action">Save Email Access</button>
+            <p id="accessGrantStatus" class="form-status"></p>
+          </form>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Granted Email Access</h3>
+              <p>These email-based roles apply on the next login for matching accounts.</p>
+            </div>
+          </div>
+          <div id="accessGrantList" class="grant-list"></div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>User Intake</h3>
+              <p>Create a pending user, admin, or super admin record for pilot onboarding.</p>
+            </div>
+          </div>
+          <form id="intakeUserForm" class="admin-form">
+            <label>Full Name<input id="intakeNameInput" type="text" placeholder="Full name" required /></label>
+            <label>Email Address<input id="intakeEmailInput" type="email" placeholder="name@example.com" required /></label>
+            <label>Initial Role
+              <select id="intakeRoleInput" required>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+              </select>
+            </label>
+            <button type="submit" class="primary-action">Create Pending User Record</button>
+            <p id="intakeUserStatus" class="form-status"></p>
+          </form>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>System Health</h3>
+              <p>Watch account activity, draft volume, and flagged records across the platform.</p>
+            </div>
+          </div>
+          <div class="analytics-grid" id="systemHealthGrid"></div>
+        </section>
+      </div>
+
+      <section class="panel-card wide">
+        <div class="panel-header">
+          <div>
+            <h3>User Access Control</h3>
+            <p>Change roles and remove app records. For the prototype, deleting here removes the Firestore user record only.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>XP</th>
+                <th>Progress Flags</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="superUserTableBody"></tbody>
+          </table>
+        </div>
+        <p id="superAdminStatus" class="form-status"></p>
+      </section>
+
+      <section class="panel-card wide">
+        <div class="panel-header">
+          <div>
+            <h3>Audit Log</h3>
+            <p>Review the latest role changes, approvals, and access-management actions.</p>
+          </div>
+        </div>
+        <div id="auditLogList" class="review-list"></div>
+      </section>
+    </div>
+  </div>
+
+  <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
+  <script type="module" src="scripts/super-admin.js"></script>
+  <script src="scripts/loading.js" defer></script>
+</body>
+</html>
+

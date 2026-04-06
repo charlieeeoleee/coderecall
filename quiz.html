@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -20,7 +20,7 @@
   </a>
 
   <button class="theme-toggle quiz-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-    <span id="themeIcon">🌙</span>
+    <span id="themeIcon">ðŸŒ™</span>
   </button>
 
   <main class="quiz-page">
@@ -51,8 +51,8 @@
       <div class="choices-grid" id="choicesContainer"></div>
 
       <div class="quiz-actions">
-        <button class="quiz-btn secondary-btn" id="backBtn" onclick="goBackToSubject()">← Back</button>
-        <button class="quiz-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next →</button>
+      <button class="quiz-btn secondary-btn" id="backBtn" onclick="goBackToSubject()">Back</button>
+        <button class="quiz-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next â†’</button>
       </div>
     </section>
   </main>
@@ -86,6 +86,9 @@
   </div>
 
   <script type="module" src="scripts/quiz.js"></script>
+  <script src="scripts/loading.js" defer></script>
 </body>
 </html>
+
+
 
