@@ -112,8 +112,14 @@ async function ensureUserDoc(uid) {
 async function getMergedProgress() {
   const localProgress = {
     [getProgressKey("pretest")]: localStorage.getItem(getProgressKey("pretest")) === "true",
-    [getProgressKey("modules")]: localStorage.getItem(getProgressKey("modules")) === "true",
-    [getProgressKey("quiz")]: localStorage.getItem(getProgressKey("quiz")) === "true",
+    [getProgressKey("modules")]:
+      localStorage.getItem(getProgressKey("modules")) === "true" ||
+      localStorage.getItem(`${subject}_easy_modules_done`) === "true" ||
+      localStorage.getItem(`${subject}_medium_modules_done`) === "true" ||
+      localStorage.getItem(`${subject}_hard_modules_done`) === "true",
+    [getProgressKey("quiz")]:
+      localStorage.getItem(getProgressKey("quiz")) === "true" ||
+      localStorage.getItem(`${subject}_hard_quiz`) === "true",
     [getProgressKey("posttest")]: localStorage.getItem(getProgressKey("posttest")) === "true"
   };
 
@@ -131,10 +137,16 @@ async function getMergedProgress() {
       localProgress[getProgressKey("pretest")] || firebaseProgress[getProgressKey("pretest")] === true,
 
     [getProgressKey("modules")]:
-      localProgress[getProgressKey("modules")] || firebaseProgress[getProgressKey("modules")] === true,
+      localProgress[getProgressKey("modules")] ||
+      firebaseProgress[getProgressKey("modules")] === true ||
+      firebaseProgress[`${subject}_easy_modules_done`] === true ||
+      firebaseProgress[`${subject}_medium_modules_done`] === true ||
+      firebaseProgress[`${subject}_hard_modules_done`] === true,
 
     [getProgressKey("quiz")]:
-      localProgress[getProgressKey("quiz")] || firebaseProgress[getProgressKey("quiz")] === true,
+      localProgress[getProgressKey("quiz")] ||
+      firebaseProgress[getProgressKey("quiz")] === true ||
+      firebaseProgress[`${subject}_hard_quiz`] === true,
 
     [getProgressKey("posttest")]:
       localProgress[getProgressKey("posttest")] || firebaseProgress[getProgressKey("posttest")] === true
@@ -195,6 +207,14 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
   await loadProgress();
 });
+
+function updateIcon() {
+  const icon = document.getElementById("themeIcon");
+  if (!icon) return;
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
+}
+
+updateIcon();
 
 initSounds();
 initGlobalClickSound();

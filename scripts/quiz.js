@@ -18,6 +18,7 @@ import {
   restartThemeMusic,
   playSound
 } from "./sound.js";
+import { fetchPublishedQuizzes } from "./published-content.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import {
   hardwarePretestQuestions,
@@ -388,6 +389,23 @@ const questionBanks = {
   }
 };
 
+async function loadPublishedQuizQuestions() {
+  const publishedItems = await fetchPublishedQuizzes(db, {
+    subject,
+    quizType: type
+  });
+
+  publishedQuizQuestions = publishedItems
+    .filter((item) => Array.isArray(item.choices) && item.choices.length >= 2)
+    .map((item) => normalizeStandardQuestion({
+      question: item.question || "",
+      choices: [...item.choices],
+      answer: item.answerText || item.answer || item.answerLetter || "",
+      rationale: item.rationale || "",
+      image: item.imageDataUrl || ""
+    }));
+}
+
 /* =========================
    QUIZ STATE
 ========================= */
@@ -398,6 +416,7 @@ let selectedChoice = null;
 let pendingContinue = null;
 let xpAwardedThisAttempt = false;
 let hasInitializedPage = false;
+let publishedQuizQuestions = [];
 
 /* =========================
    HELPERS
@@ -478,12 +497,16 @@ async function initializeQuizPage() {
     return;
   }
 
+  await loadPublishedQuizQuestions();
   prepareQuestions();
   renderQuestion();
 }
 
 function prepareQuestions() {
-  const source = questionBanks[subject]?.[type] || [];
+  const source = [
+    ...(questionBanks[subject]?.[type] || []),
+    ...publishedQuizQuestions
+  ];
 
   if (!source.length) {
     quizQuestions = [];
@@ -529,6 +552,18 @@ function renderQuestion() {
 
   updateProgress();
   document.getElementById("questionText").textContent = currentQuestion.question;
+
+  let media = document.getElementById("questionMedia");
+  if (!media) {
+    media = document.createElement("div");
+    media.id = "questionMedia";
+    media.className = "quiz-question-media";
+    document.querySelector(".question-box")?.appendChild(media);
+  }
+
+  media.innerHTML = currentQuestion.image
+    ? `<img src="${currentQuestion.image}" alt="Question visual" class="quiz-question-image">`
+    : "";
 
   const choicesContainer = document.getElementById("choicesContainer");
   choicesContainer.innerHTML = "";
@@ -855,6 +890,12 @@ window.toggleTheme = function () {
   updateIcon();
   restartThemeMusic();
 };
+
+function updateIcon() {
+  const icon = document.getElementById("themeIcon");
+  if (!icon) return;
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
+}
 
 /* =========================
    AUTH INIT

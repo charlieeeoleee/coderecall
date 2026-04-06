@@ -1,12 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { 
-    initSounds,
-    initGlobalClickSound,
-    tryStartMusic,
-    restartThemeMusic
- } from "./sound.js";
+import {
+  initSounds,
+  initGlobalClickSound,
+  tryStartMusic,
+  restartThemeMusic
+} from "./sound.js";
+import { fetchPublishedQuizzes, chunkPublishedQuizLevels } from "./published-content.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -30,10 +31,12 @@ const QUIZ_LEVEL_COUNTS = {
   hardware: { easy: 23, medium: 7, hard: 25 }
 };
 
-const TOTAL_LEVELS = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;
+const STATIC_LEVELS = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;
 const XP_PER_LEVEL = 6;
 
 let currentUser = null;
+let publishedQuizLevelGroups = [];
+let totalLevels = STATIC_LEVELS;
 
 const subjectLabels = {
   electrical: "Electrical Quiz Levels",
@@ -62,7 +65,7 @@ function getLegacyOverallQuizKey() {
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
 function loadTheme() {
@@ -73,7 +76,7 @@ function loadTheme() {
   updateIcon();
 }
 
-window.toggleTheme = function () {
+window.toggleTheme = function() {
   document.body.classList.toggle("light-mode");
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
   localStorage.setItem("theme", mode);
@@ -81,9 +84,19 @@ window.toggleTheme = function () {
   restartThemeMusic();
 };
 
-window.goBackToSubject = function () {
+window.goBackToSubject = function() {
   window.location.href = `quiz-difficulty.html?subject=${subject}`;
 };
+
+async function loadPublishedQuizLevels() {
+  const publishedQuestions = await fetchPublishedQuizzes(db, {
+    subject,
+    quizType: difficulty
+  });
+
+  publishedQuizLevelGroups = chunkPublishedQuizLevels(publishedQuestions.filter((item) => Array.isArray(item.choices) && item.choices.length >= 2));
+  totalLevels = STATIC_LEVELS + publishedQuizLevelGroups.length;
+}
 
 async function ensureUserDoc(uid) {
   const userRef = doc(db, "users", uid);
@@ -104,7 +117,7 @@ async function ensureUserDoc(uid) {
 async function getUserProgress() {
   const progress = {};
 
-  for (let i = 1; i <= TOTAL_LEVELS; i++) {
+  for (let i = 1; i <= totalLevels; i++) {
     progress[getLevelKey(i)] =
       localStorage.getItem(getLevelKey(i)) === "true" ||
       (difficulty === "easy" && localStorage.getItem(getLegacyLevelKey(i)) === "true");
@@ -121,7 +134,7 @@ async function getUserProgress() {
   const data = snap.data() || {};
   const firebaseProgress = data.progress || {};
 
-  for (let i = 1; i <= TOTAL_LEVELS; i++) {
+  for (let i = 1; i <= totalLevels; i++) {
     if (
       firebaseProgress[getLevelKey(i)] === true ||
       (difficulty === "easy" && firebaseProgress[getLegacyLevelKey(i)] === true)
@@ -141,13 +154,13 @@ async function getUserProgress() {
 }
 
 async function syncOverallQuizCompletion(progress) {
-  const allDone = Array.from({ length: TOTAL_LEVELS }, (_, idx) => idx + 1)
+  const allDone = Array.from({ length: totalLevels }, (_, idx) => idx + 1)
     .every((level) => progress[getLevelKey(level)] === true);
 
-  if (!allDone) return;
+  if (!allDone || !totalLevels) return;
 
   localStorage.setItem(getOverallQuizKey(), "true");
-  if (difficulty === "easy") {
+  if (difficulty === "hard") {
     localStorage.setItem(getLegacyOverallQuizKey(), "true");
   }
 
@@ -157,7 +170,7 @@ async function syncOverallQuizCompletion(progress) {
     const data = snap.data() || {};
     const existingProgress = data.progress || {};
     existingProgress[getOverallQuizKey()] = true;
-    if (difficulty === "easy") {
+    if (difficulty === "hard") {
       existingProgress[getLegacyOverallQuizKey()] = true;
     }
 
@@ -168,35 +181,38 @@ async function syncOverallQuizCompletion(progress) {
 }
 
 async function renderLevels() {
+  await loadPublishedQuizLevels();
+
   const progress = await getUserProgress();
   const grid = document.getElementById("levelsGrid");
   grid.innerHTML = "";
 
   let completedCount = 0;
 
-  for (let i = 1; i <= TOTAL_LEVELS; i++) {
+  for (let i = 1; i <= totalLevels; i++) {
     const done = progress[getLevelKey(i)] === true;
     if (done) completedCount++;
   }
 
   const earnedXP = completedCount * XP_PER_LEVEL;
-  const percent = Math.round((completedCount / TOTAL_LEVELS) * 100);
+  const percent = totalLevels ? Math.round((completedCount / totalLevels) * 100) : 0;
 
-  document.getElementById("completedLevelsText").textContent = `${completedCount} / ${TOTAL_LEVELS}`;
+  document.getElementById("completedLevelsText").textContent = `${completedCount} / ${totalLevels}`;
   document.getElementById("earnedQuizXPText").textContent = `${earnedXP} XP`;
   document.getElementById("levelsPercentText").textContent = `${percent}%`;
 
-  for (let level = 1; level <= TOTAL_LEVELS; level++) {
+  for (let level = 1; level <= totalLevels; level++) {
     const done = progress[getLevelKey(level)] === true;
     const unlocked = level === 1 || progress[getLevelKey(level - 1)] === true;
+    const isPublishedLevel = level > STATIC_LEVELS;
 
     const card = document.createElement("button");
     card.className = `level-card ${done ? "completed" : unlocked ? "unlocked" : "locked"}`;
 
     card.innerHTML = `
-      <div class="level-status">${done ? "✅" : unlocked ? "🔓" : "🔒"}</div>
+      <div class="level-status">${done ? "&#10004;" : unlocked ? "&#128275;" : "&#128274;"}</div>
       <div class="level-number">Level ${level}</div>
-      <div class="level-meta">3 Questions • 6 XP</div>
+      <div class="level-meta">${isPublishedLevel ? "Published content" : "3 Questions"} &bull; 6 XP</div>
     `;
 
     if (unlocked) {
@@ -223,6 +239,5 @@ initGlobalClickSound();
 tryStartMusic();
 
 document.body.addEventListener("click", () => {
-    tryStartMusic();
+  tryStartMusic();
 }, { once: true });
-

@@ -9,6 +9,7 @@ import {
   restartThemeMusic, 
   playSound 
 } from "./sound.js";
+import { fetchPublishedQuizzes, chunkPublishedQuizLevels } from "./published-content.js";
 
 import { quizData } from "../data/quiz-data.js";
 import { electricalExtraQuizData } from "../data/quiz-data-electrical-extra.js";
@@ -40,6 +41,8 @@ let currentIndex = 0;
 let selectedChoice = null;
 let score = 0;
 let xpAwarded = false;
+let publishedQuizLevelGroups = [];
+let totalLevelsForDifficulty = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;
 
 const HARDWARE_DOC_IMAGE_BASE = "assets/quizzes/hardware/docx";
 
@@ -278,6 +281,23 @@ const mergedQuizData = {
   }
 };
 
+async function loadPublishedQuizLevels() {
+  const publishedQuestions = await fetchPublishedQuizzes(db, {
+    subject,
+    quizType: difficulty
+  });
+
+  const validQuestions = publishedQuestions
+    .filter((item) => Array.isArray(item.choices) && item.choices.length >= 2)
+    .map((item) => normalizeAnswer({
+      ...item,
+      choices: [...item.choices]
+    }));
+
+  publishedQuizLevelGroups = chunkPublishedQuizLevels(validQuestions, 3);
+  totalLevelsForDifficulty = (QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25) + publishedQuizLevelGroups.length;
+}
+
 function getLevelDoneKey() {
   return `${subject}_${difficulty}_quiz_level_${quizLevel}_done`;
 }
@@ -363,7 +383,10 @@ function getPlaceholderQuestions(subjectName, levelNumber) {
 }
 
 function prepareQuestions() {
-  const levelData = mergedQuizData?.[subject]?.[difficulty]?.[quizLevel];
+  const staticLevelCount = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;
+  const levelData = quizLevel <= staticLevelCount
+    ? mergedQuizData?.[subject]?.[difficulty]?.[quizLevel]
+    : publishedQuizLevelGroups[quizLevel - staticLevelCount - 1];
 
   if (!levelData) {
     console.warn("No quiz data found, using fallback");
@@ -552,7 +575,7 @@ async function saveLevelCompletion() {
     };
   }
 
-  const allDone = Array.from({ length: 25 }, (_, idx) => idx + 1).every((lvl) => {
+  const allDone = Array.from({ length: totalLevelsForDifficulty }, (_, idx) => idx + 1).every((lvl) => {
     if (lvl === quizLevel) return true;
     const levelKey = `${subject}_${difficulty}_quiz_level_${lvl}_done`;
     const legacyLevelKey = `${subject}_quiz_level_${lvl}_done`;
@@ -567,7 +590,7 @@ async function saveLevelCompletion() {
   if (allDone) {
     progress[getOverallQuizKey()] = true;
     localStorage.setItem(getOverallQuizKey(), "true");
-    if (difficulty === "easy") {
+    if (difficulty === "hard") {
       progress[getLegacyOverallQuizKey()] = true;
       localStorage.setItem(getLegacyOverallQuizKey(), "true");
     }
@@ -630,10 +653,79 @@ onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
 });
 
-loadTheme();
-renderHeader();
-prepareQuestions();
-renderQuestion();
+function updateIcon() {
+  const icon = document.getElementById("themeIcon");
+  if (!icon) return;
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
+}
+
+function renderQuestion() {
+  selectedChoice = null;
+  document.getElementById("nextBtn").disabled = true;
+
+  const currentQuestion = questions[currentIndex];
+  if (!currentQuestion) return;
+
+  updateProgress();
+  document.getElementById("questionText").textContent = currentQuestion.question;
+  let media = document.getElementById("questionMedia");
+  if (!media) {
+    media = document.createElement("div");
+    media.id = "questionMedia";
+    media.className = "level-question-media";
+    document.querySelector(".level-question-block").appendChild(media);
+  }
+
+  media.innerHTML = currentQuestion.image
+    ? `<img src="${currentQuestion.image}" alt="Question visual" class="level-question-image">`
+    : "";
+
+  const container = document.getElementById("choicesContainer");
+  container.innerHTML = "";
+
+  currentQuestion.choices.forEach((choice, index) => {
+    const btn = document.createElement("button");
+    btn.className = "choice-btn";
+    if (currentQuestion.choiceImages?.[index]) {
+      btn.innerHTML = `
+        <span class="choice-media-wrap">
+          <img src="${currentQuestion.choiceImages[index]}" alt="Choice ${index + 1}" class="choice-media-image">
+        </span>
+        <span class="choice-media-label">${choice}</span>
+      `;
+    } else {
+      btn.textContent = choice;
+    }
+
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedChoice = choice;
+      document.getElementById("nextBtn").disabled = false;
+    });
+
+    container.appendChild(btn);
+  });
+
+  document.getElementById("nextBtn").textContent =
+    currentIndex === questions.length - 1 ? "Submit" : "Next ->";
+}
+
+async function initializeQuizLevelPage() {
+  await loadPublishedQuizLevels();
+  loadTheme();
+  renderHeader();
+  prepareQuestions();
+  renderQuestion();
+}
+
+initializeQuizLevelPage().catch((error) => {
+  console.error("Error initializing quiz level page:", error);
+  loadTheme();
+  renderHeader();
+  prepareQuestions();
+  renderQuestion();
+});
 
 initSounds();
 initGlobalClickSound();
@@ -779,6 +871,16 @@ window.closeRationale = function () {
     finishLevel();
   }
 };
+
+function showRationale(isCorrect, question, selectedAnswer) {
+  document.getElementById("rationaleTitle").textContent =
+    isCorrect ? "Correct \u2714" : "Wrong \u274C";
+
+  document.getElementById("rationaleText").textContent =
+    question?.rationale || buildFallbackRationale(question, selectedAnswer, isCorrect);
+
+  document.getElementById("rationaleModal").classList.add("active");
+}
 
 function getWeekKey() {
   const now = new Date();

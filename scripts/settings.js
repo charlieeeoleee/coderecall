@@ -2,7 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import {
   getAuth,
   onAuthStateChanged,
-  signOut
+  signOut,
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   getFirestore,
@@ -40,6 +42,8 @@ const db = getFirestore(app);
 let currentUser = null;
 let currentIsGuest = false;
 let pendingProfilePhotoDataUrl = "";
+let currentLoginType = "Unknown";
+let currentVerificationState = "Unknown";
 
 /* =========================
    AUTH STATE
@@ -130,6 +134,8 @@ async function loadUserSettings() {
   document.getElementById("profileEmail").textContent = email;
   document.getElementById("profilePhoto").src = photo;
   document.getElementById("loginType").textContent = loginType;
+  currentLoginType = loginType;
+  currentVerificationState = verificationText;
 
   const editName = document.getElementById("editProfileName");
   const editPhotoUrl = document.getElementById("editProfilePhotoUrl");
@@ -139,6 +145,7 @@ async function loadUserSettings() {
   const verificationStatus = document.getElementById("verificationStatus");
   verificationStatus.textContent = verificationText;
   verificationStatus.className = `status-pill ${verificationClass}`;
+  updateAccountActionVisibility();
 }
 
 /* =========================
@@ -154,12 +161,15 @@ function loadGuestSettings() {
   document.getElementById("profileEmail").textContent = "No email";
   document.getElementById("profilePhoto").src = guestPhoto;
   document.getElementById("loginType").textContent = "Guest Mode";
+  currentLoginType = "Guest Mode";
+  currentVerificationState = "Guest Session";
 
   const editName = document.getElementById("editProfileName");
   const editPhotoUrl = document.getElementById("editProfilePhotoUrl");
   const editPhotoFile = document.getElementById("editProfilePhotoFile");
   const profileStatus = document.getElementById("profileEditStatus");
   const profileForm = document.getElementById("profileEditForm");
+  const resetPhotoBtn = document.getElementById("resetProfilePhotoBtn");
 
   if (editName) editName.value = "Guest";
   if (editPhotoUrl) editPhotoUrl.value = "";
@@ -170,6 +180,7 @@ function loadGuestSettings() {
     const submitButton = profileForm.querySelector('button[type="submit"]');
     if (submitButton) submitButton.disabled = true;
   }
+  if (resetPhotoBtn) resetPhotoBtn.disabled = true;
   if (profileStatus) {
     profileStatus.textContent = "Profile editing is available for signed-in accounts.";
   }
@@ -177,6 +188,7 @@ function loadGuestSettings() {
   const verificationStatus = document.getElementById("verificationStatus");
   verificationStatus.textContent = "Guest Session";
   verificationStatus.className = "status-pill locked";
+  updateAccountActionVisibility();
 }
 
 function dataOrEmpty(docSnap, key) {
@@ -350,6 +362,9 @@ function wireProfileEditor() {
   const form = document.getElementById("profileEditForm");
   const fileInput = document.getElementById("editProfilePhotoFile");
   const statusEl = document.getElementById("profileEditStatus");
+  const resetPhotoBtn = document.getElementById("resetProfilePhotoBtn");
+  const resendVerificationBtn = document.getElementById("resendVerificationBtn");
+  const passwordResetBtn = document.getElementById("passwordResetBtn");
 
   if (fileInput) {
     fileInput.addEventListener("change", () => {
@@ -366,6 +381,67 @@ function wireProfileEditor() {
         }
       };
       reader.readAsDataURL(file);
+    });
+  }
+
+  if (resetPhotoBtn) {
+    resetPhotoBtn.addEventListener("click", () => {
+      if (!currentUser) {
+        if (statusEl) statusEl.textContent = "Please sign in to edit your profile.";
+        return;
+      }
+
+      pendingProfilePhotoDataUrl = "";
+      if (fileInput) fileInput.value = "";
+
+      const photoUrlInput = document.getElementById("editProfilePhotoUrl");
+      if (photoUrlInput) photoUrlInput.value = "";
+      if (statusEl) statusEl.textContent = "Profile photo will reset after you save.";
+    });
+  }
+
+  if (resendVerificationBtn) {
+    resendVerificationBtn.addEventListener("click", async () => {
+      if (!currentUser) return;
+
+      try {
+        await currentUser.reload();
+
+        if (currentUser.emailVerified) {
+          currentVerificationState = "Verified";
+          const verificationStatus = document.getElementById("verificationStatus");
+          verificationStatus.textContent = "Verified";
+          verificationStatus.className = "status-pill unlocked";
+          updateAccountActionVisibility();
+          showInfoPopup("Already Verified", "This account is already verified.");
+          return;
+        }
+
+        await sendEmailVerification(currentUser);
+        showInfoPopup("Verification Sent", "A new verification email has been sent to your inbox.");
+      } catch (error) {
+        console.error("Verification resend error:", error);
+        showInfoPopup("Unable to Send", "We could not resend the verification email right now.");
+      }
+    });
+  }
+
+  if (passwordResetBtn) {
+    passwordResetBtn.addEventListener("click", async () => {
+      const email = currentUser?.email || document.getElementById("profileEmail").textContent;
+
+      if (!email || email === "No email") {
+        showInfoPopup("No Email Found", "This account does not have an email address available for password reset.");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showInfoPopup("Password Reset Sent", "Check your email for the password reset link.");
+      } catch (error) {
+        console.error("Password reset error:", error);
+        showInfoPopup("Unable to Send", "We could not send a password reset email right now.");
+      }
     });
   }
 
@@ -405,6 +481,26 @@ function wireProfileEditor() {
       if (statusEl) statusEl.textContent = "Unable to save profile changes right now.";
     }
   });
+}
+
+function updateAccountActionVisibility() {
+  const resendVerificationBtn = document.getElementById("resendVerificationBtn");
+  const passwordResetBtn = document.getElementById("passwordResetBtn");
+
+  if (resendVerificationBtn) {
+    const shouldShowResend =
+      !currentIsGuest &&
+      currentLoginType === "Email / Password" &&
+      currentVerificationState !== "Verified";
+    resendVerificationBtn.hidden = !shouldShowResend;
+  }
+
+  if (passwordResetBtn) {
+    const shouldShowPasswordReset =
+      !currentIsGuest &&
+      currentLoginType === "Email / Password";
+    passwordResetBtn.hidden = !shouldShowPasswordReset;
+  }
 }
 
 /* =========================

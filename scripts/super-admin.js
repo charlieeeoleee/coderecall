@@ -26,6 +26,7 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
+import { fetchPublishedModules, fetchPublishedQuizzes } from "./published-content.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -69,6 +70,8 @@ async function loadSuperAdminDashboard() {
     pendingUsersSnap,
     moduleDraftsSnap,
     quizDraftsSnap,
+    publishedModulesSnap,
+    publishedQuizzesSnap,
     notesSnap,
     auditSnap
   ] = await Promise.all([
@@ -77,6 +80,8 @@ async function loadSuperAdminDashboard() {
     safeGetDocs("pendingUsers", collection(db, "pendingUsers")),
     safeGetDocs("moduleDrafts", collection(db, "moduleDrafts")),
     safeGetDocs("quizDrafts", collection(db, "quizDrafts")),
+    safeGetDocs("publishedModules", collection(db, "publishedModules")),
+    safeGetDocs("publishedQuizzes", collection(db, "publishedQuizzes")),
     safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
     safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12)))
   ]);
@@ -86,13 +91,16 @@ async function loadSuperAdminDashboard() {
   const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const moduleDrafts = moduleDraftsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const quizDrafts = quizDraftsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  const publishedModules = publishedModulesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  const publishedQuizzes = publishedQuizzesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
   renderOverview(users);
   renderAccessGrantList(grants);
-  renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
+  renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, publishedModules, publishedQuizzes, notes);
   renderUserTable(users);
+  renderPublishingQueue(moduleDrafts, quizDrafts, publishedModules, publishedQuizzes);
   renderAuditLog(audits);
   wireAccessGrantForm();
   wireIntakeForm();
@@ -145,7 +153,7 @@ function renderOverview(users) {
   setText("superAverageXp", `${averageXp} XP`);
 }
 
-function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes) {
+function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, publishedModules, publishedQuizzes, notes) {
   const grid = document.getElementById("systemHealthGrid");
   if (!grid) return;
 
@@ -159,6 +167,8 @@ function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDraft
     { title: "Suspended Users", value: suspendedUsers, detail: "Accounts currently blocked from normal system use." },
     { title: "Pending Module Drafts", value: pendingModuleDrafts, detail: "Module drafts waiting for admin review." },
     { title: "Pending Quiz Drafts", value: pendingQuizDrafts, detail: "Quiz drafts waiting for admin review." },
+    { title: "Live Modules", value: publishedModules.length, detail: "Published module lessons already visible to learners." },
+    { title: "Live Quiz Draft Publishes", value: publishedQuizzes.length, detail: "Published quiz items available in the live learner flow." },
     { title: "Support Notes", value: notes.length, detail: "Coaching notes recorded by admins for learners." },
     { title: "Active Records", value: users.filter((user) => (user.status || "active") === "active").length, detail: "Users currently marked active in the platform." }
   ];
@@ -170,6 +180,160 @@ function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDraft
       <p>${card.detail}</p>
     </article>
   `).join("");
+}
+
+function renderPublishingQueue(moduleDrafts, quizDrafts, publishedModules, publishedQuizzes) {
+  const moduleList = document.getElementById("superModulePublishList");
+  const quizList = document.getElementById("superQuizPublishList");
+
+  if (moduleList) {
+    moduleList.innerHTML = buildPublishMarkup(moduleDrafts, publishedModules, "module");
+    bindPublishActions(moduleList, moduleDrafts, "module");
+  }
+
+  if (quizList) {
+    quizList.innerHTML = buildPublishMarkup(quizDrafts, publishedQuizzes, "quiz");
+    bindPublishActions(quizList, quizDrafts, "quiz");
+  }
+}
+
+function buildPublishMarkup(drafts, publishedItems, type) {
+  if (!drafts.length) {
+    return `<div class="review-item"><h5>No ${type} drafts yet</h5><p>Approved content will appear here when it is ready for publishing.</p></div>`;
+  }
+
+  const items = drafts
+    .slice()
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+    .filter((draft) => ["approved", "published"].includes(draft.status || "pending"));
+
+  if (!items.length) {
+    return `<div class="review-item"><h5>No approved ${type} drafts yet</h5><p>Have an admin approve a draft first, then publish it from here.</p></div>`;
+  }
+
+  return items.map((draft) => {
+    const alreadyPublished = publishedItems.some((item) => item.sourceDraftId === draft.id);
+    const title = draft.title || draft.question || "Untitled draft";
+    const meta = draft.difficulty || draft.quizType || "draft";
+    const statusLabel = alreadyPublished || draft.status === "published" ? "published" : (draft.status || "approved");
+
+    return `
+      <article class="review-item">
+        <h5>${escapeHtml(title)}</h5>
+        <div class="review-meta">
+          <span class="meta-pill">${escapeHtml(draft.subject || "general")}</span>
+          <span class="meta-pill">${escapeHtml(meta)}</span>
+          <span class="meta-pill">${escapeHtml(statusLabel)}</span>
+        </div>
+        <p>${escapeHtml((draft.content || draft.question || "").slice(0, 180) || "No preview available.")}</p>
+        <p>Created by: ${escapeHtml(draft.createdByEmail || "Unknown")}</p>
+        <div class="review-actions">
+          <button class="primary-action" data-publish-draft="${draft.id}" data-draft-type="${type}" ${alreadyPublished ? "disabled" : ""}>
+            ${alreadyPublished ? "Published" : "Publish Live"}
+          </button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function bindPublishActions(container, drafts, type) {
+  container.querySelectorAll("[data-publish-draft]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const draftId = button.getAttribute("data-publish-draft");
+      const draft = drafts.find((entry) => entry.id === draftId);
+      if (!draft) return;
+
+      button.disabled = true;
+      button.textContent = "Publishing...";
+
+      try {
+        if (type === "module") {
+          await publishModuleDraft(draft);
+        } else {
+          await publishQuizDraft(draft);
+        }
+
+        setStatus("Draft published to the live system.");
+        await loadSuperAdminDashboard();
+      } catch (error) {
+        console.error("Publish failed:", error);
+        setStatus("Unable to publish that draft right now.");
+        button.disabled = false;
+        button.textContent = "Publish Live";
+      }
+    });
+  });
+}
+
+async function publishModuleDraft(draft) {
+  const publishedModules = await fetchPublishedModules(db, {
+    subject: draft.subject,
+    difficulty: draft.difficulty
+  });
+
+  const nextOrder = publishedModules.length + 1;
+  const publishedRef = doc(collection(db, "publishedModules"));
+
+  await setDoc(publishedRef, {
+    sourceDraftId: draft.id,
+    subject: draft.subject,
+    difficulty: draft.difficulty,
+    title: draft.title || `Published Module ${nextOrder}`,
+    content: draft.content || "",
+    tip: draft.tip || "",
+    imageDataUrl: draft.imageDataUrl || "",
+    publishedOrder: nextOrder,
+    publishedAt: serverTimestamp(),
+    publishedBy: currentUser.email || "",
+    createdBy: draft.createdBy || "",
+    createdByEmail: draft.createdByEmail || ""
+  });
+
+  await updateDoc(doc(db, "moduleDrafts", draft.id), {
+    status: "published",
+    publishedAt: serverTimestamp(),
+    publishedBy: currentUser.email || "",
+    publishedDocId: publishedRef.id
+  });
+
+  await writeAuditLog("module_draft_published", `Published module draft ${draft.id} to live content.`);
+}
+
+async function publishQuizDraft(draft) {
+  const publishedQuizzes = await fetchPublishedQuizzes(db, {
+    subject: draft.subject,
+    quizType: draft.quizType
+  });
+
+  const nextOrder = publishedQuizzes.length + 1;
+  const publishedRef = doc(collection(db, "publishedQuizzes"));
+
+  await setDoc(publishedRef, {
+    sourceDraftId: draft.id,
+    subject: draft.subject,
+    quizType: draft.quizType,
+    question: draft.question || "",
+    choices: Array.isArray(draft.choices) ? draft.choices : [],
+    answerLetter: draft.answerLetter || "",
+    answerText: draft.answerText || "",
+    rationale: draft.rationale || "",
+    imageDataUrl: draft.imageDataUrl || "",
+    publishedOrder: nextOrder,
+    publishedAt: serverTimestamp(),
+    publishedBy: currentUser.email || "",
+    createdBy: draft.createdBy || "",
+    createdByEmail: draft.createdByEmail || ""
+  });
+
+  await updateDoc(doc(db, "quizDrafts", draft.id), {
+    status: "published",
+    publishedAt: serverTimestamp(),
+    publishedBy: currentUser.email || "",
+    publishedDocId: publishedRef.id
+  });
+
+  await writeAuditLog("quiz_draft_published", `Published quiz draft ${draft.id} to live content.`);
 }
 
 function renderUserTable(users) {

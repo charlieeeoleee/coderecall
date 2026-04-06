@@ -447,3 +447,51 @@ input:-webkit-autofill{
     max-width:360px;
   }
 }
+
+
+@media (max-width: 480px){
+  body{
+    align-items:flex-start;
+    padding:12px;
+  }
+
+  .back-btn{
+    top:12px;
+    left:12px;
+    padding:10px 14px;
+    border-radius:12px;
+  }
+
+  .theme-toggle{
+    right:12px !important;
+    bottom:12px !important;
+  }
+
+  .container{
+    margin-top:44px;
+    border-radius:16px;
+  }
+
+  .left{
+    min-height:170px;
+    padding:26px 16px;
+  }
+
+  .main-logo{
+    width:220px;
+  }
+
+  .right{
+    min-height:auto;
+    padding:14px 0 24px;
+  }
+
+  .form-box{
+    width:90%;
+    gap:12px;
+  }
+
+  h2{
+    font-size:28px;
+  }
+}

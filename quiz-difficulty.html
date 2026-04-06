@@ -20,7 +20,7 @@
   </a>
 
   <button class="theme-toggle difficulty-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-    <span id="themeIcon">ðŸŒ™</span>
+    <span id="themeIcon">&#127769;</span>
   </button>
 
   <main class="difficulty-page">
@@ -34,30 +34,30 @@
     </section>
 
     <section class="difficulty-grid">
-      <button class="difficulty-card difficulty-easy card" onclick="openDifficulty('easy')">
+      <button class="difficulty-card difficulty-easy card locked" id="easyBtn">
         <div class="difficulty-card-glow"></div>
         <div class="difficulty-card-inner">
           <span class="difficulty-badge">BEGINNER</span>
           <h2>Easy</h2>
-          <p>Basic concepts and simple recall questions.</p>
+          <p>Unlocks after finishing Easy modules.</p>
         </div>
       </button>
 
-      <button class="difficulty-card difficulty-medium card" onclick="openDifficulty('medium')">
+      <button class="difficulty-card difficulty-medium card locked" id="mediumBtn">
         <div class="difficulty-card-glow"></div>
         <div class="difficulty-card-inner">
           <span class="difficulty-badge">INTERMEDIATE</span>
           <h2>Medium</h2>
-          <p>More challenging items that require better understanding.</p>
+          <p>Unlocks after finishing Medium modules.</p>
         </div>
       </button>
 
-      <button class="difficulty-card difficulty-hard card" onclick="openDifficulty('hard')">
+      <button class="difficulty-card difficulty-hard card locked" id="hardBtn">
         <div class="difficulty-card-glow"></div>
         <div class="difficulty-card-inner">
           <span class="difficulty-badge">ADVANCED</span>
           <h2>Hard</h2>
-          <p>Advanced and tricky questions for mastery.</p>
+          <p>Unlocks after finishing Hard modules.</p>
         </div>
       </button>
     </section>

@@ -10,6 +10,7 @@ import {
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
 import { MODULE_IMAGES } from "../data/module-images.js";
 import { MODULE_SUPPLEMENTAL_IMAGES } from "../data/module-supplemental-images.js";
+import { fetchPublishedModules } from "./published-content.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -50,6 +51,9 @@ const subject = params.get("subject") || "electrical";
 const difficulty = params.get("difficulty") || "easy";
 const moduleKey = params.get("module") || "module1";
 const moduleNumber = Number(moduleKey.replace("module", "")) || 1;
+const STATIC_MODULE_COUNT = MODULE_STRUCTURE?.[subject]?.[difficulty] || 0;
+let publishedModules = [];
+let totalModulesForDifficulty = STATIC_MODULE_COUNT;
 
 const subjectNames = {
   electrical: "Electrical",
@@ -1025,6 +1029,20 @@ const IMAGE_CURATION = {
 };
 
 function getModuleData() {
+  if (moduleNumber > STATIC_MODULE_COUNT) {
+    const publishedModule = publishedModules[moduleNumber - STATIC_MODULE_COUNT - 1] || null;
+    if (!publishedModule) return null;
+
+    const publishedImages = publishedModule.imageDataUrl
+      ? [{ src: publishedModule.imageDataUrl, caption: "Published module image" }]
+      : [];
+
+    return {
+      ...publishedModule,
+      images: publishedImages
+    };
+  }
+
   const base = MODULE_CATALOG[subject]?.[difficulty]?.[moduleKey] || null;
   if (!base) return null;
 
@@ -1038,6 +1056,11 @@ function getModuleData() {
       [...embeddedImages, ...supplementalImages, ...(base.images || [])]
     )
   };
+}
+
+async function loadPublishedModuleEntries() {
+  publishedModules = await fetchPublishedModules(db, { subject, difficulty });
+  totalModulesForDifficulty = STATIC_MODULE_COUNT + publishedModules.length;
 }
 
 function getModuleDoneKey() {
@@ -1416,9 +1439,7 @@ function curateModuleImages(title, images) {
 }
 
 function getNextModuleUrl() {
-  const totalModules = MODULE_STRUCTURE?.[subject]?.[difficulty] || 0;
-
-  if (moduleNumber >= totalModules) {
+  if (moduleNumber >= totalModulesForDifficulty) {
     return `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
   }
 
@@ -1426,6 +1447,7 @@ function getNextModuleUrl() {
 }
 
 async function renderModulePage() {
+  await loadPublishedModuleEntries();
   const data = getModuleData();
   const subjectName = subjectNames[subject] || "Subject";
   const difficultyName = difficultyNames[difficulty] || "Difficulty";
@@ -1501,7 +1523,7 @@ async function renderModulePage() {
       ? (restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : "Checkpoint cleared")
       : "Read to clear checkpoint";
   document.getElementById("moduleActionBtn").textContent =
-    moduleNumber < (MODULE_STRUCTURE?.[subject]?.[difficulty] || 0) ? "Next Module" : "Return to Modules";
+    moduleNumber < totalModulesForDifficulty ? "Next Module" : "Return to Modules";
   document.getElementById("moduleActionBtn").onclick = startQuiz;
   renderPills(objectives, lessonDetails?.objectives || []);
   renderSections(sections, lessonDetails?.sections || []);
@@ -2316,6 +2338,12 @@ function updateIcon() {
   if (!icon) return;
 
   icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+}
+
+function updateIcon() {
+  const icon = document.getElementById("themeIcon");
+  if (!icon) return;
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
 /* RUN */

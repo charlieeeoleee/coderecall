@@ -301,11 +301,29 @@ body{
   flex-wrap:wrap;
 }
 
+.account-actions{
+  margin-top:14px;
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
 .profile-edit-status{
   margin:0;
   min-height:20px;
   font-size:13px;
   color:#8df6cb;
+}
+
+.secondary-action-btn{
+  background:transparent;
+  border:2px solid rgba(0,229,255,0.45);
+  color:#baf8ff;
+}
+
+.secondary-action-btn:hover{
+  box-shadow:0 12px 24px rgba(0,229,255,0.16);
+  filter:none;
 }
 
 .status-pill{
@@ -622,6 +640,11 @@ body.light-mode .theme-action-btn{
   background:linear-gradient(135deg,#ff2e97,#ff8c00);
   color:white;
   box-shadow:0 0 16px rgba(255,46,151,0.14);
+}
+
+body.light-mode .secondary-action-btn{
+  border-color:rgba(255,46,151,0.35);
+  color:#c72d7c;
 }
 
 body.light-mode .slider{

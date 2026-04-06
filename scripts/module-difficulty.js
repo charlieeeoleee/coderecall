@@ -77,6 +77,14 @@ function unlockDifficultyIfReady() {
 loadTheme();
 unlockDifficultyIfReady();
 
+function updateIcon() {
+  const icon = document.getElementById("themeIcon");
+  if (!icon) return;
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
+}
+
+updateIcon();
+
 initSounds();
 initGlobalClickSound();
 tryStartMusic();
