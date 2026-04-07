@@ -29,19 +29,19 @@ export const MODULE_SUPPLEMENTAL_IMAGES = {
       ],
       module2: [
         {
-          src: "assets/modules/hardware/medium/module2/config-02-workspace.svg",
+          src: "assets/modules/hardware/medium/module2/config-02-workspace.png",
           alt: "Safe workspace preparation",
           caption: "Safe workspace preparation",
           info: "This visual reminds learners to prepare a clean, organized, ESD-safe area before starting assembly or configuration."
         },
         {
-          src: "assets/modules/hardware/medium/module2/config-03-assembly.svg",
+          src: "assets/modules/hardware/medium/module2/config-03-assembly.png",
           alt: "Assembly sequence",
           caption: "Assembly sequence",
           info: "This image summarizes the correct order of installing and connecting parts during computer setup."
         },
         {
-          src: "assets/modules/hardware/medium/module2/config-04-testing.svg",
+          src: "assets/modules/hardware/medium/module2/config-04-testing.png",
           alt: "Post-assembly testing",
           caption: "Post-assembly testing",
           info: "This image reinforces that a build is not finished until POST and hardware checks confirm the system is working properly."

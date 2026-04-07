@@ -10,7 +10,6 @@ import {
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
 import { MODULE_IMAGES } from "../data/module-images.js";
 import { MODULE_SUPPLEMENTAL_IMAGES } from "../data/module-supplemental-images.js";
-import { fetchPublishedModules } from "./published-content.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -1059,7 +1058,7 @@ function getModuleData() {
 }
 
 async function loadPublishedModuleEntries() {
-  publishedModules = await fetchPublishedModules(db, { subject, difficulty });
+  publishedModules = [];
   totalModulesForDifficulty = STATIC_MODULE_COUNT + publishedModules.length;
 }
 
@@ -1461,21 +1460,12 @@ async function renderModulePage() {
   const challengePoints = document.getElementById("challengePoints");
 
   const lessonDetails = data ? buildGamifiedLesson(data) : null;
-  const completed = await isModuleCompleted();
-  let restoredXP = 0;
-
-  if (completed) {
-    restoredXP = await awardModuleXPOnce();
-  }
 
   document.getElementById("moduleSubject").textContent = subjectName;
   document.getElementById("moduleDifficulty").textContent = difficultyName;
   document.getElementById("moduleNumber").textContent = `Module ${moduleNumber}`;
   document.getElementById("moduleTag").textContent = `${subjectName.toUpperCase()} MODULE`;
-  updateCheckpointUi(
-    completed,
-    restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : null
-  );
+  updateCheckpointUi(false, null);
 
   if (!data) {
     document.getElementById("title").textContent = "Module content coming soon";
@@ -1508,7 +1498,7 @@ async function renderModulePage() {
         "Prepare the quiz topic that should follow this module"
       ]
     });
-    renderModuleImages([], gallery, galleryChip, galleryNote);
+      renderModuleImages([], gallery, galleryChip, galleryNote, null);
     return;
   }
 
@@ -1518,10 +1508,7 @@ async function renderModulePage() {
   document.getElementById("content").textContent = data.content;
   document.getElementById("studyTip").textContent =
     data.tip || "Read carefully and identify the key terms before continuing.";
-  document.getElementById("moduleStatusChip").textContent =
-    completed
-      ? (restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : "Checkpoint cleared")
-      : "Read to clear checkpoint";
+  document.getElementById("moduleStatusChip").textContent = "Read to clear checkpoint";
   document.getElementById("moduleActionBtn").textContent =
     moduleNumber < totalModulesForDifficulty ? "Next Module" : "Return to Modules";
   document.getElementById("moduleActionBtn").onclick = startQuiz;
@@ -1533,7 +1520,29 @@ async function renderModulePage() {
   renderPassiveCircuits(data);
   renderActiveCircuits(data);
   renderMotherboardFormFactors(data);
-  renderModuleImages(data.images || [], gallery, galleryChip, galleryNote);
+    renderModuleImages(data.images || [], gallery, galleryChip, galleryNote, data);
+
+  let completed = false;
+  let restoredXP = 0;
+
+  try {
+    completed = await isModuleCompleted();
+
+    if (completed) {
+      restoredXP = await awardModuleXPOnce();
+    }
+  } catch (error) {
+    console.error("Unable to load module completion state:", error);
+  }
+
+  updateCheckpointUi(
+    completed,
+    completed && restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : null
+  );
+  if (completed) {
+    document.getElementById("moduleStatusChip").textContent =
+      restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : "Checkpoint cleared";
+  }
   setupAutoCheckpoint(data, completed);
 }
 
@@ -2225,9 +2234,21 @@ function renderTroubleshootingSteps(images, gallery, galleryChip, galleryNote) {
   }).join("");
 }
 
-function renderModuleImages(images, gallery, galleryChip, galleryNote) {
+function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleData = null) {
+  const gallerySection = document.getElementById("moduleGallerySection");
   gallery.innerHTML = "";
   gallery.classList.remove("module-gallery-grid-single");
+
+  if (moduleData?.title === "History") {
+    if (gallerySection) {
+      gallerySection.hidden = true;
+    }
+    return;
+  }
+
+  if (gallerySection) {
+    gallerySection.hidden = false;
+  }
 
   if (!images.length) {
     galleryChip.textContent = "No module images";

@@ -123,7 +123,9 @@
         <h2>Computer History Timeline</h2>
         <span class="module-content-chip">Timeline View</span>
       </div>
-      <div class="module-timeline-visual" id="moduleTimelineVisual"></div>
+      <div class="module-timeline-visual-shell">
+        <div class="module-timeline-visual" id="moduleTimelineVisual"></div>
+      </div>
       <div class="module-timeline-strip" id="moduleTimelineStrip"></div>
       <p class="module-gallery-note" id="moduleTimelineNote">
         Review the people and milestones in order to connect each major figure to the progress of computing.
@@ -155,6 +157,1187 @@
     </div>
   </main>
 
+  <script type="module">
+    import { MODULE_CATALOG, MODULE_STRUCTURE } from "./data/module-data.js";
+    import { MODULE_IMAGES } from "./data/module-images.js";
+    import { MODULE_SUPPLEMENTAL_IMAGES } from "./data/module-supplemental-images.js";
+
+    const params = new URLSearchParams(window.location.search);
+    const subjectParam = (params.get("subject") || "").toLowerCase();
+    const difficultyParam = (params.get("difficulty") || "").toLowerCase();
+    const moduleKey = (params.get("module") || "module1").toLowerCase();
+    const validSubjects = new Set(["hardware", "electrical"]);
+    const validDifficulties = new Set(["easy", "medium", "hard"]);
+
+    const subject = validSubjects.has(subjectParam) ? subjectParam : "electrical";
+    const difficulty = validDifficulties.has(difficultyParam) ? difficultyParam : "easy";
+    const moduleNumber = Number(moduleKey.replace("module", "")) || 1;
+    const staticModuleCount = MODULE_STRUCTURE?.[subject]?.[difficulty] || 0;
+    const data = MODULE_CATALOG?.[subject]?.[difficulty]?.[`module${moduleNumber}`] || null;
+
+    const subjectNames = {
+      electrical: "Electrical",
+      hardware: "Computer Hardware"
+    };
+
+    const MODULE_XP_REWARD = 5;
+    const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
+
+    const difficultyNames = {
+      easy: "Easy",
+      medium: "Medium",
+      hard: "Difficult"
+    };
+
+    const FALLBACK_CHALLENGES = {
+      "Introduction to Electricity and Electronics": [
+        "Explain how electrons create electricity",
+        "Identify the source, path, and load in a circuit",
+        "Differentiate static electricity from current electricity"
+      ],
+      "Personal Protective Equipment (PPE)": [
+        "Name three PPE items used in electrical work",
+        "Match each PPE item to the hazard it prevents",
+        "Explain why PPE must be prepared before the task starts"
+      ],
+      "Tools for Electrical Work": [
+        "Identify one hand tool and one measuring tool",
+        "Explain what a multimeter is used for",
+        "Match a tool to its correct job in electrical work"
+      ],
+      "Parts of the Computer and Input Output Devices": [
+        "Name three computer parts shown in the lesson",
+        "Explain the role of one input device and one output device",
+        "Match a hardware part to its function in the system"
+      ],
+      "Safety Tools": [
+        "Name three safety tools used during servicing",
+        "Explain the difference between safety tools and ESD tools",
+        "Describe why anti-static protection matters"
+      ],
+      Motherboard: [
+        "Point out the CPU socket, RAM slots, PCIe slots, and storage interfaces",
+        "Explain the role of the BIOS or UEFI, POST, and the CMOS battery",
+        "Describe why the VRM, heatsink, and CPU fan matter during operation"
+      ],
+      "Basic Computer Configuration Setup": [
+        "State the preparation and safety actions before hardware work begins",
+        "Describe the reverse order used during disassembly and the sequence used in assembly",
+        "Name the POST and boot issues listed in the source"
+      ],
+      "Preventive Maintenance": [
+        "State why the maintenance schedule is reviewed first",
+        "List the cleaning and checking practices named in the source",
+        "Explain why ESD protection and a System Restore Point are included in the procedure"
+      ],
+      Troubleshooting: [
+        "What could cause a system to shut down from heat?",
+        "What might explain a no bootable device error?",
+        "What type of fault happens randomly with changing symptoms?"
+      ],
+      History: [
+        "Who designed the Analytical Engine?",
+        "Who is associated with the World Wide Web?",
+        "Who helped shape modern computer architecture?"
+      ],
+      OHS: [
+        "Recall one important laboratory safety rule",
+        "Identify one unsafe behavior and its risk",
+        "Explain how OHS habits prevent accidents"
+      ]
+    };
+
+    const FALLBACK_QUIZZES = {
+      "Introduction to Electricity and Electronics": [
+        {
+          question: "Which particle moves to create electrical flow in a conductor?",
+          options: ["Electron", "Proton", "Neutron", "Nucleus"],
+          answer: "Electron"
+        },
+        {
+          question: "Which set completes a simple circuit?",
+          options: ["Source, path, load", "Switch, motor, fan", "Wire, fuse, lamp", "Battery, resistor, atom"],
+          answer: "Source, path, load"
+        },
+        {
+          question: "Which type of electricity involves continuous movement of charge in a circuit?",
+          options: ["Current electricity", "Static electricity", "Magnetic force", "Thermal power"],
+          answer: "Current electricity"
+        }
+      ],
+      "Personal Protective Equipment (PPE)": [
+        {
+          question: "Which PPE item protects the hands during electrical work?",
+          options: ["Insulated gloves", "Earplugs", "Face towel", "Notebook"],
+          answer: "Insulated gloves"
+        },
+        {
+          question: "Which PPE item helps protect the eyes from sparks and debris?",
+          options: ["Safety goggles", "Rubber mat", "Wire stripper", "Cable tie"],
+          answer: "Safety goggles"
+        },
+        {
+          question: "Why should PPE be prepared before starting the task?",
+          options: ["To reduce injury risk before hazards are encountered", "To make the tools heavier", "To increase voltage", "To replace all safety rules"],
+          answer: "To reduce injury risk before hazards are encountered"
+        }
+      ],
+      "Tools for Electrical Work": [
+        {
+          question: "Which tool removes insulation from a wire without damaging the conductor?",
+          options: ["Wire stripper", "Clamp meter", "Lineman pliers", "Digital multimeter"],
+          answer: "Wire stripper"
+        },
+        {
+          question: "Which tool is used to measure voltage and resistance?",
+          options: ["Long nose pliers", "Digital multimeter", "Fish tape wire puller", "Crimping tool"],
+          answer: "Digital multimeter"
+        },
+        {
+          question: "Which tool helps grip wires in tight spaces?",
+          options: ["Long nose pliers", "Insulated screwdriver set", "Wire stripper", "Clamp meter"],
+          answer: "Long nose pliers"
+        }
+      ],
+      "Parts of the Computer and Input Output Devices": [
+        {
+          question: "Which of these is an input device?",
+          options: ["Keyboard", "Monitor", "Speaker", "Printer"],
+          answer: "Keyboard"
+        },
+        {
+          question: "Which part processes instructions in the computer?",
+          options: ["CPU", "AVR", "Monitor", "Mouse"],
+          answer: "CPU"
+        },
+        {
+          question: "Why is an AVR important?",
+          options: ["It helps protect the computer from unstable power", "It stores photos", "It types text", "It replaces RAM"],
+          answer: "It helps protect the computer from unstable power"
+        }
+      ],
+      "Safety Tools": [
+        {
+          question: "Which item helps prevent electrostatic discharge while handling components?",
+          options: ["Anti-static wrist strap", "Hammer", "Ruler", "Stapler"],
+          answer: "Anti-static wrist strap"
+        },
+        {
+          question: "Which item protects the eyes from dust and flying particles?",
+          options: ["Safety goggles", "Notebook", "Cable tie", "USB drive"],
+          answer: "Safety goggles"
+        },
+        {
+          question: "What is a parts organizer used for?",
+          options: ["Keeping screws and small parts sorted", "Measuring voltage", "Cutting wires", "Cooling the CPU"],
+          answer: "Keeping screws and small parts sorted"
+        }
+      ],
+      Motherboard: [
+        {
+          question: "Which motherboard part holds the processor?",
+          options: ["CPU socket", "SATA port", "PCIe slot", "CMOS battery"],
+          answer: "CPU socket"
+        },
+        {
+          question: "Which part stores BIOS settings when power is off?",
+          options: ["CMOS battery", "VRM", "Heat sink", "Front panel header"],
+          answer: "CMOS battery"
+        },
+        {
+          question: "Which form factor is the most compact among the listed motherboard sizes?",
+          options: ["Mini-ITX", "E-ATX", "ATX", "Micro-ATX is larger"],
+          answer: "Mini-ITX"
+        }
+      ],
+      "Basic Computer Configuration Setup": [
+        {
+          question: "What should be done before touching internal components?",
+          options: ["Unplug the power cord", "Turn up the fan speed", "Remove the CPU first", "Install the OS immediately"],
+          answer: "Unplug the power cord"
+        },
+        {
+          question: "How should screws and small parts be handled during disassembly?",
+          options: ["Keep them in labeled containers", "Scatter them on the table", "Throw them away", "Tape them to the monitor"],
+          answer: "Keep them in labeled containers"
+        },
+        {
+          question: "What must happen after assembly to verify startup behavior?",
+          options: ["POST", "Wallpaper change", "Audio playback", "Keyboard cleaning"],
+          answer: "POST"
+        }
+      ],
+      "Preventive Maintenance": [
+        {
+          question: "What is preventive maintenance in the module?",
+          options: ["Regular inspection, cleaning, and replacement of worn parts", "Only emergency repair", "Only software installation", "Only cable tying"],
+          answer: "Regular inspection, cleaning, and replacement of worn parts"
+        },
+        {
+          question: "What is commonly used to remove dust from hardware?",
+          options: ["Compressed air", "Water spray", "Cooking oil", "Glue"],
+          answer: "Compressed air"
+        },
+        {
+          question: "What should be created before software maintenance such as driver updates?",
+          options: ["A System Restore Point", "A new keyboard", "A second monitor", "A fan bracket"],
+          answer: "A System Restore Point"
+        }
+      ],
+      Troubleshooting: [
+        {
+          question: "What should be checked first when a PC has no power?",
+          options: ["Outlet, cable, and PSU switch", "Speaker volume", "Screen wallpaper", "Mouse color"],
+          answer: "Outlet, cable, and PSU switch"
+        },
+        {
+          question: "What can beep codes and startup lights help identify?",
+          options: ["Possible hardware faults", "Typing speed", "Internet plan", "Desk size"],
+          answer: "Possible hardware faults"
+        },
+        {
+          question: "Unexpected shutdowns and loud fans can point to what problem?",
+          options: ["Overheating", "Printer ink level", "Loose wallpaper", "Keyboard language"],
+          answer: "Overheating"
+        }
+      ],
+      History: [
+        {
+          question: "Who is associated with the Analytical Engine concept?",
+          options: ["Charles Babbage", "Tim Berners-Lee", "Robert Metcalfe", "Grace Hopper"],
+          answer: "Charles Babbage"
+        },
+        {
+          question: "Who strongly influenced compiler development?",
+          options: ["Grace Hopper", "Konrad Zuse", "Alan Turing", "John von Neumann"],
+          answer: "Grace Hopper"
+        },
+        {
+          question: "Who created the World Wide Web?",
+          options: ["Tim Berners-Lee", "Ada Lovelace", "Charles Babbage", "Robert Metcalfe"],
+          answer: "Tim Berners-Lee"
+        }
+      ],
+      OHS: [
+        {
+          question: "Which is a correct OHS practice?",
+          options: ["Keep the workplace clean and organized", "Leave tools on the floor", "Ignore hazard signs", "Use tools without training"],
+          answer: "Keep the workplace clean and organized"
+        },
+        {
+          question: "Which behavior is unsafe?",
+          options: ["Ignoring safety guidelines", "Checking hazards before work", "Using PPE correctly", "Following lab rules"],
+          answer: "Ignoring safety guidelines"
+        },
+        {
+          question: "Why does cleanliness matter in technical work areas?",
+          options: ["It helps reduce hazards and accidents", "It increases noise", "It replaces PPE", "It removes the need for supervision"],
+          answer: "It helps reduce hazards and accidents"
+        }
+      ]
+    };
+
+    const LESSON_DETAILS = {
+      Motherboard: {
+        objectives: [
+          "Identify the literal parts found on a motherboard",
+          "Explain the function of each major motherboard section",
+          "Recognize how sockets, form factors, firmware, and cooling affect compatibility"
+        ],
+        sections: [
+          {
+            heading: "Literal Motherboard Parts",
+            body: "The motherboard includes the CPU socket, chipset, DIMM or RAM slots, PCIe expansion slots, SATA ports, NVMe M.2 slots, VRM area, jumpers, DIP switches, BIOS or UEFI firmware chip, and CMOS battery. Each part has a specific place and purpose on the board."
+          },
+          {
+            heading: "Sockets, Memory, and Expansion",
+            body: "The CPU socket is the connection point for the processor. RAM slots hold system memory, while PCIe slots are used for graphics cards, sound cards, and network interface cards. Socket types such as LGA, PGA, and BGA determine whether a processor is physically compatible with the board."
+          },
+          {
+            heading: "Storage, Firmware, and Power",
+            body: "SATA ports connect hard drives and standard SSDs, while NVMe M.2 slots support faster storage. The BIOS or UEFI starts the hardware and runs POST, the CMOS battery preserves settings when power is off, and the VRM converts PSU power into the lower voltage needed by the CPU."
+          },
+          {
+            heading: "Cooling and Form Factors",
+            body: "CPU fans and heatsinks help remove excess heat during operation. Motherboard form factors such as ATX, E-ATX, Micro-ATX, and Mini-ITX determine the board's size, layout, case fit, and expansion capacity."
+          }
+        ],
+        challengeTitle: "Motherboard Map Challenge",
+        challengePrompt: "Picture a real motherboard and identify the major parts by location and function."
+      },
+      "Basic Computer Configuration Setup": {
+        objectives: [
+          "Identify the preparation and safety steps stated in the source",
+          "Follow the disassembly and assembly order described in the module",
+          "Recognize the post-assembly testing and troubleshooting checks listed in the source"
+        ],
+        sections: [
+          {
+            heading: "Preparation and Safety Protocols",
+            body: "The source begins with workspace requirements, essential tools, power safety, and ESD protection. It states that the area should be large, level, well-lit, and well-ventilated, and that the power cord should be unplugged before touching internal components."
+          },
+          {
+            heading: "Disassembly Procedures",
+            body: "The source says disassembly should follow a logical reverse order. It includes shutting down the PC, allowing it to cool, unplugging external cables, removing side panels first, pulling components straight out, and organizing screws and small parts in labeled containers."
+          },
+          {
+            heading: "Assembly and Component Installation",
+            body: "The source covers motherboard mounting with standoffs, correct CPU alignment, thermal paste application, heatsink and fan installation, RAM alignment, PSU mounting, and proper front panel connector attachment."
+          },
+          {
+            heading: "Post-Assembly Testing and Troubleshooting",
+            body: "The source says the assembled system must undergo POST. It includes beep codes, no power, sudden shutdowns caused by CPU overheating, and missing storage that prevents the system from finding an operating system."
+          }
+        ],
+        challengeTitle: "Build Sequence Challenge",
+        challengePrompt: "Recall the literal setup flow written in the source module."
+      },
+      "Preventive Maintenance": {
+        objectives: [
+          "Explain preventive maintenance exactly as defined in the source",
+          "Identify the hardware cleaning and checking practices listed in the module",
+          "Recognize the safety and software maintenance steps described in the source"
+        ],
+        sections: [
+          {
+            heading: "Maintenance Planning and Procedures",
+            body: "The source defines preventive maintenance as regular and systematic inspection, cleaning, and replacement of worn parts, materials, and systems. It says the first step is to review the job requirements and maintenance schedule, and it includes the 5S principle for workplace organization."
+          },
+          {
+            heading: "Hardware Maintenance and Cleaning",
+            body: "The source specifically includes compressed air for dust removal, correct RAM seating until the side tabs click, DDR keying and compatibility, and screw management using labeled containers or magnetic trays."
+          },
+          {
+            heading: "Troubleshooting and Components",
+            body: "The source includes thermal shutdown caused by CPU overheating, checking the 4/8-pin ATX 12V CPU power cable when there is no display, the role of the CMOS battery, and the definition of a MAC address on the LAN card."
+          },
+          {
+            heading: "Safety and Software Maintenance",
+            body: "The source says all power sources must be turned off and proper ESD protection must be used before maintenance. It also says a System Restore Point should be created before software maintenance such as registry cleaning or driver updates."
+          }
+        ],
+        challengeTitle: "Maintenance Mindset Challenge",
+        challengePrompt: "Recall the preventive maintenance steps and checks written in the source module."
+      },
+      Troubleshooting: {
+        objectives: [
+          "Describe the troubleshooting process",
+          "Identify common hardware fault symptoms",
+          "Classify faults as transient, permanent, or intermittent"
+        ],
+        sections: [
+          {
+            heading: "Problem-Solving Process",
+            body: "Troubleshooting starts by identifying the problem, establishing a probable cause, and testing the theory logically."
+          },
+          {
+            heading: "Hardware Symptoms",
+            body: "Overheating, bad RAM, failed drives, PSU issues, and BIOS faults each produce useful symptoms for diagnosis."
+          },
+          {
+            heading: "Fault Classification",
+            body: "Some faults happen once, some repeat consistently, and others appear unpredictably, which changes how repair decisions are made."
+          }
+        ],
+        challengeTitle: "Fault Hunt Challenge",
+        challengePrompt: "Use symptoms to reason like a technician."
+      },
+      History: {
+        objectives: [
+          "Identify major inventors in computer history",
+          "Match each inventor to a key contribution",
+          "Understand how early ideas shaped modern computing"
+        ],
+        sections: [
+          {
+            heading: "Foundations of Computing",
+            body: "Charles Babbage and Ada Lovelace helped establish the earliest ideas of programmable machines and algorithmic thinking."
+          },
+          {
+            heading: "Modern Computing Thinkers",
+            body: "Alan Turing, John Von Neumann, Grace Hopper, and others shaped computation, architecture, and software development."
+          },
+          {
+            heading: "Networking and the Web",
+            body: "Tim Berners-Lee and Robert Metcalfe helped define the web and networking systems used today."
+          }
+        ],
+        challengeTitle: "Inventor Match Challenge",
+        challengePrompt: "Review the timeline and link each person to the correct contribution."
+      }
+    };
+
+    const LITERAL_IMAGE_CAPTIONS = {
+      "assets/modules/hardware/easy/module1/image-01.png": "Sound card",
+      "assets/modules/hardware/easy/module1/image-02.png": "Desktop microphone",
+      "assets/modules/hardware/easy/module1/image-03.png": "LAN ports",
+      "assets/modules/hardware/easy/module1/image-04.png": "Network interface card",
+      "assets/modules/hardware/easy/module1/image-05.png": "Computer memory slots",
+      "assets/modules/hardware/easy/module1/image-06.png": "CPU cooler",
+      "assets/modules/hardware/easy/module1/image-07.png": "Ink tank printer",
+      "assets/modules/hardware/easy/module1/image-08.png": "Computer cooling fan",
+      "assets/modules/hardware/easy/module1/image-09.png": "Computer mouse",
+      "assets/modules/hardware/easy/module1/image-10.png": "Monitor",
+      "assets/modules/hardware/easy/module1/image-11.png": "System unit",
+      "assets/modules/hardware/easy/module1/image-12.png": "PS/2 keyboard and mouse ports",
+      "assets/modules/hardware/easy/module1/image-13.png": "Parallel port",
+      "assets/modules/hardware/easy/module1/image-14.png": "Serial port",
+      "assets/modules/hardware/easy/module1/image-15.png": "Computer speakers",
+      "assets/modules/hardware/easy/module1/image-16.png": "Ethernet expansion card",
+      "assets/modules/hardware/easy/module1/image-17.png": "SATA ports",
+      "assets/modules/hardware/easy/module1/image-18.png": "Projector",
+      "assets/modules/hardware/easy/module1/image-19.png": "Keyboard",
+      "assets/modules/hardware/easy/module1/image-20.png": "Barcode scanner",
+      "assets/modules/hardware/easy/module1/image-21.png": "Plotter printer",
+      "assets/modules/hardware/easy/module1/image-22.png": "Headset with microphone",
+      "assets/modules/hardware/easy/module1/image-23.png": "Power supply unit",
+      "assets/modules/hardware/easy/module1/image-24.png": "Webcam",
+      "assets/modules/hardware/easy/module1/image-25.png": "Keyboard",
+      "assets/modules/hardware/easy/module1/image-26.png": "Hard disk drive",
+      "assets/modules/hardware/easy/module1/image-27.png": "RAM module",
+      "assets/modules/hardware/easy/module1/image-28.png": "Graphics card",
+      "assets/modules/hardware/easy/module1/image-29.png": "Computer mouse",
+      "assets/modules/hardware/easy/module1/image-30.png": "PCI and PCIe expansion slots",
+      "assets/modules/hardware/easy/module1/image-31.png": "Automatic voltage regulator",
+      "assets/modules/hardware/easy/module1/image-32.png": "Optical disc drive",
+      "assets/modules/hardware/easy/module1/image-33.png": "Computer case chassis",
+      "assets/modules/hardware/easy/module1/image-34.png": "LED monitor",
+      "assets/modules/hardware/easy/module1/image-35.png": "BIOS chip and CMOS battery",
+      "assets/modules/hardware/easy/module1/image-36.png": "HDMI port",
+      "assets/modules/hardware/easy/module1/image-37.png": "Motherboard back panel I/O ports",
+      "assets/modules/hardware/easy/module1/image-38.png": "Flatbed scanner",
+      "assets/modules/hardware/easy/module1/image-39.png": "Processor",
+      "assets/modules/hardware/easy/module1/image-40.png": "CPU socket",
+      "assets/modules/hardware/easy/module1/image-41.png": "VGA port",
+      "assets/modules/hardware/easy/module1/image-42.png": "Hard disk drive platter",
+      "assets/modules/hardware/easy/module1/image-43.png": "IDE and floppy drive connectors",
+      "assets/modules/hardware/easy/module1/image-44.png": "Joystick",
+      "assets/modules/hardware/easy/module1/image-45.png": "Motherboard",
+      "assets/modules/hardware/easy/module1/image-46.png": "CMOS battery",
+      "assets/modules/hardware/easy/module1/image-47.png": "Audio ports",
+      "assets/modules/hardware/medium/module1/image-01.png": "CPU cooler and heatsink",
+      "assets/modules/hardware/medium/module1/image-02.png": "Voltage regulator module",
+      "assets/modules/hardware/medium/module1/image-03.png": "Motherboard overview",
+      "assets/modules/hardware/medium/module1/image-04.png": "BGA processor package",
+      "assets/modules/hardware/medium/module1/image-05.png": "CPU socket",
+      "assets/modules/hardware/medium/module1/image-06.png": "PCIe expansion slots",
+      "assets/modules/hardware/medium/module1/image-07.png": "CMOS battery on motherboard",
+      "assets/modules/hardware/medium/module1/image-08.png": "PGA processor pins",
+      "assets/modules/hardware/medium/module1/image-09.png": "Motherboard jumper caps",
+      "assets/modules/hardware/medium/module1/image-10.png": "LGA processor contact pads",
+      "assets/modules/hardware/medium/module1/image-11.png": "Motherboard chipset diagram",
+      "assets/modules/hardware/medium/module1/image-12.png": "SATA data cable",
+      "assets/modules/hardware/medium/module1/image-13.png": "RAM slots",
+      "assets/modules/hardware/easy/module2/image-01.png": "Respirator mask and full-face respirator",
+      "assets/modules/hardware/easy/module2/image-02.png": "Cleaning cloth",
+      "assets/modules/hardware/easy/module2/image-03.png": "Anti-static wrist strap",
+      "assets/modules/hardware/easy/module2/image-04.png": "Safety hard hat",
+      "assets/modules/hardware/easy/module2/image-05.png": "Protective safety boots",
+      "assets/modules/hardware/easy/module2/image-06.png": "Protective safety goggles",
+      "assets/modules/hardware/easy/module2/image-07.png": "High-visibility safety vest",
+      "assets/modules/hardware/easy/module2/image-08.png": "Parts organizer storage box",
+      "assets/modules/hardware/easy/module2/image-09.png": "ESD-safe gloves for device handling",
+      "assets/modules/hardware/easy/module2/image-10.png": "Anti-static work mat",
+      "assets/modules/hardware/easy/module2/image-11.png": "Foam earplugs",
+      "assets/modules/hardware/easy/module2/image-12.png": "Electronics compressed-air duster",
+      "assets/modules/hardware/easy/module2/image-13.png": "Face shield visor",
+      "assets/modules/hardware/easy/module2/image-14.png": "Anti-static bag",
+      "assets/modules/hardware/easy/module2/image-15.png": "Cable ties",
+      "assets/modules/hardware/easy/module2/image-16.png": "Protective work gloves",
+      "assets/modules/hardware/easy/module2/image-17.png": "Safety harness with lanyard",
+      "assets/modules/hardware/easy/module3/image-01.png": "Safety clothing and hazard icons",
+      "assets/modules/hardware/easy/module3/image-02.png": "Complete PPE diagram",
+      "assets/modules/hardware/easy/module3/image-03.png": "Laboratory safety rules poster",
+      "assets/modules/hardware/easy/module3/image-04.png": "Safety and hazard symbols chart",
+      "assets/modules/electrical/easy/module1/image-01.jpg": "Technician inspecting solar panels",
+      "assets/modules/electrical/easy/module1/image-02.jpg": "Technician working on a server rack",
+      "assets/modules/electrical/easy/module1/image-03.jpg": "Electrician installing ceiling wiring",
+      "assets/modules/electrical/easy/module1/image-04.png": "High-visibility work coveralls",
+      "assets/modules/electrical/easy/module1/image-05.jpg": "Yellow hard hat",
+      "assets/modules/electrical/easy/module2/image-01.jpg": "High-visibility protective clothing",
+      "assets/modules/electrical/easy/module2/image-02.jpg": "Yellow hard hat",
+      "assets/modules/electrical/easy/module2/image-03.jpg": "Face shield helmet",
+      "assets/modules/electrical/easy/module2/image-04.jpg": "Ear protection earmuffs",
+      "assets/modules/electrical/easy/module2/image-05.jpg": "Electrical safety boots",
+      "assets/modules/electrical/easy/module2/image-06.jpg": "Insulated protective gloves",
+      "assets/modules/electrical/easy/module3/image-01.jpg": "Digital multimeter",
+      "assets/modules/electrical/easy/module3/image-02.jpg": "Electrician's cable knife",
+      "assets/modules/electrical/easy/module3/image-03.jpg": "Wire stripper",
+      "assets/modules/electrical/easy/module3/image-04.jpg": "Clamp meter kit",
+      "assets/modules/electrical/easy/module3/image-05.jpg": "Insulated screwdriver set",
+      "assets/modules/electrical/easy/module3/image-06.jpg": "Crimping tool",
+      "assets/modules/electrical/easy/module3/image-07.jpg": "Long nose pliers",
+      "assets/modules/electrical/easy/module3/image-08.jpg": "Fish tape wire puller",
+      "assets/modules/electrical/easy/module3/image-09.jpg": "Lineman pliers",
+      "assets/modules/electrical/easy/module3/image-10.jpg": "Clamp meter"
+    };
+
+    const IMAGE_CURATION = {
+      "Introduction to Electricity and Electronics": { captionPrefix: "Electricity concept visual" },
+      "Personal Protective Equipment (PPE)": { captionPrefix: "PPE reference" },
+      "Tools for Electrical Work": { captionPrefix: "Electrical tool reference" },
+      "Parts of the Computer and Input Output Devices": { captionPrefix: "Computer parts visual" },
+      "Safety Tools": { captionPrefix: "Safety tool reference" },
+      OHS: { captionPrefix: "OHS reminder visual" }
+    };
+
+    function getImageInfo(moduleTitle, caption, index) {
+      const literalInfo = {
+        "Sound card": "A sound card handles audio input and output so a computer can play, record, and process sound.",
+        "Desktop microphone": "A microphone is an input device used to capture voice and other audio signals.",
+        "LAN ports": "LAN ports connect the computer to a local area network using an Ethernet cable.",
+        "Network interface card": "A network interface card gives a computer wired network communication capability.",
+        "Computer memory slots": "Memory slots hold RAM modules that provide temporary working memory for the system.",
+        "CPU cooler": "A CPU cooler removes heat from the processor to help prevent overheating.",
+        "Ink tank printer": "A printer is an output device that produces hard copies of digital documents and images.",
+        "Computer cooling fan": "A cooling fan keeps air moving inside the system unit to reduce heat buildup.",
+        "Computer mouse": "A mouse is an input device used to point, click, drag, and control items on the screen.",
+        "Monitor": "A monitor is an output device that displays text, images, and the computer's visual interface.",
+        "System unit": "The system unit houses the main internal components of the computer such as the motherboard, processor, memory, and storage devices.",
+        "PS/2 keyboard and mouse ports": "These round PS/2 ports are used to connect a keyboard and mouse to older computer systems.",
+        "Parallel port": "A parallel port is an older connector commonly used for printers and other legacy external devices.",
+        "Serial port": "A serial port is a communication interface used to connect older peripherals one bit at a time.",
+        "Computer speakers": "Speakers are output devices that convert digital audio signals into sound that the user can hear.",
+        "Ethernet expansion card": "An Ethernet expansion card adds network connectivity so the computer can connect to a wired local area network.",
+        "SATA ports": "SATA ports on the motherboard connect storage devices such as hard drives and solid-state drives.",
+        "Projector": "A projector is an output device that displays the computer's visual output on a wall or screen.",
+        "Keyboard": "A keyboard is an input device used to enter letters, numbers, symbols, and commands into the computer.",
+        "Barcode scanner": "A barcode scanner is an input device that reads barcodes and sends the data to the computer.",
+        "Plotter printer": "A plotter is a specialized output device used to print large drawings, plans, and technical graphics.",
+        "Headset with microphone": "A headset combines audio output through earphones with voice input through a microphone.",
+        "Power supply unit": "A power supply unit converts electrical power from the outlet into the voltages needed by internal computer components.",
+        "Webcam": "A webcam is an input device that captures live video for communication, recording, or online meetings.",
+        "Hard disk drive": "A hard disk drive stores files, programs, and operating system data for long-term use.",
+        "RAM module": "A RAM module provides temporary working memory that the computer uses while running programs and processing tasks.",
+        "Graphics card": "A graphics card processes visual data and helps display images, video, and graphics on the monitor.",
+        "PCI and PCIe expansion slots": "These expansion slots allow additional cards such as graphics, sound, and network cards to be attached to the motherboard.",
+        "Automatic voltage regulator": "An automatic voltage regulator helps protect the computer from unstable voltage and sudden power fluctuations.",
+        "Optical disc drive": "An optical disc drive reads and sometimes writes data on CDs, DVDs, or other optical discs.",
+        "Computer case chassis": "The computer case or chassis holds and protects the internal parts while organizing airflow and mounting points.",
+        "LED monitor": "An LED monitor is an output device that shows the computer's display using a flat-screen panel.",
+        "BIOS chip and CMOS battery": "The BIOS chip stores startup firmware, while the CMOS battery helps keep system settings and time when power is off.",
+        "HDMI port": "An HDMI port carries digital video and audio from the computer to a monitor, TV, or projector.",
+        "Motherboard back panel I/O ports": "The back panel I/O area contains the external ports used to connect peripherals, audio devices, display cables, and network connections.",
+        "Flatbed scanner": "A flatbed scanner is an input device that captures printed photos or documents and converts them into digital images.",
+        "Processor": "The processor or CPU is the main component that executes instructions and processes data in the computer.",
+        "CPU socket": "The CPU socket is the part of the motherboard where the processor is installed and electrically connected.",
+        "VGA port": "A VGA port is a legacy video connector used to send display signals from the computer to a monitor or projector.",
+        "Hard disk drive platter": "The platter inside a hard disk drive is the spinning magnetic surface where data is physically stored.",
+        "IDE and floppy drive connectors": "These motherboard connectors were used to attach older IDE hard drives, optical drives, and floppy disk drives.",
+        "Joystick": "A joystick is an input device used to control movement and actions in games, simulations, or specialized software.",
+        "Motherboard": "The motherboard is the main circuit board that connects and allows communication between all major computer components.",
+        "CMOS battery": "The CMOS battery provides power that helps preserve the computer's BIOS settings and system clock when the computer is turned off.",
+        "Audio ports": "Audio ports allow microphones, speakers, headphones, and other sound devices to connect to the computer.",
+        "CPU cooler and heatsink": "The CPU cooler and heatsink remove heat from the processor so the system can run safely without overheating.",
+        "Voltage regulator module": "A voltage regulator module helps convert and stabilize power before it reaches sensitive motherboard components such as the CPU.",
+        "Motherboard overview": "This image shows the motherboard as the main printed circuit board where major ports, slots, sockets, and chips are arranged.",
+        "BGA processor package": "A BGA package uses solder balls underneath the chip, which means it is mounted directly to the board rather than inserted into a socket.",
+        "CPU socket": "The CPU socket is the motherboard part that holds the processor and provides its electrical connection to the system.",
+        "PCIe expansion slots": "PCIe expansion slots allow graphics cards, network cards, and other add-on cards to connect to the motherboard.",
+        "CMOS battery on motherboard": "The CMOS battery helps keep BIOS settings and the system clock stored even when the computer is powered off.",
+        "PGA processor pins": "A PGA processor uses a grid of pins underneath the chip so it can fit into a matching socket on the motherboard.",
+        "Motherboard jumper caps": "Jumper caps are small connectors used to open, close, or change hardware configuration settings on the motherboard.",
+        "LGA processor contact pads": "An LGA processor uses flat contact pads underneath the chip while the matching socket contains the pins.",
+        "Motherboard chipset diagram": "This diagram highlights the chipset area that manages communication between the processor, memory, storage, and connected devices.",
+        "SATA data cable": "A SATA data cable connects storage devices like hard drives or SSDs to the motherboard's SATA ports.",
+        "RAM slots": "RAM slots are the long connectors on the motherboard where memory modules are installed.",
+        "Respirator mask and full-face respirator": "These protective devices help block dust, fumes, and airborne particles during servicing work.",
+        "Cleaning cloth": "A soft cleaning cloth is used to wipe components and surfaces without causing scratches.",
+        "Anti-static wrist strap": "An anti-static wrist strap helps prevent electrostatic discharge that can damage sensitive components.",
+        "Safety hard hat": "A hard hat protects the head from impact and falling objects in work areas.",
+        "Protective safety boots": "Safety boots help protect the feet from impact, sharp objects, and slippery surfaces.",
+        "Protective safety goggles": "Safety goggles shield the eyes from dust, flying particles, and accidental splashes.",
+        "High-visibility safety vest": "A high-visibility vest makes the technician easier to see in active work areas and shared spaces.",
+        "Parts organizer storage box": "A parts organizer keeps screws, jumpers, and small components sorted so they are not lost during servicing.",
+        "ESD-safe gloves for device handling": "These gloves help the technician handle delicate devices more safely while reducing dirt, fingerprints, and minor static risk.",
+        "Anti-static work mat": "An anti-static mat provides a safer work surface for servicing electronic parts that are sensitive to electrostatic discharge.",
+        "Foam earplugs": "Foam earplugs protect hearing in noisy work areas where tools, machinery, or testing equipment are running.",
+        "Electronics compressed-air duster": "A compressed-air duster is used to blow dust and lint out of computer parts without direct contact.",
+        "Face shield visor": "A face shield helps protect the eyes and face from flying debris, dust, and accidental splashes.",
+        "Anti-static bag": "An anti-static bag protects electronic components from electrostatic discharge during storage or transport.",
+        "Cable ties": "Cable ties are used to bundle and organize wires so the workspace stays neat and cable routing stays controlled.",
+        "Protective work gloves": "Protective work gloves help shield the hands from abrasion, sharp edges, and light handling hazards.",
+        "Safety harness with lanyard": "A safety harness with lanyard is used for fall protection when work is done at height or in elevated areas.",
+        "Safety clothing and hazard icons": "This visual highlights protective clothing and common workplace hazard warnings.",
+        "Complete PPE diagram": "This diagram shows the full set of personal protective equipment that should be worn in a hazardous work area.",
+        "Laboratory safety rules poster": "This poster summarizes the basic rules that keep laboratory and workshop activities safe.",
+        "Safety and hazard symbols chart": "These symbols help learners quickly recognize hazards, required equipment, and emergency locations.",
+        "Technician inspecting solar panels": "This image shows electrical work in a real installation setting where inspection and testing are important.",
+        "Technician working on a server rack": "This visual shows a technician handling powered equipment and cable systems in a controlled environment.",
+        "Electrician installing ceiling wiring": "This image shows an electrician routing conductors during installation work.",
+        "High-visibility work coveralls": "High-visibility clothing helps make workers easier to see in active work areas.",
+        "Yellow hard hat": "A hard hat is basic head protection used in construction and electrical work areas.",
+        "High-visibility protective clothing": "High-visibility protective clothing helps make electrical workers easier to see while also adding basic body protection in active work areas.",
+        "Face shield helmet": "A face shield helmet helps protect the eyes and face from sparks, flying particles, and accidental splashes during electrical work.",
+        "Ear protection earmuffs": "Earmuffs protect hearing in noisy environments where machinery or tools are operating.",
+        "Electrical safety boots": "Electrical safety boots add foot protection and help reduce risk while working near electrical hazards.",
+        "Insulated protective gloves": "Insulated protective gloves help shield the hands while handling tools, wires, and equipment in electrical work.",
+        "Digital multimeter": "A digital multimeter is used to measure voltage, current, resistance, and continuity.",
+        "Electrician's cable knife": "A cable knife is used to cut and prepare insulation during electrical installation work.",
+        "Wire stripper": "A wire stripper removes insulation cleanly without damaging the conductor inside.",
+        "Clamp meter kit": "This clamp meter kit includes the measuring device and accessories used for electrical testing and inspection.",
+        "Lineman pliers": "Lineman pliers are used for gripping, twisting, and cutting electrical wire.",
+        "Clamp meter": "A clamp meter measures electrical current without needing to disconnect the conductor.",
+        "Insulated screwdriver set": "Insulated screwdrivers are designed for electrical tasks where added shock protection is needed.",
+        "Crimping tool": "A crimping tool secures terminals or connectors onto the ends of wires.",
+        "Long nose pliers": "Long nose pliers are useful for gripping, bending, and reaching into tight spaces.",
+        "Fish tape wire puller": "Fish tape helps guide and pull wires through conduit or enclosed paths."
+      };
+
+      if (literalInfo[caption]) {
+        return literalInfo[caption];
+      }
+
+      const titleHints = {
+        "Introduction to Electricity and Electronics": "This image reinforces a core electricity or electronics idea from the lesson.",
+        "Personal Protective Equipment (PPE)": "This image shows personal protective equipment used to reduce risk during electrical work.",
+        "Tools for Electrical Work": "This image highlights a common tool and its role during electrical installation or testing.",
+        "Parts of the Computer and Input Output Devices": "This image shows a hardware component or computer device discussed in the lesson.",
+        "Safety Tools": "This image highlights a safety tool that helps protect the technician or the equipment.",
+        OHS: "This image supports the lesson on occupational health and safety practices."
+      };
+
+      return titleHints[moduleTitle] || `This reference visual supports the lesson content for ${moduleTitle || `image ${index + 1}`}.`;
+    }
+
+    function curateModuleImages(title, images) {
+      const config = IMAGE_CURATION[title] || { captionPrefix: "Module visual" };
+      return images.map((image, index) => {
+        const hasCustomCaption =
+          typeof image.caption === "string" &&
+          image.caption.trim() &&
+          !image.caption.startsWith("Reference visual");
+        const caption =
+          LITERAL_IMAGE_CAPTIONS[image.src] ||
+          (hasCustomCaption ? image.caption : `${config.captionPrefix} ${index + 1}`);
+        return {
+          ...image,
+          caption,
+          alt: caption || image.alt || `${title} visual ${index + 1}`,
+          info: image.info || getImageInfo(title, caption, index)
+        };
+      });
+    }
+
+    function updateIcon() {
+      const icon = document.getElementById("themeIcon");
+      if (!icon) return;
+      icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
+    }
+
+    function loadTheme() {
+      const saved = localStorage.getItem("theme");
+      if (saved === "light") {
+        document.body.classList.add("light-mode");
+      }
+      updateIcon();
+    }
+
+    window.toggleTheme = function () {
+      document.body.classList.toggle("light-mode");
+      localStorage.setItem("theme", document.body.classList.contains("light-mode") ? "light" : "dark");
+      updateIcon();
+    };
+
+    window.goBackToLevels = function () {
+      window.location.href = `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
+    };
+
+    function getModuleDoneKey() {
+      return `${subject}_${difficulty}_module_${moduleNumber}_done`;
+    }
+
+    function updateCheckpointUi(completed, statusLabel = null) {
+      const progressState = document.getElementById("moduleProgressState");
+      const checkpointBtn = document.getElementById("moduleCheckpointBtn");
+      const statusChip = document.getElementById("moduleStatusChip");
+
+      if (progressState) {
+        progressState.textContent = completed ? "Cleared" : "In Progress";
+      }
+
+      if (checkpointBtn) {
+        checkpointBtn.textContent = completed
+          ? "Checkpoint cleared automatically"
+          : "Checkpoint clears after reading";
+      }
+
+      if (statusChip && statusLabel) {
+        statusChip.textContent = statusLabel;
+      }
+    }
+
+    function markModuleCompleted() {
+      if (!data) return;
+
+      localStorage.setItem(getModuleDoneKey(), "true");
+      localStorage.setItem(RECENT_MODULE_COMPLETION_KEY, JSON.stringify({
+        subject,
+        difficulty,
+        module: moduleNumber,
+        title: data.title || `Module ${moduleNumber}`,
+        xp: MODULE_XP_REWARD,
+        completedAt: new Date().toISOString()
+      }));
+    }
+
+    window.startQuiz = function () {
+      markModuleCompleted();
+      updateCheckpointUi(true, `Checkpoint cleared +${MODULE_XP_REWARD} XP`);
+
+      if (moduleNumber >= staticModuleCount) {
+        window.location.href = `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
+        return;
+      }
+
+      window.location.href = `module.html?subject=${subject}&difficulty=${difficulty}&module=module${moduleNumber + 1}`;
+    };
+
+    function renderPills(container, items) {
+      if (!container) return;
+      container.innerHTML = "";
+      items.forEach((item, index) => {
+        const pill = document.createElement("div");
+        pill.className = "module-pill";
+        pill.innerHTML = `
+          <span class="module-pill-index">${index + 1}</span>
+          <span>${item}</span>
+        `;
+        container.appendChild(pill);
+      });
+    }
+
+    function renderSections(container, items) {
+      if (!container) return;
+      container.innerHTML = "";
+      items.forEach((item) => {
+        const card = document.createElement("article");
+        card.className = "module-section-card";
+        card.innerHTML = `
+          <h3>${item.heading}</h3>
+          <p>${item.body}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function getLessonDetails(title, content) {
+      const preset = LESSON_DETAILS[title];
+      if (preset) {
+        return preset;
+      }
+
+      return {
+        objectives: [
+          "Understand the main topic of the lesson",
+          "Identify the important terms and functions",
+          "Prepare for the next activity in the module path"
+        ],
+        sections: [
+          {
+            heading: "Core Lesson",
+            body: content || "No lesson content available."
+          }
+        ],
+        challengeTitle: "Challenge",
+        challengePrompt: "Summarize the lesson in your own words before continuing."
+      };
+    }
+
+    function getMotherboardFormFactorCards() {
+      return [
+        {
+          title: "ATX",
+          kicker: "Standard Desktop Board",
+          subtitle: "The lesson lists ATX as one of the common motherboard form factors.",
+          boardSrc: "assets/modules/hardware/medium/module1/atx-motherboard.jpg",
+          boardAlt: "ATX motherboard photo",
+          boardLabel: "Actual motherboard photo",
+          boardText: "ATX is the standard motherboard size commonly used in desktop computer systems.",
+          description: "Use this container to remember the standard ATX layout before comparing it with the larger and smaller board formats."
+        },
+        {
+          title: "E-ATX",
+          kicker: "Larger Expansion Layout",
+          subtitle: "The lesson also names E-ATX as a larger board layout.",
+          boardSrc: "assets/modules/hardware/medium/module1/eatx-motherboard.jpg",
+          boardAlt: "E-ATX motherboard photo",
+          boardLabel: "Actual motherboard photo",
+          boardText: "E-ATX is larger than ATX and is commonly used for high-end systems with more expansion space.",
+          description: "Use this container to connect the idea of additional board space with the E-ATX form factor."
+        },
+        {
+          title: "Micro-ATX",
+          kicker: "Smaller Square Layout",
+          subtitle: "The lesson includes Micro-ATX as a more compact motherboard size.",
+          boardSrc: "assets/modules/hardware/medium/module1/micro-atx-motherboard.png",
+          boardAlt: "Micro-ATX motherboard photo",
+          boardLabel: "Actual motherboard photo",
+          boardText: "Micro-ATX is a smaller square motherboard format used in more compact desktop systems.",
+          description: "Use this container to remember that Micro-ATX keeps the motherboard's main functions in a smaller layout."
+        },
+        {
+          title: "Mini-ITX",
+          kicker: "Compact System Layout",
+          subtitle: "The lesson names Mini-ITX as the compact form factor for space-saving builds.",
+          boardSrc: "assets/modules/hardware/medium/module1/mini-itx-motherboard.png",
+          boardAlt: "Mini-ITX motherboard photo",
+          boardLabel: "Actual motherboard photo",
+          boardText: "Mini-ITX is a compact motherboard form factor designed for space-saving builds.",
+          description: "Use this container to connect compact computer cases with the Mini-ITX motherboard format."
+        }
+      ];
+    }
+
+    function renderMotherboardFormFactors() {
+      const section = document.getElementById("moduleFormFactorSection");
+      const grid = document.getElementById("moduleFormFactorGrid");
+      const chip = document.getElementById("moduleFormFactorChip");
+      const note = document.getElementById("moduleFormFactorNote");
+
+      if (!section || !grid || !chip || !note) return;
+
+      const shouldRender =
+        subject === "hardware" &&
+        difficulty === "medium" &&
+        moduleNumber === 1 &&
+        data?.title === "Motherboard";
+
+      if (!shouldRender) {
+        section.hidden = true;
+        grid.innerHTML = "";
+        return;
+      }
+
+      const cards = getMotherboardFormFactorCards();
+      section.hidden = false;
+      chip.textContent = `${cards.length} form factors`;
+      note.textContent = "Each form factor is placed in its own container so the board type is easier to compare one by one.";
+
+      grid.innerHTML = cards.map((card) => `
+        <article class="module-form-factor-card">
+          <div class="module-form-factor-head">
+            <div class="module-form-factor-title-group">
+              <span class="module-form-factor-kicker">${card.kicker}</span>
+              <h3 class="module-form-factor-title">${card.title}</h3>
+              <p class="module-form-factor-subtitle">${card.subtitle}</p>
+            </div>
+            <span class="module-form-factor-pill">Form Factor</span>
+          </div>
+          <div class="module-form-factor-media">
+            <div class="module-form-factor-panel">
+              <img src="${card.boardSrc}" alt="${card.boardAlt}">
+              <div class="module-form-factor-panel-copy">
+                <p class="module-form-factor-label">${card.boardLabel}</p>
+                <p class="module-form-factor-text">${card.boardText}</p>
+              </div>
+            </div>
+          </div>
+          <div class="module-form-factor-footer">
+            <p>${card.description}</p>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function getComputerPartsImageCategory(image, index) {
+      const caption = (image.caption || "").toLowerCase();
+
+      if (caption.includes("microphone") || caption.includes("keyboard") || caption.includes("mouse") || caption.includes("scanner") || caption.includes("webcam") || caption.includes("joystick") || caption.includes("barcode")) {
+        return {
+          title: "Input Devices",
+          description: "These devices let the user send data and commands into the computer."
+        };
+      }
+
+      if (caption.includes("printer") || caption.includes("monitor") || caption.includes("speaker") || caption.includes("projector") || caption.includes("headset") || caption.includes("audio")) {
+        return {
+          title: "Output Devices",
+          description: "These devices present information, audio, or printed results from the computer."
+        };
+      }
+
+      if (caption.includes("lan") || caption.includes("network") || caption.includes("ethernet") || caption.includes("hdmi") || caption.includes("vga") || caption.includes("serial port") || caption.includes("parallel port") || caption.includes("ps/2") || caption.includes("i/o ports")) {
+        return {
+          title: "Networking and Communication",
+          description: "These ports and adapters connect the computer to peripherals, displays, and wired communication links."
+        };
+      }
+
+      if (
+        caption.includes("motherboard") ||
+        caption.includes("processor") ||
+        caption.includes("cpu") ||
+        caption.includes("socket") ||
+        caption.includes("memory") ||
+        caption.includes("ram") ||
+        caption.includes("bios") ||
+        caption.includes("cmos") ||
+        caption.includes("fan") ||
+        caption.includes("graphics card") ||
+        caption.includes("sound card") ||
+        caption.includes("expansion slots")
+      ) {
+        return {
+          title: "Internal Components",
+          description: "These are parts inside the system unit that process data, store information, or keep the computer running."
+        };
+      }
+
+      if (caption.includes("system unit") || caption.includes("case chassis") || caption.includes("voltage regulator") || caption.includes("power supply unit")) {
+        return {
+          title: "System Unit and Power",
+          description: "These parts protect the computer hardware, hold the internal devices, and help provide stable electrical power."
+        };
+      }
+
+      if (caption.includes("hard disk drive") || caption.includes("optical disc drive") || caption.includes("ide and floppy")) {
+        return {
+          title: "Storage Devices",
+          description: "These devices are used to keep data, programs, and files for short-term or long-term use."
+        };
+      }
+
+      return {
+        title: "Support Devices and Connectors",
+        description: "These additional visuals show supporting peripherals, connectors, and parts learners should still recognize."
+      };
+    }
+
+    function renderCategorizedComputerPartsImages(images, gallery, galleryChip, galleryNote) {
+      const groups = new Map();
+      images.forEach((image, index) => {
+        const category = getComputerPartsImageCategory(image, index);
+        if (!groups.has(category.title)) {
+          groups.set(category.title, {
+            description: category.description,
+            items: []
+          });
+        }
+        groups.get(category.title).items.push(image);
+      });
+
+      galleryChip.textContent = `${images.length} image${images.length === 1 ? "" : "s"} organized`;
+      galleryNote.textContent = "These visuals are grouped by device type so learners can study the parts in a clearer order.";
+
+      gallery.innerHTML = "";
+      groups.forEach((group, title) => {
+        const section = document.createElement("section");
+        section.className = "module-gallery-group";
+
+        const cards = group.items.map((image, index) => `
+          <figure class="module-figure">
+            <div class="module-figure-media">
+              <img src="${image.src}" alt="${image.alt || image.caption || `Module image ${index + 1}`}">
+            </div>
+            <figcaption>
+              <span class="module-figure-title">${image.caption || `Reference image ${index + 1}`}</span>
+              <span class="module-figure-info">${image.info || ""}</span>
+            </figcaption>
+          </figure>
+        `).join("");
+
+        section.innerHTML = `
+          <div class="module-gallery-group-head">
+            <h3>${title}</h3>
+            <p>${group.description}</p>
+          </div>
+          <div class="module-gallery-grid">${cards}</div>
+        `;
+
+        gallery.appendChild(section);
+      });
+    }
+
+    function renderMiniQuiz(container, quizItems) {
+      if (!container) return;
+      container.innerHTML = "";
+
+      const quiz = document.createElement("div");
+      quiz.className = "module-quiz";
+
+      quizItems.forEach((item, index) => {
+        const card = document.createElement("article");
+        card.className = "module-quiz-card";
+        card.innerHTML = `
+          <div class="module-quiz-question-row">
+            <span class="module-quiz-index">${index + 1}</span>
+            <h3 class="module-quiz-question">${item.question}</h3>
+          </div>
+          <div class="module-quiz-options">
+            ${(item.options || []).map((option) => `
+              <label class="module-quiz-option">
+                <input type="radio" name="fallback-module-quiz-${index}" value="${option}">
+                <span>${option}</span>
+              </label>
+            `).join("")}
+          </div>
+          <p class="module-quiz-feedback" id="fallbackModuleQuizFeedback${index}"></p>
+        `;
+        quiz.appendChild(card);
+      });
+
+      const actions = document.createElement("div");
+      actions.className = "module-quiz-actions";
+      actions.innerHTML = `
+        <button type="button" class="module-btn primary-btn" id="fallbackModuleQuizCheckBtn">Check Answers</button>
+        <p class="module-quiz-score" id="fallbackModuleQuizScore"></p>
+      `;
+      quiz.appendChild(actions);
+      container.appendChild(quiz);
+
+      document.getElementById("fallbackModuleQuizCheckBtn")?.addEventListener("click", () => {
+        let score = 0;
+
+        quizItems.forEach((item, index) => {
+          const selected = container.querySelector(`input[name="fallback-module-quiz-${index}"]:checked`);
+          const feedback = document.getElementById(`fallbackModuleQuizFeedback${index}`);
+          if (!feedback) return;
+
+          if (!selected) {
+            feedback.textContent = "Choose one answer first.";
+            feedback.className = "module-quiz-feedback pending";
+            return;
+          }
+
+          if (selected.value === item.answer) {
+            score += 1;
+            feedback.textContent = `Correct: ${item.answer}`;
+            feedback.className = "module-quiz-feedback correct";
+          } else {
+            feedback.textContent = `Correct answer: ${item.answer}`;
+            feedback.className = "module-quiz-feedback incorrect";
+          }
+        });
+
+        const scoreEl = document.getElementById("fallbackModuleQuizScore");
+        if (scoreEl) {
+          scoreEl.textContent = `Score: ${score} / ${quizItems.length}`;
+        }
+      });
+    }
+
+    function renderModuleImages(images) {
+      const gallery = document.getElementById("moduleGallery");
+      const galleryChip = document.getElementById("moduleGalleryChip");
+      const galleryNote = document.getElementById("moduleGalleryNote");
+      if (!gallery || !galleryChip || !galleryNote) return;
+
+      gallery.innerHTML = "";
+
+      if (!images.length) {
+        galleryChip.textContent = "No module images";
+        galleryNote.textContent = "This lesson does not currently have built-in images in the fallback view.";
+        return;
+      }
+
+      const galleryImages = images.filter((image) => {
+        if (
+          data?.title === "Motherboard" &&
+          [
+            "ATX form factor",
+            "E-ATX form factor",
+            "Micro-ATX form factor",
+            "Mini-ITX form factor"
+          ].includes(image.caption)
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      if (data?.title === "Parts of the Computer and Input Output Devices") {
+        renderCategorizedComputerPartsImages(galleryImages, gallery, galleryChip, galleryNote);
+        return;
+      }
+
+      galleryChip.textContent = `${galleryImages.length} image${galleryImages.length === 1 ? "" : "s"} ready`;
+      galleryNote.textContent = "These built-in visuals were loaded from the project image data.";
+
+      galleryImages.forEach((image, index) => {
+        const figure = document.createElement("figure");
+        figure.className = "module-figure";
+        figure.innerHTML = `
+          <div class="module-figure-media">
+            <img src="${image.src}" alt="${image.alt || image.caption || `Module image ${index + 1}`}">
+          </div>
+          <figcaption>
+            <span class="module-figure-title">${image.caption || `Reference image ${index + 1}`}</span>
+            <span class="module-figure-info">${image.info || ""}</span>
+          </figcaption>
+        `;
+        gallery.appendChild(figure);
+      });
+    }
+
+    loadTheme();
+
+    updateCheckpointUi(localStorage.getItem(getModuleDoneKey()) === "true");
+
+    document.getElementById("moduleSubject").textContent = subjectNames[subject] || "Subject";
+    document.getElementById("moduleDifficulty").textContent = difficultyNames[difficulty] || "Difficulty";
+    document.getElementById("moduleNumber").textContent = `Module ${moduleNumber}`;
+    document.getElementById("moduleTag").textContent = `${(subjectNames[subject] || "Subject").toUpperCase()} MODULE`;
+
+    if (!data) {
+      document.getElementById("title").textContent = "Module content coming soon";
+      document.getElementById("moduleSubtitle").textContent = "This lesson slot does not have built-in content yet.";
+      document.getElementById("content").textContent = "The module page is working, but this lesson does not have static content yet.";
+      document.getElementById("studyTip").textContent = "Return to the module list or add the lesson to the built-in module data.";
+      document.getElementById("moduleStatusChip").textContent = "Needs content";
+      document.getElementById("moduleActionBtn").textContent = "Back to Modules";
+      document.getElementById("moduleActionBtn").onclick = window.goBackToLevels;
+      renderPills(document.getElementById("moduleObjectives"), [
+        "Check the built-in module catalog",
+        "Confirm the subject and difficulty",
+        "Add the missing lesson content if needed"
+      ]);
+      renderSections(document.getElementById("moduleSections"), [
+        {
+          heading: "Fallback Module View",
+          body: "This fallback renderer is active because the full module script did not complete. The built-in content for this lesson was also not found."
+        }
+      ]);
+      renderModuleImages([]);
+      } else {
+        const embeddedImages = MODULE_IMAGES?.[subject]?.[difficulty]?.[`module${moduleNumber}`] || [];
+        const supplementalImages = MODULE_SUPPLEMENTAL_IMAGES?.[subject]?.[difficulty]?.[`module${moduleNumber}`] || [];
+        const allImages = curateModuleImages(
+          data.title,
+          [...embeddedImages, ...supplementalImages, ...(data.images || [])]
+        );
+        const lessonDetails = getLessonDetails(data.title, data.content);
+
+        document.getElementById("title").textContent = data.title;
+        document.getElementById("moduleSubtitle").textContent = `Study this ${difficulty} lesson before continuing to the next activity.`;
+      document.getElementById("content").textContent = data.content || "No lesson content available.";
+      document.getElementById("studyTip").textContent = data.tip || "Read carefully and identify the key terms before continuing.";
+      document.getElementById("moduleStatusChip").textContent = "Read to clear checkpoint";
+      document.getElementById("moduleActionBtn").textContent = moduleNumber < staticModuleCount ? "Next Module" : "Return to Modules";
+      document.getElementById("moduleActionBtn").onclick = window.startQuiz;
+      renderPills(document.getElementById("moduleObjectives"), lessonDetails.objectives);
+      renderSections(document.getElementById("moduleSections"), lessonDetails.sections);
+        renderMotherboardFormFactors();
+        renderModuleImages(allImages);
+    }
+
+    const currentLessonDetails = getLessonDetails(data?.title, data?.content);
+    document.getElementById("challengeTitle").textContent = currentLessonDetails.challengeTitle;
+    document.getElementById("challengePrompt").textContent = currentLessonDetails.challengePrompt;
+    const fallbackQuiz = FALLBACK_QUIZZES[data?.title];
+    if (fallbackQuiz) {
+      renderMiniQuiz(document.getElementById("challengePoints"), fallbackQuiz);
+    } else {
+      renderPills(document.getElementById("challengePoints"), [
+        ...(FALLBACK_CHALLENGES[data?.title] || [
+          "State the main concept",
+          "Recall one practical use",
+          "Explain one safety or technical idea from the lesson"
+        ])
+      ]);
+    }
+  </script>
   <script type="module" src="scripts/module.js"></script>
   <script src="scripts/loading.js" defer></script>
 </body>
