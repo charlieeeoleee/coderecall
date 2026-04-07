@@ -101,18 +101,18 @@
         <section class="panel-card">
           <div class="panel-header">
             <div>
-              <h3>Module Builder</h3>
-              <p>Add a prototype module draft with lesson text and one image.</p>
+              <h3>Module Draft Upload</h3>
+              <p>Upload a `.docx` module file for review. Approved drafts will be added manually by a super admin.</p>
             </div>
           </div>
           <form id="moduleDraftForm" class="admin-form">
             <label>Subject<select id="moduleSubject" required><option value="hardware">Computer Hardware</option><option value="electrical">Electrical</option></select></label>
             <label>Difficulty<select id="moduleDifficulty" required><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Difficult</option></select></label>
             <label>Module Title<input id="moduleTitleInput" type="text" required /></label>
-            <label>Lesson Text<textarea id="moduleContentInput" rows="6" required></textarea></label>
-            <label>Study Tip<input id="moduleTipInput" type="text" /></label>
-            <label>Upload Image<input id="moduleImageInput" type="file" accept="image/*" /></label>
-            <img id="moduleImagePreview" class="upload-preview" alt="Module preview" hidden />
+            <label>Teacher Notes<textarea id="moduleContentInput" rows="4" placeholder="Optional notes for the reviewer."></textarea></label>
+            <label>Study Tip<input id="moduleTipInput" type="text" placeholder="Optional tip or summary." /></label>
+            <label>Upload Module `.docx`<input id="moduleDocInput" type="file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required /></label>
+            <p id="moduleDocName" class="form-status"></p>
             <button type="submit" class="primary-action">Save Module Draft</button>
             <p id="moduleDraftStatus" class="form-status"></p>
           </form>
@@ -121,22 +121,17 @@
         <section class="panel-card">
           <div class="panel-header">
             <div>
-              <h3>Quiz Builder</h3>
-              <p>Add a prototype question draft for pretest, quiz, or posttest.</p>
+              <h3>Quiz Draft Upload</h3>
+              <p>Upload a `.docx` quiz file for review. Approved drafts will be encoded into the system manually.</p>
             </div>
           </div>
           <form id="quizDraftForm" class="admin-form">
             <label>Subject<select id="quizSubject" required><option value="hardware">Computer Hardware</option><option value="electrical">Electrical</option></select></label>
             <label>Quiz Type<select id="quizType" required><option value="pretest">Pretest</option><option value="easy">Easy Quiz</option><option value="medium">Medium Quiz</option><option value="hard">Hard Quiz</option><option value="posttest">Posttest</option></select></label>
-            <label>Question<textarea id="quizQuestionInput" rows="4" required></textarea></label>
-            <label>Choice A<input id="quizChoiceA" type="text" required /></label>
-            <label>Choice B<input id="quizChoiceB" type="text" required /></label>
-            <label>Choice C<input id="quizChoiceC" type="text" required /></label>
-            <label>Choice D<input id="quizChoiceD" type="text" required /></label>
-            <label>Correct Answer<select id="quizAnswer" required><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></label>
-            <label>Rationale<textarea id="quizRationaleInput" rows="3"></textarea></label>
-            <label>Upload Question Image<input id="quizImageInput" type="file" accept="image/*" /></label>
-            <img id="quizImagePreview" class="upload-preview" alt="Quiz preview" hidden />
+            <label>Quiz Title<input id="quizQuestionInput" type="text" required /></label>
+            <label>Reviewer Notes<textarea id="quizRationaleInput" rows="4" placeholder="Optional notes for the reviewer."></textarea></label>
+            <label>Upload Quiz `.docx`<input id="quizDocInput" type="file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required /></label>
+            <p id="quizDocName" class="form-status"></p>
             <button type="submit" class="primary-action">Save Quiz Draft</button>
             <p id="quizDraftStatus" class="form-status"></p>
           </form>
@@ -146,7 +141,7 @@
           <div class="panel-header">
             <div>
               <h3>Content Approval Workflow</h3>
-              <p>Review draft content from admins before it becomes part of the live learning system.</p>
+              <p>Review uploaded draft files from admins. Approved drafts are manually encoded into the live system by a super admin.</p>
             </div>
           </div>
           <div class="review-grid">

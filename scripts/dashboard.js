@@ -48,6 +48,7 @@ let currentXP = 0;
 let currentIsGuest = false;
 let currentAchievements = [];
 let leaderboardData = [];
+const SELECTED_SUBJECT_KEY = "selectedSubject";
 
 /* =========================
    AUTH STATE
@@ -514,6 +515,7 @@ function launchConfetti() {
    OPEN SUBJECT PAGE
 ========================= */
 window.startGame = function(subject) {
+  sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
   window.location.href = `subject.html?subject=${subject}`;
 };
 

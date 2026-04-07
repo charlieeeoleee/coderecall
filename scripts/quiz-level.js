@@ -9,11 +9,20 @@ import {
   restartThemeMusic, 
   playSound 
 } from "./sound.js";
-import { fetchPublishedQuizzes, chunkPublishedQuizLevels } from "./published-content.js";
 
 import { quizData } from "../data/quiz-data.js";
 import { electricalExtraQuizData } from "../data/quiz-data-electrical-extra.js";
 import { hardwareQuizData } from "../data/quiz-data-hardware-extra.js";
+
+function chunkPublishedQuizLevels(items, chunkSize = 3) {
+  const chunks = [];
+
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+
+  return chunks;
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -282,10 +291,7 @@ const mergedQuizData = {
 };
 
 async function loadPublishedQuizLevels() {
-  const publishedQuestions = await fetchPublishedQuizzes(db, {
-    subject,
-    quizType: difficulty
-  });
+  const publishedQuestions = [];
 
   const validQuestions = publishedQuestions
     .filter((item) => Array.isArray(item.choices) && item.choices.length >= 2)

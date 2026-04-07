@@ -81,22 +81,117 @@
   <script>
     (function () {
       const params = new URLSearchParams(window.location.search);
-      const subject = params.get("subject") || "electrical";
+      const subjectParam = (params.get("subject") || "").toLowerCase();
+      const unlockMode = (params.get("unlock") || "").toLowerCase();
+      const savedSubject = (sessionStorage.getItem("selectedSubject") || "").toLowerCase();
+      const validSubjects = new Set(["hardware", "electrical"]);
+      const subject = validSubjects.has(subjectParam)
+        ? subjectParam
+        : validSubjects.has(savedSubject)
+          ? savedSubject
+          : "electrical";
+
+      const subjectMeta = {
+        electrical: {
+          title: "ELECTRICAL WIRING AND ELECTRONICS CIRCUIT COMPONENTS",
+          desc: "Take the pre-test, study the modules, answer quizzes, and finish the post-test."
+        },
+        hardware: {
+          title: "COMPUTER HARDWARE",
+          desc: "Take the pre-test, study the modules, answer quizzes, and finish the post-test."
+        }
+      };
+
+      const meta = subjectMeta[subject] || subjectMeta.electrical;
+      const titleEl = document.getElementById("subjectTitle");
+      const descEl = document.getElementById("subjectDesc");
+
+      if (titleEl) titleEl.textContent = meta.title;
+      if (descEl) descEl.textContent = meta.desc;
+
+      sessionStorage.setItem("selectedSubject", subject);
+
+      function buildUrl(path, extraParams = {}) {
+        const url = new URL(path, window.location.href);
+        Object.entries(extraParams).forEach(([key, value]) => {
+          if (value != null && value !== "") {
+            url.searchParams.set(key, value);
+          }
+        });
+        if (unlockMode) {
+          url.searchParams.set("unlock", unlockMode);
+        }
+        return `${url.pathname.split("/").pop()}${url.search}`;
+      }
+
+      function unlockCard(buttonId) {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+        button.classList.remove("locked");
+        const lockIcon = button.querySelector(".lock-icon");
+        if (lockIcon) lockIcon.remove();
+      }
+
+      function hasLocalCompletion(name) {
+        const progressKey = `${subject}_${name}`;
+        return (
+          localStorage.getItem(progressKey) === "true" ||
+          localStorage.getItem(`${progressKey}_done`) === "true" ||
+          localStorage.getItem(`${progressKey}_attempt_done`) === "true"
+        );
+      }
+
+      if (unlockMode === "modules") {
+        unlockCard("modulesBtn");
+      } else if (unlockMode === "quiz") {
+        unlockCard("modulesBtn");
+        unlockCard("quizzesBtn");
+      } else if (unlockMode === "all") {
+        unlockCard("modulesBtn");
+        unlockCard("quizzesBtn");
+        unlockCard("posttestBtn");
+      } else {
+        const pretestDone = hasLocalCompletion("pretest");
+        const modulesDone =
+          hasLocalCompletion("modules") ||
+          localStorage.getItem(`${subject}_easy_modules_done`) === "true" ||
+          localStorage.getItem(`${subject}_medium_modules_done`) === "true" ||
+          localStorage.getItem(`${subject}_hard_modules_done`) === "true";
+        const quizDone =
+          hasLocalCompletion("quiz") ||
+          localStorage.getItem(`${subject}_hard_quiz`) === "true";
+
+        if (pretestDone) {
+          unlockCard("modulesBtn");
+        }
+
+        if (pretestDone && modulesDone) {
+          unlockCard("quizzesBtn");
+        }
+
+        if (pretestDone && modulesDone && quizDone) {
+          unlockCard("posttestBtn");
+        }
+      }
 
       window.openPretest = function () {
-        window.location.href = `quiz.html?subject=${subject}&level=easy&type=pretest`;
+        sessionStorage.setItem("selectedSubject", subject);
+        window.location.href = buildUrl("quiz.html", { subject, level: "easy", type: "pretest" });
       };
 
       window.openModules = function () {
-        window.location.href = `module-difficulty.html?subject=${subject}`;
+        sessionStorage.setItem("selectedSubject", subject);
+        window.location.href = buildUrl("module-difficulty.html", { subject });
       };
 
       window.openQuiz = function () {
-        window.location.href = `quiz-difficulty.html?subject=${subject}`;
+        sessionStorage.setItem("selectedSubject", subject);
+        window.location.href = buildUrl("quiz-difficulty.html", { subject });
       };
 
       window.openPosttest = function () {
-        window.location.href = `quiz.html?subject=${subject}&level=easy&type=posttest`;
+        sessionStorage.setItem("selectedSubject", subject);
+        window.location.href = buildUrl("quiz.html", { subject, level: "easy", type: "posttest" });
       };
 
       window.goBack = function () {
@@ -104,8 +199,8 @@
       };
     })();
   </script>
-  <script type="module" src="scripts/subject.js?v=20260407b"></script>
-  <script src="scripts/loading.js?v=20260407b" defer></script>
+  <script type="module" src="scripts/subject.js?v=20260407f"></script>
+  <script src="scripts/loading.js?v=20260407f" defer></script>
 </body>
 </html>
 

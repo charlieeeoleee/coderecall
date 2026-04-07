@@ -3,6 +3,8 @@ import {
   fetchPublishedQuizzes as fetchSupabasePublishedQuizzes
 } from "./supabase-content.js";
 
+export const CUSTOM_CONTENT_ENABLED = false;
+
 function getTimestampValue(value) {
   if (!value) return 0;
   if (typeof value.seconds === "number") return value.seconds;
@@ -27,11 +29,17 @@ function sortByPublishOrder(items) {
 }
 
 export async function fetchPublishedModules(_db, filters = {}) {
+  if (!CUSTOM_CONTENT_ENABLED) {
+    return [];
+  }
   const items = await fetchSupabasePublishedModules(filters);
   return sortByPublishOrder(items);
 }
 
 export async function fetchPublishedQuizzes(_db, filters = {}) {
+  if (!CUSTOM_CONTENT_ENABLED) {
+    return [];
+  }
   const items = await fetchSupabasePublishedQuizzes(filters);
   return sortByPublishOrder(items);
 }

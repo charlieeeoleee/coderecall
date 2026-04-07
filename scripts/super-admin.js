@@ -28,11 +28,7 @@ import {
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
 import {
   fetchModuleDrafts,
-  fetchQuizDrafts,
-  fetchPublishedModules,
-  fetchPublishedQuizzes,
-  publishModuleDraft as publishModuleDraftToSupabase,
-  publishQuizDraft as publishQuizDraftToSupabase
+  fetchQuizDrafts
 } from "./supabase-content.js";
 
 const firebaseConfig = {
@@ -77,8 +73,6 @@ async function loadSuperAdminDashboard() {
     pendingUsersSnap,
     moduleDrafts,
     quizDrafts,
-    publishedModules,
-    publishedQuizzes,
     notesSnap,
     auditSnap
   ] = await Promise.all([
@@ -87,8 +81,6 @@ async function loadSuperAdminDashboard() {
     safeGetDocs("pendingUsers", collection(db, "pendingUsers")),
     safeSupabaseRead("module drafts", fetchModuleDrafts),
     safeSupabaseRead("quiz drafts", fetchQuizDrafts),
-    safeSupabaseRead("published modules", fetchPublishedModules),
-    safeSupabaseRead("published quizzes", fetchPublishedQuizzes),
     safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
     safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12)))
   ]);
@@ -101,9 +93,10 @@ async function loadSuperAdminDashboard() {
 
   renderOverview(users);
   renderAccessGrantList(grants);
-  renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, publishedModules, publishedQuizzes, notes);
+  renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
   renderUserTable(users);
-  renderPublishingQueue(moduleDrafts, quizDrafts, publishedModules, publishedQuizzes);
+  renderPublishingQueue(moduleDrafts, quizDrafts);
+  renderManualImportChecklist();
   renderAuditLog(audits);
   wireAccessGrantForm();
   wireIntakeForm();
@@ -165,7 +158,7 @@ function renderOverview(users) {
   setText("superAverageXp", `${averageXp} XP`);
 }
 
-function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, publishedModules, publishedQuizzes, notes) {
+function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes) {
   const grid = document.getElementById("systemHealthGrid");
   if (!grid) return;
 
@@ -179,8 +172,8 @@ function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDraft
     { title: "Suspended Users", value: suspendedUsers, detail: "Accounts currently blocked from normal system use." },
     { title: "Pending Module Drafts", value: pendingModuleDrafts, detail: "Module drafts waiting for admin review." },
     { title: "Pending Quiz Drafts", value: pendingQuizDrafts, detail: "Quiz drafts waiting for admin review." },
-    { title: "Live Modules", value: publishedModules.length, detail: "Published module lessons already visible to learners." },
-    { title: "Live Quiz Draft Publishes", value: publishedQuizzes.length, detail: "Published quiz items available in the live learner flow." },
+    { title: "Approved Module Drafts", value: moduleDrafts.filter((draft) => (draft.status || "pending") === "approved").length, detail: "Approved module files waiting for manual system entry." },
+    { title: "Approved Quiz Drafts", value: quizDrafts.filter((draft) => (draft.status || "pending") === "approved").length, detail: "Approved quiz files waiting for manual system entry." },
     { title: "Support Notes", value: notes.length, detail: "Coaching notes recorded by admins for learners." },
     { title: "Active Records", value: users.filter((user) => (user.status || "active") === "active").length, detail: "Users currently marked active in the platform." }
   ];
@@ -194,40 +187,79 @@ function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDraft
   `).join("");
 }
 
-function renderPublishingQueue(moduleDrafts, quizDrafts, publishedModules, publishedQuizzes) {
+function renderPublishingQueue(moduleDrafts, quizDrafts) {
   const moduleList = document.getElementById("superModulePublishList");
   const quizList = document.getElementById("superQuizPublishList");
 
   if (moduleList) {
-    moduleList.innerHTML = buildPublishMarkup(moduleDrafts, publishedModules, "module");
-    bindPublishActions(moduleList, moduleDrafts, "module");
+    moduleList.innerHTML = buildPublishMarkup(moduleDrafts, "module");
   }
 
   if (quizList) {
-    quizList.innerHTML = buildPublishMarkup(quizDrafts, publishedQuizzes, "quiz");
-    bindPublishActions(quizList, quizDrafts, "quiz");
+    quizList.innerHTML = buildPublishMarkup(quizDrafts, "quiz");
   }
 }
 
-function buildPublishMarkup(drafts, publishedItems, type) {
+function renderManualImportChecklist() {
+  const container = document.getElementById("manualImportChecklist");
+  if (!container) return;
+
+  const steps = [
+    {
+      title: "1. Download and review the approved `.docx` draft",
+      body: "Open the uploaded draft file, verify the subject, difficulty, and content quality, and confirm it matches the approved notes."
+    },
+    {
+      title: "2. Add module content to the built-in files manually",
+      body: "For lessons, copy the final text into the existing static module data files and keep the current structure used by the learner pages."
+    },
+    {
+      title: "3. Add quiz items to the built-in assessment files manually",
+      body: "For quizzes, encode each approved question into the existing quiz data files so progression stays tied to the built-in system."
+    },
+    {
+      title: "4. Verify progression locally before release",
+      body: "Run through the real student flow: pre-test, modules, quizzes, and post-test. Confirm unlocks, back buttons, and completion flags still work."
+    },
+    {
+      title: "5. Record the manual import in the audit trail",
+      body: "After the static files are updated, leave a clear implementation note or audit entry so the team knows the draft has already been imported."
+    }
+  ];
+
+  container.innerHTML = steps.map((step) => `
+    <article class="review-item">
+      <h5>${step.title}</h5>
+      <p>${step.body}</p>
+    </article>
+  `).join("");
+}
+
+function buildPublishMarkup(drafts, type) {
   if (!drafts.length) {
-    return `<div class="review-item"><h5>No ${type} drafts yet</h5><p>Approved content will appear here when it is ready for publishing.</p></div>`;
+    return `<div class="review-item"><h5>No ${type} drafts yet</h5><p>Uploaded drafts will appear here for super-admin visibility.</p></div>`;
   }
 
   const items = drafts
     .slice()
     .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-    .filter((draft) => ["approved", "published"].includes(draft.status || "pending"));
+    .filter((draft) => ["pending", "approved", "rejected"].includes(draft.status || "pending"));
 
   if (!items.length) {
-    return `<div class="review-item"><h5>No approved ${type} drafts yet</h5><p>Have an admin approve a draft first, then publish it from here.</p></div>`;
+    return `<div class="review-item"><h5>No visible ${type} drafts yet</h5><p>Once admins upload drafts, their review status will appear here.</p></div>`;
   }
 
   return items.map((draft) => {
-    const alreadyPublished = publishedItems.some((item) => item.sourceDraftId === draft.id);
     const title = draft.title || draft.question || "Untitled draft";
     const meta = draft.difficulty || draft.quizType || "draft";
-    const statusLabel = alreadyPublished || draft.status === "published" ? "published" : (draft.status || "approved");
+    const fileName = type === "module" ? extractStoredFileName(draft.tip) : extractStoredFileName(draft.rationale);
+    const notes = type === "module" ? (draft.content || "") : stripStoredFileName(draft.rationale || "");
+    const status = draft.status || "pending";
+    const statusNote = status === "approved"
+      ? "Manual import required"
+      : status === "pending"
+        ? "Waiting for admin review"
+        : "Rejected draft";
 
     return `
       <article class="review-item">
@@ -235,57 +267,25 @@ function buildPublishMarkup(drafts, publishedItems, type) {
         <div class="review-meta">
           <span class="meta-pill">${escapeHtml(draft.subject || "general")}</span>
           <span class="meta-pill">${escapeHtml(meta)}</span>
-          <span class="meta-pill">${escapeHtml(statusLabel)}</span>
+          <span class="meta-pill">${escapeHtml(status)}</span>
         </div>
-        <p>${escapeHtml((draft.content || draft.question || "").slice(0, 180) || "No preview available.")}</p>
+        <p>${escapeHtml(fileName ? `Attached file: ${fileName}` : "No attached file name recorded.")}</p>
+        <p>${escapeHtml(notes.trim() || "No reviewer notes provided.")}</p>
         <p>Created by: ${escapeHtml(draft.createdByEmail || "Unknown")}</p>
-        <div class="review-actions">
-          <button class="primary-action" data-publish-draft="${draft.id}" data-draft-type="${type}" ${alreadyPublished ? "disabled" : ""}>
-            ${alreadyPublished ? "Published" : "Publish Live"}
-          </button>
-        </div>
+        <div class="review-actions"><span class="meta-pill">${escapeHtml(statusNote)}</span></div>
       </article>
     `;
   }).join("");
 }
 
-function bindPublishActions(container, drafts, type) {
-  container.querySelectorAll("[data-publish-draft]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const draftId = button.getAttribute("data-publish-draft");
-      const draft = drafts.find((entry) => entry.id === draftId);
-      if (!draft) return;
-
-      button.disabled = true;
-      button.textContent = "Publishing...";
-
-      try {
-        if (type === "module") {
-          await publishModuleDraft(draft);
-        } else {
-          await publishQuizDraft(draft);
-        }
-
-        setStatus("Draft published to the live system.");
-        await loadSuperAdminDashboard();
-      } catch (error) {
-        console.error("Publish failed:", error);
-        setStatus("Unable to publish that draft right now.");
-        button.disabled = false;
-        button.textContent = "Publish Live";
-      }
-    });
-  });
+function extractStoredFileName(value) {
+  const text = String(value || "");
+  const match = text.match(/^FILE:(.+)$/m);
+  return match ? match[1].trim() : "";
 }
 
-async function publishModuleDraft(draft) {
-  await publishModuleDraftToSupabase(draft, currentUser.email || "");
-  await writeAuditLog("module_draft_published", `Published module draft ${draft.id} to live content.`);
-}
-
-async function publishQuizDraft(draft) {
-  await publishQuizDraftToSupabase(draft, currentUser.email || "");
-  await writeAuditLog("quiz_draft_published", `Published quiz draft ${draft.id} to live content.`);
+function stripStoredFileName(value) {
+  return String(value || "").replace(/^FILE:.+\n?/m, "");
 }
 
 function renderUserTable(users) {

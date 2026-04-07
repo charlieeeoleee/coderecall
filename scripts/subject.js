@@ -26,12 +26,29 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
+const SELECTED_SUBJECT_KEY = "selectedSubject";
+const validSubjects = new Set(["hardware", "electrical"]);
 
 /* =========================
    SUBJECT PARAM
 ========================= */
 const params = new URLSearchParams(window.location.search);
-const subject = params.get("subject") || "electrical";
+const subjectParam = (params.get("subject") || "").toLowerCase();
+const savedSubject = (sessionStorage.getItem(SELECTED_SUBJECT_KEY) || "").toLowerCase();
+const unlockMode = (params.get("unlock") || "").toLowerCase();
+const subject = validSubjects.has(subjectParam)
+  ? subjectParam
+  : validSubjects.has(savedSubject)
+    ? savedSubject
+    : "electrical";
+
+sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
+
+if (subjectParam !== subject) {
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set("subject", subject);
+  window.history.replaceState({}, "", nextUrl);
+}
 
 /* SUBJECT META */
 const subjectMeta = {
@@ -83,6 +100,18 @@ function getProgressKey(name) {
   return `${subject}_${name}`;
 }
 
+function hasLocalCompletion(name) {
+  const progressKey = getProgressKey(name);
+  const resultDoneKey = `${progressKey}_done`;
+  const attemptDoneKey = `${progressKey}_attempt_done`;
+
+  return (
+    localStorage.getItem(progressKey) === "true" ||
+    localStorage.getItem(resultDoneKey) === "true" ||
+    localStorage.getItem(attemptDoneKey) === "true"
+  );
+}
+
 function unlockButton(buttonId) {
   const btn = document.getElementById(buttonId);
   if (!btn) return;
@@ -111,16 +140,16 @@ async function ensureUserDoc(uid) {
 
 async function getMergedProgress() {
   const localProgress = {
-    [getProgressKey("pretest")]: localStorage.getItem(getProgressKey("pretest")) === "true",
+    [getProgressKey("pretest")]: hasLocalCompletion("pretest"),
     [getProgressKey("modules")]:
-      localStorage.getItem(getProgressKey("modules")) === "true" ||
+      hasLocalCompletion("modules") ||
       localStorage.getItem(`${subject}_easy_modules_done`) === "true" ||
       localStorage.getItem(`${subject}_medium_modules_done`) === "true" ||
       localStorage.getItem(`${subject}_hard_modules_done`) === "true",
     [getProgressKey("quiz")]:
-      localStorage.getItem(getProgressKey("quiz")) === "true" ||
+      hasLocalCompletion("quiz") ||
       localStorage.getItem(`${subject}_hard_quiz`) === "true",
-    [getProgressKey("posttest")]: localStorage.getItem(getProgressKey("posttest")) === "true"
+    [getProgressKey("posttest")]: hasLocalCompletion("posttest")
   };
 
   if (!currentUser) {
@@ -131,10 +160,13 @@ async function getMergedProgress() {
   const snap = await getDoc(userRef);
   const data = snap.data() || {};
   const firebaseProgress = data.progress || {};
+  const firebaseResults = data.results || {};
 
   return {
     [getProgressKey("pretest")]:
-      localProgress[getProgressKey("pretest")] || firebaseProgress[getProgressKey("pretest")] === true,
+      localProgress[getProgressKey("pretest")] ||
+      firebaseProgress[getProgressKey("pretest")] === true ||
+      firebaseResults[getProgressKey("pretest")] != null,
 
     [getProgressKey("modules")]:
       localProgress[getProgressKey("modules")] ||
@@ -146,14 +178,35 @@ async function getMergedProgress() {
     [getProgressKey("quiz")]:
       localProgress[getProgressKey("quiz")] ||
       firebaseProgress[getProgressKey("quiz")] === true ||
-      firebaseProgress[`${subject}_hard_quiz`] === true,
+      firebaseProgress[`${subject}_hard_quiz`] === true ||
+      firebaseResults[getProgressKey("quiz")] != null,
 
     [getProgressKey("posttest")]:
-      localProgress[getProgressKey("posttest")] || firebaseProgress[getProgressKey("posttest")] === true
+      localProgress[getProgressKey("posttest")] ||
+      firebaseProgress[getProgressKey("posttest")] === true ||
+      firebaseResults[getProgressKey("posttest")] != null
   };
 }
 
 async function loadProgress() {
+  if (unlockMode === "modules") {
+    unlockButton("modulesBtn");
+    return;
+  }
+
+  if (unlockMode === "quiz") {
+    unlockButton("modulesBtn");
+    unlockButton("quizzesBtn");
+    return;
+  }
+
+  if (unlockMode === "all") {
+    unlockButton("modulesBtn");
+    unlockButton("quizzesBtn");
+    unlockButton("posttestBtn");
+    return;
+  }
+
   const progress = await getMergedProgress();
 
   const pretestDone = progress[getProgressKey("pretest")] === true;
@@ -164,11 +217,11 @@ async function loadProgress() {
     unlockButton("modulesBtn");
   }
 
-  if (modulesDone) {
+  if (pretestDone && modulesDone) {
     unlockButton("quizzesBtn");
   }
 
-  if (quizDone) {
+  if (pretestDone && modulesDone && quizDone) {
     unlockButton("posttestBtn");
   }
 }
@@ -202,10 +255,17 @@ window.toggleTheme = function () {
    INIT
 ========================= */
 loadTheme();
+loadProgress().catch((error) => {
+  console.error("Initial subject progress load failed:", error);
+});
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
-  await loadProgress();
+  try {
+    await loadProgress();
+  } catch (error) {
+    console.error("Authenticated subject progress load failed:", error);
+  }
 });
 
 function updateIcon() {

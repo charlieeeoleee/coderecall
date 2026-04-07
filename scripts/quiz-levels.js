@@ -7,7 +7,16 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
-import { fetchPublishedQuizzes, chunkPublishedQuizLevels } from "./published-content.js";
+
+function chunkPublishedQuizLevels(items, chunkSize = 3) {
+  const chunks = [];
+
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+
+  return chunks;
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -89,11 +98,7 @@ window.goBackToSubject = function() {
 };
 
 async function loadPublishedQuizLevels() {
-  const publishedQuestions = await fetchPublishedQuizzes(db, {
-    subject,
-    quizType: difficulty
-  });
-
+  const publishedQuestions = [];
   publishedQuizLevelGroups = chunkPublishedQuizLevels(publishedQuestions.filter((item) => Array.isArray(item.choices) && item.choices.length >= 2));
   totalLevels = STATIC_LEVELS + publishedQuizLevelGroups.length;
 }

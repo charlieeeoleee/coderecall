@@ -33,6 +33,7 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let currentIsGuest = false;
+const SELECTED_SUBJECT_KEY = "selectedSubject";
 
 onAuthStateChanged(auth, async (user) => {
   const isGuest = localStorage.getItem("guest") === "true";
@@ -162,6 +163,7 @@ function animateNumber(element, targetValue) {
 }
 
 window.openSubject = function(subject) {
+  sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
   window.location.href = `subject.html?subject=${subject}`;
 };
 

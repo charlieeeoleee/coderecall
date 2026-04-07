@@ -11,12 +11,22 @@ let sounds = {};
 let clickSoundInitialized = false;
 let themeMusic = null;
 let musicResumeTimer = null;
+let soundEffectsUnlocked = false;
 
 function loadSound(name, volume = 1) {
   const audio = new Audio(`assets/sounds/${name}.mp3`);
   audio.preload = "auto";
   audio.volume = volume;
+  audio.load();
   return audio;
+}
+
+function createSoundEntry(name, volume = 1, size = 3) {
+  return {
+    src: `assets/sounds/${name}.mp3`,
+    volume,
+    pool: Array.from({ length: size }, () => loadSound(name, volume))
+  };
 }
 
 function getThemeTrackName() {
@@ -102,14 +112,14 @@ function canPlaySounds() {
 
 export function initSounds() {
   sounds = {
-    badge: loadSound("badge", 0.8),
-    master: loadSound("master-badge", 0.9),
-    full: loadSound("full-completion", 0.95),
-    completion: loadSound("completion", 0.85),
-    confetti: loadSound("confetti", 0.75),
-    click: loadSound("click", 0.45),
-    correct: loadSound("correct", 0.75),
-    wrong: loadSound("wrong", 0.75)
+    badge: createSoundEntry("badge", 0.8),
+    master: createSoundEntry("master-badge", 0.9),
+    full: createSoundEntry("full-completion", 0.95),
+    completion: createSoundEntry("completion", 0.85),
+    confetti: createSoundEntry("confetti", 0.75),
+    click: createSoundEntry("click", 0.45, 4),
+    correct: createSoundEntry("correct", 0.75, 4),
+    wrong: createSoundEntry("wrong", 0.75, 4)
   };
 
   if (!themeMusic) {
@@ -127,16 +137,68 @@ export function initSounds() {
   });
 }
 
+function unlockSoundEffects() {
+  if (soundEffectsUnlocked) return;
+  soundEffectsUnlocked = true;
+
+  Object.values(sounds).forEach((entry) => {
+    const pool = entry?.pool;
+    if (!Array.isArray(pool)) return;
+
+    pool.forEach((audio) => {
+      try {
+        const originalMuted = audio.muted;
+        const originalTime = audio.currentTime;
+
+        audio.muted = true;
+        audio.currentTime = 0;
+
+        const playPromise = audio.play();
+        if (playPromise?.then) {
+          playPromise
+            .then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.muted = originalMuted;
+            })
+            .catch(() => {
+              audio.muted = originalMuted;
+            });
+        } else {
+          audio.pause();
+          audio.currentTime = originalTime;
+          audio.muted = originalMuted;
+        }
+      } catch {
+        // ignore unlock failures
+      }
+    });
+  });
+}
+
 export function playSound(name) {
   if (!canPlaySounds()) return;
-  if (!sounds[name]) return;
+  const entry = sounds[name];
+  const pool = entry?.pool;
+  if (!entry || !Array.isArray(pool) || pool.length === 0) return;
 
   try {
-    const instance = sounds[name].cloneNode(true);
+    const instance = pool.find((audio) => audio.paused || audio.ended) || pool[0];
     instance.currentTime = 0;
-    instance.volume = sounds[name].volume;
+    instance.muted = false;
+    instance.volume = entry.volume;
 
-    instance.play().catch(() => {});
+    instance.play().catch(() => {
+      try {
+        const fallback = new Audio(entry.src);
+        fallback.preload = "auto";
+        fallback.volume = entry.volume;
+        fallback.currentTime = 0;
+        fallback.play().catch(() => {});
+      } catch {
+        // ignore fallback playback issues
+      }
+    });
 
   } catch {
     // ignore playback issues
@@ -146,6 +208,10 @@ export function playSound(name) {
 export function initGlobalClickSound() {
   if (clickSoundInitialized) return;
   clickSoundInitialized = true;
+
+  document.addEventListener("pointerdown", () => {
+    unlockSoundEffects();
+  }, { once: true });
 
   document.addEventListener("pointerdown", (e) => {
     const target = e.target;

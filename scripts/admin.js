@@ -209,6 +209,7 @@ function renderStudentTable(learners) {
 function renderDraftReviews(moduleDrafts, quizDrafts) {
   const moduleList = document.getElementById("moduleDraftReviewList");
   const quizList = document.getElementById("quizDraftReviewList");
+
   if (moduleList) moduleList.innerHTML = buildDraftMarkup(moduleDrafts, "module");
   if (quizList) quizList.innerHTML = buildDraftMarkup(quizDrafts, "quiz");
 
@@ -231,7 +232,7 @@ function buildDraftMarkup(drafts, type) {
           <span class="meta-pill">${escapeHtml(draft.difficulty || draft.quizType || "draft")}</span>
           <span class="meta-pill">${escapeHtml(draft.status || "pending")}</span>
         </div>
-        <p>${escapeHtml((draft.content || draft.question || "").slice(0, 180) || "No preview available.")}</p>
+        <p>${escapeHtml(getDraftPreviewText(draft, type))}</p>
         <p>Created by: ${escapeHtml(draft.createdByEmail || "Unknown")}</p>
         <div class="review-actions">
           <button class="primary-action" data-approve-draft="${draft.id}" data-collection="${type === "module" ? "moduleDrafts" : "quizDrafts"}">Approve</button>
@@ -269,6 +270,18 @@ async function updateDraftStatus(collectionName, draftId, status) {
 
   await writeAuditLog("draft_review", `${status} ${collectionName} entry ${draftId}`);
   await loadAdminDashboard();
+}
+
+function getDraftPreviewText(draft, type) {
+  const fileName = type === "module"
+    ? extractStoredFileName(draft.tip)
+    : extractStoredFileName(draft.rationale);
+  const notes = type === "module"
+    ? (draft.content || "")
+    : stripStoredFileName(draft.rationale || "");
+  const noteText = notes.trim() ? `Notes: ${notes.trim().slice(0, 140)}` : "No reviewer notes provided.";
+
+  return fileName ? `Attached file: ${fileName}. ${noteText}` : noteText;
 }
 
 function countStage(learners, subject, stage) {
@@ -316,12 +329,14 @@ function countDifficultyModuleClears(learners, difficulty) {
 }
 
 function wireBuilderForms() {
-  wireImagePreview("moduleImageInput", "moduleImagePreview");
-  wireImagePreview("quizImageInput", "quizImagePreview");
-
   const moduleForm = document.getElementById("moduleDraftForm");
   const quizForm = document.getElementById("quizDraftForm");
   const feedbackForm = document.getElementById("feedbackNoteForm");
+  const moduleDocInput = document.getElementById("moduleDocInput");
+  const quizDocInput = document.getElementById("quizDocInput");
+
+  wireFileNamePreview(moduleDocInput, "moduleDocName");
+  wireFileNamePreview(quizDocInput, "quizDocName");
 
   if (moduleForm && !moduleForm.dataset.bound) {
     moduleForm.dataset.bound = "true";
@@ -342,62 +357,66 @@ function wireBuilderForms() {
 async function saveModuleDraft(event) {
   event.preventDefault();
 
-  const imageDataUrl = await fileToDataUrl(document.getElementById("moduleImageInput")?.files?.[0]);
+  const docFile = document.getElementById("moduleDocInput")?.files?.[0];
   const status = document.getElementById("moduleDraftStatus");
+  const docPayload = await fileToDataUrl(docFile);
+
+  if (!docFile || !docPayload) {
+    if (status) status.textContent = "Please upload a `.docx` module file first.";
+    return;
+  }
 
   await saveModuleDraftToSupabase({
     subject: document.getElementById("moduleSubject").value,
     difficulty: document.getElementById("moduleDifficulty").value,
     title: document.getElementById("moduleTitleInput").value.trim(),
     content: document.getElementById("moduleContentInput").value.trim(),
-    tip: document.getElementById("moduleTipInput").value.trim(),
-    imageDataUrl,
+    tip: formatStoredFileName(docFile.name, document.getElementById("moduleTipInput").value.trim()),
+    imageDataUrl: docPayload,
     status: "pending",
     createdBy: currentUser.uid,
     createdByEmail: currentUser.email || ""
   });
 
-  await writeAuditLog("module_draft_created", `Created module draft: ${document.getElementById("moduleTitleInput").value.trim()}`);
+  await writeAuditLog("module_draft_created", `Created module draft upload: ${document.getElementById("moduleTitleInput").value.trim()} (${docFile.name})`);
 
   event.target.reset();
-  resetPreview("moduleImagePreview");
-  if (status) status.textContent = "Module draft saved. It is now waiting for approval review.";
+  resetFileNamePreview("moduleDocName");
+  if (status) status.textContent = "Module draft file saved. It is now waiting for review and manual encoding.";
   await loadAdminDashboard();
 }
 
 async function saveQuizDraft(event) {
   event.preventDefault();
 
-  const imageDataUrl = await fileToDataUrl(document.getElementById("quizImageInput")?.files?.[0]);
+  const docFile = document.getElementById("quizDocInput")?.files?.[0];
   const status = document.getElementById("quizDraftStatus");
-  const choices = [
-    document.getElementById("quizChoiceA").value.trim(),
-    document.getElementById("quizChoiceB").value.trim(),
-    document.getElementById("quizChoiceC").value.trim(),
-    document.getElementById("quizChoiceD").value.trim()
-  ];
-  const answerLetter = document.getElementById("quizAnswer").value;
-  const answerIndex = { A: 0, B: 1, C: 2, D: 3 }[answerLetter];
+  const docPayload = await fileToDataUrl(docFile);
+
+  if (!docFile || !docPayload) {
+    if (status) status.textContent = "Please upload a `.docx` quiz file first.";
+    return;
+  }
 
   await saveQuizDraftToSupabase({
     subject: document.getElementById("quizSubject").value,
     quizType: document.getElementById("quizType").value,
     question: document.getElementById("quizQuestionInput").value.trim(),
-    choices,
-    answerLetter,
-    answerText: choices[answerIndex],
-    rationale: document.getElementById("quizRationaleInput").value.trim(),
-    imageDataUrl,
+    choices: [],
+    answerLetter: "",
+    answerText: "",
+    rationale: formatStoredFileName(docFile.name, document.getElementById("quizRationaleInput").value.trim()),
+    imageDataUrl: docPayload,
     status: "pending",
     createdBy: currentUser.uid,
     createdByEmail: currentUser.email || ""
   });
 
-  await writeAuditLog("quiz_draft_created", `Created quiz draft for ${document.getElementById("quizType").value}`);
+  await writeAuditLog("quiz_draft_created", `Created quiz draft upload for ${document.getElementById("quizType").value} (${docFile.name})`);
 
   event.target.reset();
-  resetPreview("quizImagePreview");
-  if (status) status.textContent = "Quiz draft saved. It is now waiting for approval review.";
+  resetFileNamePreview("quizDocName");
+  if (status) status.textContent = "Quiz draft file saved. It is now waiting for review and manual encoding.";
   await loadAdminDashboard();
 }
 
@@ -509,28 +528,25 @@ window.closeStudentProfile = function() {
   if (status) status.textContent = "";
 };
 
-function wireImagePreview(inputId, imageId) {
-  const input = document.getElementById(inputId);
-  const preview = document.getElementById(imageId);
-  if (!input || !preview || input.dataset.bound) return;
+function wireFileNamePreview(input, statusId) {
+  const status = document.getElementById(statusId);
+  if (!input || !status || input.dataset.bound) return;
 
   input.dataset.bound = "true";
   input.addEventListener("change", async () => {
     const file = input.files?.[0];
     if (!file) {
-      resetPreview(imageId);
+      resetFileNamePreview(statusId);
       return;
     }
-    preview.src = await fileToDataUrl(file);
-    preview.hidden = false;
+    status.textContent = `Attached file: ${file.name}`;
   });
 }
 
-function resetPreview(imageId) {
-  const preview = document.getElementById(imageId);
-  if (!preview) return;
-  preview.hidden = true;
-  preview.removeAttribute("src");
+function resetFileNamePreview(statusId) {
+  const status = document.getElementById(statusId);
+  if (!status) return;
+  status.textContent = "";
 }
 
 function fileToDataUrl(file) {
@@ -541,6 +557,22 @@ function fileToDataUrl(file) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+function formatStoredFileName(fileName, notes = "") {
+  const safeName = String(fileName || "").trim();
+  const safeNotes = String(notes || "").trim();
+  return safeNotes ? `FILE:${safeName}\n${safeNotes}` : `FILE:${safeName}`;
+}
+
+function extractStoredFileName(value) {
+  const text = String(value || "");
+  const match = text.match(/^FILE:(.+)$/m);
+  return match ? match[1].trim() : "";
+}
+
+function stripStoredFileName(value) {
+  return String(value || "").replace(/^FILE:.+\n?/m, "");
 }
 
 async function writeAuditLog(action, details) {

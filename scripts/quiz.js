@@ -45,11 +45,21 @@ let score = 0;
 let selectedChoice = null;
 let pendingContinue = null;
 let xpAwardedThisAttempt = false;
+const SELECTED_SUBJECT_KEY = "selectedSubject";
+const validSubjects = new Set(["hardware", "electrical"]);
 
 const params = new URLSearchParams(window.location.search);
-const subject = params.get("subject") || "electrical";
+const subjectParam = (params.get("subject") || "").toLowerCase();
+const savedSubject = (sessionStorage.getItem(SELECTED_SUBJECT_KEY) || "").toLowerCase();
+const subject = validSubjects.has(subjectParam)
+  ? subjectParam
+  : validSubjects.has(savedSubject)
+    ? savedSubject
+    : "electrical";
 const level = params.get("level") || "easy";
 const type = params.get("type") || "pretest";
+
+sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
 
 const XP_RULES = {
   pretest: 1,
@@ -626,6 +636,9 @@ async function saveQuizResultToStorageAndFirestore() {
   const percent = Math.round((score / total) * 100);
   const resultKey = getResultDocKey();
   const flags = getProgressFlags();
+  const selectedSubject = (sessionStorage.getItem(SELECTED_SUBJECT_KEY) || "").toLowerCase();
+  const canonicalSubject = validSubjects.has(selectedSubject) ? selectedSubject : subject;
+  const canonicalResultKey = `${canonicalSubject}_${type}`;
 
   const resultPayload = {
     subject,
@@ -639,16 +652,23 @@ async function saveQuizResultToStorageAndFirestore() {
 
   if (type === "pretest") {
     localStorage.setItem(flags.pretestKey, "true");
+    localStorage.setItem(`${canonicalSubject}_pretest`, "true");
   } else if (type === "posttest") {
     localStorage.setItem(flags.posttestKey, "true");
+    localStorage.setItem(`${canonicalSubject}_posttest`, "true");
   } else {
     localStorage.setItem(flags.quizKey, "true");
+    localStorage.setItem(`${canonicalSubject}_quiz`, "true");
   }
 
   localStorage.setItem(getQuizStorageKey(), "true");
   localStorage.setItem(`${resultKey}_score`, String(score));
   localStorage.setItem(`${resultKey}_percent`, String(percent));
   localStorage.setItem(`${resultKey}_done`, "true");
+  localStorage.setItem(`${canonicalResultKey}_score`, String(score));
+  localStorage.setItem(`${canonicalResultKey}_percent`, String(percent));
+  localStorage.setItem(`${canonicalResultKey}_done`, "true");
+  localStorage.setItem(`${canonicalResultKey}_attempt_done`, "true");
 
   if (!currentUser) return;
 
@@ -660,13 +680,20 @@ async function saveQuizResultToStorageAndFirestore() {
 
   if (type === "pretest") {
     progress[flags.pretestKey] = true;
+    progress[`${canonicalSubject}_pretest`] = true;
   } else if (type === "posttest") {
     progress[flags.posttestKey] = true;
+    progress[`${canonicalSubject}_posttest`] = true;
   } else {
     progress[flags.quizKey] = true;
+    progress[`${canonicalSubject}_quiz`] = true;
   }
 
   results[resultKey] = resultPayload;
+  results[canonicalResultKey] = {
+    ...resultPayload,
+    subject: canonicalSubject
+  };
   await updateDoc(userRef, { progress, results });
 }
 

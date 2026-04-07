@@ -23,6 +23,7 @@ const db = getFirestore(app);
 
 const params = new URLSearchParams(window.location.search);
 const subject = params.get("subject") || "electrical";
+const unlockMode = (params.get("unlock") || "").toLowerCase();
 
 let currentUser = null;
 
@@ -65,11 +66,22 @@ window.toggleTheme = function () {
 };
 
 window.goBack = function () {
-  window.location.href = `subject.html?subject=${subject}`;
+  const nextUrl = new URL("subject.html", window.location.href);
+  nextUrl.searchParams.set("subject", subject);
+  if (unlockMode) {
+    nextUrl.searchParams.set("unlock", unlockMode);
+  }
+  window.location.href = `${nextUrl.pathname.split("/").pop()}${nextUrl.search}`;
 };
 
 window.openDifficulty = function (difficulty) {
-  window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
+  const nextUrl = new URL("quiz-levels.html", window.location.href);
+  nextUrl.searchParams.set("subject", subject);
+  nextUrl.searchParams.set("difficulty", difficulty);
+  if (unlockMode) {
+    nextUrl.searchParams.set("unlock", unlockMode);
+  }
+  window.location.href = `${nextUrl.pathname.split("/").pop()}${nextUrl.search}`;
 };
 
 async function ensureUserDoc(uid) {
@@ -140,6 +152,18 @@ function unlockDifficulty(buttonId, difficulty, description) {
 }
 
 async function applyDifficultyUnlocks() {
+  if (unlockMode === "quiz") {
+    unlockDifficulty("easyBtn", "easy", "Basic concepts and simple recall questions.");
+    return;
+  }
+
+  if (unlockMode === "all") {
+    unlockDifficulty("easyBtn", "easy", "Basic concepts and simple recall questions.");
+    unlockDifficulty("mediumBtn", "medium", "More challenging items that require better understanding.");
+    unlockDifficulty("hardBtn", "hard", "Advanced and tricky questions for mastery.");
+    return;
+  }
+
   const progress = await getMergedProgress();
 
   if (progress.easyModulesDone) {

@@ -8,7 +8,6 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
-import { fetchPublishedModules } from "./published-content.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -118,7 +117,7 @@ window.goToNextDifficulty = function() {
 };
 
 async function loadPublishedModuleEntries() {
-  publishedModules = await fetchPublishedModules(db, { subject, difficulty });
+  publishedModules = [];
   totalLevels = STATIC_LEVELS + publishedModules.length;
 }
 
