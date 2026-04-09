@@ -439,6 +439,73 @@ body{
   transform: scale(0.95);
 }
 
+/* ================= MODAL ================= */
+.subject-modal{
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 8, 20, 0.58);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.subject-modal.active{
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.subject-modal-box{
+  width: min(460px, 100%);
+  padding: 28px 24px 24px;
+  border-radius: 24px;
+  text-align: center;
+  background: rgba(20, 18, 40, 0.96);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 24px 48px rgba(0,0,0,0.28),
+    0 0 22px rgba(255,46,136,0.16);
+}
+
+.subject-modal-box h3{
+  margin: 12px 0 10px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #f4f8ff;
+}
+
+.subject-modal-box p{
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(244,248,255,0.9);
+}
+
+.subject-modal-btn{
+  border: none;
+  border-radius: 16px;
+  padding: 14px 24px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(135deg, #ff2e88, #00d9ff);
+  box-shadow:
+    0 8px 20px rgba(255,46,136,0.22),
+    0 0 16px rgba(0,217,255,0.16);
+  transition: transform 0.28s ease, box-shadow 0.28s ease, filter 0.28s ease;
+}
+
+.subject-modal-btn:hover{
+  transform: translateY(-3px) scale(1.04);
+  filter: brightness(1.05);
+}
+
 /* ================= LIGHT MODE ================= */
 body.light-mode .subject-title{
   color: #111827;
@@ -536,6 +603,23 @@ body.light-mode .subject-badge{
 body.light-mode .subject-card:not(.locked):hover .subject-badge{
   background: rgba(255,255,255,0.22);
   border: 1px solid rgba(255,255,255,0.24);
+}
+
+body.light-mode .subject-modal-box{
+  background: rgba(255,255,255,0.96);
+  border-color: rgba(0,0,0,0.08);
+}
+
+body.light-mode .subject-modal-box h3{
+  color: #111827;
+}
+
+body.light-mode .subject-modal-box p{
+  color: rgba(17,24,39,0.78);
+}
+
+body.light-mode .subject-modal-btn{
+  background: linear-gradient(135deg, #6d5dfc, #00d9ff);
 }
 
 /* ================= RESPONSIVE ================= */

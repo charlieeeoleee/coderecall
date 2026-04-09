@@ -50,6 +50,81 @@ body{
   background: linear-gradient(135deg, #00e5ff, #32ffc7);
 }
 
+.level-sound-panel{
+  position: fixed;
+  left: 26px;
+  bottom: 24px;
+  z-index: 1000;
+}
+
+.sound-toggle-panel{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: rgba(14, 20, 38, 0.86);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.24),
+    0 0 20px rgba(255, 46, 136, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.sound-toggle-item{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #eaf7ff;
+}
+
+.sound-toggle-switch{
+  position: relative;
+  display: inline-flex;
+}
+
+.sound-toggle-switch input{
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sound-toggle-slider{
+  position: relative;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sound-toggle-slider::after{
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  transition: transform 0.25s ease;
+}
+
+.sound-toggle-switch input:checked + .sound-toggle-slider{
+  background: linear-gradient(135deg, #ff2e88, #00d9ff);
+  border-color: transparent;
+  box-shadow: 0 0 16px rgba(0,217,255,0.18);
+}
+
+.sound-toggle-switch input:checked + .sound-toggle-slider::after{
+  transform: translateX(22px);
+}
+
 .level-page{
   width: min(980px, 92%);
   margin: 0 auto;
@@ -336,6 +411,23 @@ body.light-mode .level-tag{
   border: 1px solid rgba(0,0,0,0.08);
 }
 
+body.light-mode .sound-toggle-panel{
+  background: rgba(255,255,255,0.88);
+  border-color: rgba(0,0,0,0.08);
+  box-shadow:
+    0 12px 28px rgba(109, 93, 252, 0.14),
+    0 0 20px rgba(157, 78, 221, 0.08);
+}
+
+body.light-mode .sound-toggle-item{
+  color: #111827;
+}
+
+body.light-mode .sound-toggle-slider{
+  background: rgba(17,24,39,0.10);
+  border-color: rgba(17,24,39,0.08);
+}
+
 @media (max-width: 768px){
   .level-logo{
     font-size: 12px;
@@ -373,6 +465,35 @@ body.light-mode .level-tag{
     width: 56px;
     height: 56px;
     font-size: 22px;
+  }
+
+  .level-sound-panel{
+    left: 18px;
+    bottom: 18px;
+  }
+
+  .sound-toggle-panel{
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .sound-toggle-item{
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .sound-toggle-slider{
+    width: 48px;
+    height: 28px;
+  }
+
+  .sound-toggle-slider::after{
+    width: 20px;
+    height: 20px;
+  }
+
+  .sound-toggle-switch input:checked + .sound-toggle-slider::after{
+    transform: translateX(20px);
   }
 }
 

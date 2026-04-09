@@ -37,7 +37,7 @@ const difficulty = params.get("difficulty") || "easy";
 
 const QUIZ_LEVEL_COUNTS = {
   electrical: { easy: 25, medium: 25, hard: 25 },
-  hardware: { easy: 23, medium: 7, hard: 25 }
+  hardware: { easy: 23, medium: 25, hard: 25 }
 };
 
 const STATIC_LEVELS = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;

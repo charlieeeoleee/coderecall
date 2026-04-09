@@ -70,6 +70,22 @@ const meta = subjectMeta[subject] || {
 document.getElementById("subjectTitle").textContent = meta.title;
 document.getElementById("subjectDesc").textContent = meta.desc;
 
+function showSubjectNotice(message) {
+  const modal = document.getElementById("subjectNoticeModal");
+  const text = document.getElementById("subjectNoticeText");
+  const button = document.getElementById("subjectNoticeBtn");
+
+  if (!modal || !text || !button) {
+    return;
+  }
+
+  text.textContent = message;
+  modal.classList.add("active");
+  button.onclick = () => {
+    modal.classList.remove("active");
+  };
+}
+
 /* =========================
    NAVIGATION
 ========================= */
@@ -77,7 +93,15 @@ window.goBack = function () {
   window.location.href = "dashboard.html";
 };
 
+function hasCompletedPretest() {
+  return hasLocalCompletion("pretest");
+}
+
 window.openPretest = function () {
+  if (hasCompletedPretest()) {
+    showSubjectNotice("You already took the pre-test.");
+    return;
+  }
   window.location.href = `quiz.html?subject=${subject}&level=easy&type=pretest`;
 };
 

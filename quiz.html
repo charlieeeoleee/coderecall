@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz.css">
+  <link rel="stylesheet" href="styles/quiz.css?v=20260410d">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -22,6 +22,23 @@
   <button class="theme-toggle quiz-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
     <span id="themeIcon">&#127769;</span>
   </button>
+
+  <section class="sound-toggle-panel quiz-sound-panel" aria-label="Sound controls">
+    <label class="sound-toggle-item" for="sfxToggle">
+      <span class="sound-toggle-label">SFX</span>
+      <span class="sound-toggle-switch">
+        <input type="checkbox" id="sfxToggle" />
+        <span class="sound-toggle-slider" aria-hidden="true"></span>
+      </span>
+    </label>
+    <label class="sound-toggle-item" for="bgmToggle">
+      <span class="sound-toggle-label">BGM</span>
+      <span class="sound-toggle-switch">
+        <input type="checkbox" id="bgmToggle" />
+        <span class="sound-toggle-slider" aria-hidden="true"></span>
+      </span>
+    </label>
+  </section>
 
   <main class="quiz-page">
     <section class="quiz-header card">
@@ -85,8 +102,17 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/quiz.js?v=20260407b"></script>
-  <script src="scripts/loading.js?v=20260407b" defer></script>
+  <div class="quiz-modal" id="pretestLockModal">
+    <div class="quiz-modal-box result-box">
+      <span class="quiz-tag">NOTICE</span>
+      <h3>Pre-Test Already Taken</h3>
+      <p id="pretestLockText">You already took the pre-test.</p>
+      <button class="quiz-btn primary-btn" id="pretestLockBtn" type="button">Return to Subject</button>
+    </div>
+  </div>
+
+  <script type="module" src="scripts/quiz.js?v=20260410d"></script>
+  <script src="scripts/loading.js?v=20260410d" defer></script>
 </body>
 </html>
 

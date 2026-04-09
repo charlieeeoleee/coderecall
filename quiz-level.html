@@ -23,6 +23,23 @@
     <span id="themeIcon">&#127769;</span>
   </button>
 
+  <section class="sound-toggle-panel level-sound-panel" aria-label="Sound controls">
+    <label class="sound-toggle-item" for="sfxToggle">
+      <span class="sound-toggle-label">SFX</span>
+      <span class="sound-toggle-switch">
+        <input type="checkbox" id="sfxToggle" />
+        <span class="sound-toggle-slider" aria-hidden="true"></span>
+      </span>
+    </label>
+    <label class="sound-toggle-item" for="bgmToggle">
+      <span class="sound-toggle-label">BGM</span>
+      <span class="sound-toggle-switch">
+        <input type="checkbox" id="bgmToggle" />
+        <span class="sound-toggle-slider" aria-hidden="true"></span>
+      </span>
+    </label>
+  </section>
+
   <main class="level-page">
     <section class="level-header card">
       <span class="level-tag" id="levelTag">QUIZ LEVEL</span>
@@ -50,7 +67,7 @@
       <div class="level-choices-grid" id="choicesContainer"></div>
 
       <div class="level-actions">
-      <button class="level-btn secondary-btn" onclick="goBackToLevels()">Back</button>
+      <button class="level-btn secondary-btn" id="backBtn" onclick="goBackToLevels()">Back</button>
         <button class="level-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next &rarr;</button>
       </div>
     </section>
@@ -60,7 +77,7 @@
     <div class="level-modal-box">
       <h3>Level Complete</h3>
       <p id="resultMessage">You finished this level.</p>
-      <button class="level-btn primary-btn" onclick="finishLevelFlow()">Back to Levels</button>
+      <button class="level-btn primary-btn" onclick="finishLevelFlow()" id="finishLevelBtn">Next Level</button>
     </div>
   </div>
 
@@ -72,9 +89,16 @@
   </div>
   </div>
 
-
-  <script type="module" src="scripts/quiz-level.js"></script>
-  <script src="scripts/loading.js" defer></script>
+  <script>
+    window.goBackToLevels = window.goBackToLevels || function () {
+      const params = new URLSearchParams(window.location.search);
+      const subject = params.get("subject") || "electrical";
+      const difficulty = params.get("difficulty") || "easy";
+      window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
+    };
+  </script>
+  <script type="module" src="scripts/quiz-level.js?v=20260410e"></script>
+  <script src="scripts/loading.js?v=20260410e" defer></script>
 </body>
 </html>
 

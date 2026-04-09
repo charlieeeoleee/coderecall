@@ -16,12 +16,14 @@ import {
   initGlobalClickSound,
   tryStartMusic,
   restartThemeMusic,
-  playSound
+  playSound,
+  handleSoundToggle,
+  handleMusicToggle
 } from "./sound.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
+import { hardwarePosttestQuestions } from "../data/hardware-posttest-data.js";
 import {
-  hardwarePretestQuestions,
-  hardwarePosttestQuestions
+  hardwarePretestQuestions
 } from "../data/hardware-assessment-data.js";
 
 const firebaseConfig = {
@@ -415,8 +417,37 @@ function getQuizXPReward() {
   return XP_RULES.quizLevel;
 }
 
+function isPretestAlreadyTaken() {
+  if (type !== "pretest") return false;
+
+  const canonicalKey = `${subject}_pretest`;
+  return (
+    localStorage.getItem(canonicalKey) === "true" ||
+    localStorage.getItem(`${canonicalKey}_done`) === "true" ||
+    localStorage.getItem(`${canonicalKey}_attempt_done`) === "true"
+  );
+}
+
 function goToSubjectPage() {
   window.location.href = `subject.html?subject=${subject}`;
+}
+
+function showPretestLockModal(message) {
+  const modal = document.getElementById("pretestLockModal");
+  const text = document.getElementById("pretestLockText");
+  const button = document.getElementById("pretestLockBtn");
+
+  if (!modal || !text || !button) {
+    goToSubjectPage();
+    return;
+  }
+
+  text.textContent = message;
+  modal.classList.add("active");
+  button.onclick = () => {
+    modal.classList.remove("active");
+    goToSubjectPage();
+  };
 }
 
 window.goBackToSubject = function () {
@@ -757,6 +788,34 @@ function updateIcon() {
   icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
+function syncSoundToggleUI() {
+  const sfxToggle = document.getElementById("sfxToggle");
+  const bgmToggle = document.getElementById("bgmToggle");
+
+  if (sfxToggle) {
+    sfxToggle.checked = localStorage.getItem("soundEnabled") !== "false";
+  }
+
+  if (bgmToggle) {
+    bgmToggle.checked = localStorage.getItem("musicEnabled") !== "false";
+  }
+}
+
+function setupSoundToggles() {
+  const sfxToggle = document.getElementById("sfxToggle");
+  const bgmToggle = document.getElementById("bgmToggle");
+
+  syncSoundToggleUI();
+
+  sfxToggle?.addEventListener("change", (event) => {
+    handleSoundToggle(event.target.checked);
+  });
+
+  bgmToggle?.addEventListener("change", (event) => {
+    handleMusicToggle(event.target.checked);
+  });
+}
+
 function loadTheme() {
   const saved = localStorage.getItem("theme");
   if (saved === "light") {
@@ -773,9 +832,14 @@ window.toggleTheme = function () {
   restartThemeMusic();
 };
 
-prepareQuestions();
-loadTheme();
-renderQuestion();
+if (isPretestAlreadyTaken()) {
+  loadTheme();
+  showPretestLockModal("You already took the pre-test.");
+} else {
+  prepareQuestions();
+  loadTheme();
+  renderQuestion();
+}
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
@@ -784,6 +848,7 @@ onAuthStateChanged(auth, (user) => {
 
 initSounds();
 initGlobalClickSound();
+setupSoundToggles();
 tryStartMusic();
 
 document.body.addEventListener("click", () => {

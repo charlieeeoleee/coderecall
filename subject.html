@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/subject.css">
+  <link rel="stylesheet" href="styles/subject.css?v=20260410b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -78,6 +78,15 @@
 
   <button class="subject-back-btn" onclick="goBack()">Back</button>
 
+  <div class="subject-modal" id="subjectNoticeModal">
+    <div class="subject-modal-box">
+      <span class="subject-badge">NOTICE</span>
+      <h3 id="subjectNoticeTitle">Pre-Test Already Taken</h3>
+      <p id="subjectNoticeText">You already took the pre-test.</p>
+      <button class="subject-modal-btn" id="subjectNoticeBtn" type="button">OK</button>
+    </div>
+  </div>
+
   <script>
     (function () {
       const params = new URLSearchParams(window.location.search);
@@ -141,6 +150,21 @@
         );
       }
 
+      function showSubjectNotice(message) {
+        const modal = document.getElementById("subjectNoticeModal");
+        const text = document.getElementById("subjectNoticeText");
+        const button = document.getElementById("subjectNoticeBtn");
+        if (!modal || !text || !button) {
+          return;
+        }
+
+        text.textContent = message;
+        modal.classList.add("active");
+        button.onclick = function () {
+          modal.classList.remove("active");
+        };
+      }
+
       if (unlockMode === "modules") {
         unlockCard("modulesBtn");
       } else if (unlockMode === "quiz") {
@@ -175,6 +199,10 @@
       }
 
       window.openPretest = function () {
+        if (hasLocalCompletion("pretest")) {
+          showSubjectNotice("You already took the pre-test.");
+          return;
+        }
         sessionStorage.setItem("selectedSubject", subject);
         window.location.href = buildUrl("quiz.html", { subject, level: "easy", type: "pretest" });
       };
@@ -199,8 +227,8 @@
       };
     })();
   </script>
-  <script type="module" src="scripts/subject.js?v=20260407f"></script>
-  <script src="scripts/loading.js?v=20260407f" defer></script>
+  <script type="module" src="scripts/subject.js?v=20260410b"></script>
+  <script src="scripts/loading.js?v=20260410b" defer></script>
 </body>
 </html>
 

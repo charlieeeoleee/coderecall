@@ -28,6 +28,7 @@ let currentUser = null;
 let autoCheckpointObserver = null;
 let autoCheckpointInFlight = false;
 const MODULE_XP_REWARD = 5;
+const QUICK_CHECK_XP_PER_CORRECT = 1;
 const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
 
 /* =========================
@@ -1070,6 +1071,10 @@ function getModuleXPKey() {
   return `${getModuleDoneKey()}_xp_awarded`;
 }
 
+function getQuickCheckBestScoreKey() {
+  return `${getModuleDoneKey()}_quick_check_best_score`;
+}
+
 async function ensureUserDoc(uid) {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
@@ -1169,6 +1174,61 @@ async function awardModuleXPOnce() {
   localStorage.setItem("guest_xp", String(guestXP + MODULE_XP_REWARD));
   localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + MODULE_XP_REWARD));
   return MODULE_XP_REWARD;
+}
+
+async function getQuickCheckBestScore() {
+  const localBest = parseInt(localStorage.getItem(getQuickCheckBestScoreKey()) || "0", 10);
+  if (!currentUser) {
+    return localBest;
+  }
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  const remoteBest = Number(data.progress?.[getQuickCheckBestScoreKey()] || 0);
+  return Math.max(localBest, remoteBest);
+}
+
+async function awardQuickCheckXP(score) {
+  const earnedScore = Math.max(0, Number(score) || 0);
+  const bestScore = await getQuickCheckBestScore();
+  const delta = Math.max(0, earnedScore - bestScore);
+
+  if (delta <= 0) {
+    return 0;
+  }
+
+  localStorage.setItem(getQuickCheckBestScoreKey(), String(earnedScore));
+
+  if (currentUser) {
+    const userRef = await ensureUserDoc(currentUser.uid);
+    const snap = await getDoc(userRef);
+    const data = snap.data() || {};
+    const currentWeek = getWeekKey();
+    const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
+    const currentXP = Number(data.xp || 0);
+    const currentWeeklyXP =
+      lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
+    const progress = data.progress || {};
+
+    progress[getQuickCheckBestScoreKey()] = earnedScore;
+
+    await updateDoc(userRef, {
+      xp: currentXP + delta,
+      xpWeekly: currentWeeklyXP + delta,
+      xpChange: delta,
+      lastWeeklyReset: currentWeek,
+      progress
+    });
+
+    return delta;
+  }
+
+  const guestXP = parseInt(localStorage.getItem("guest_xp") || "0", 10);
+  const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
+  localStorage.setItem("guest_xp", String(guestXP + delta));
+  localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + delta));
+  return delta;
 }
 
 function disconnectAutoCheckpointObserver() {
@@ -1652,7 +1712,7 @@ function renderMiniQuiz(container, quizItems) {
   const checkBtn = document.getElementById("moduleQuizCheckBtn");
   const scoreEl = document.getElementById("moduleQuizScore");
 
-  checkBtn?.addEventListener("click", () => {
+  checkBtn?.addEventListener("click", async () => {
     let score = 0;
 
     quizItems.forEach((item, index) => {
@@ -1677,8 +1737,14 @@ function renderMiniQuiz(container, quizItems) {
       }
     });
 
+    const xpEarned = await awardQuickCheckXP(score * QUICK_CHECK_XP_PER_CORRECT);
+
     if (scoreEl) {
-      scoreEl.textContent = `Score: ${score} / ${quizItems.length}`;
+      if (xpEarned > 0) {
+        scoreEl.textContent = `Score: ${score} / ${quizItems.length} • +${xpEarned} XP`;
+      } else {
+        scoreEl.textContent = `Score: ${score} / ${quizItems.length}`;
+      }
     }
   });
 }
