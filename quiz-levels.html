@@ -23,6 +23,23 @@
     <span id="themeIcon">&#127769;</span>
   </button>
 
+  <section class="sound-toggle-panel levels-sound-panel" aria-label="Sound controls">
+    <label class="sound-toggle-item" for="sfxToggle">
+      <span class="sound-toggle-label">SFX</span>
+      <span class="sound-toggle-switch">
+        <input type="checkbox" id="sfxToggle" />
+        <span class="sound-toggle-slider" aria-hidden="true"></span>
+      </span>
+    </label>
+    <label class="sound-toggle-item" for="bgmToggle">
+      <span class="sound-toggle-label">BGM</span>
+      <span class="sound-toggle-switch">
+        <input type="checkbox" id="bgmToggle" />
+        <span class="sound-toggle-slider" aria-hidden="true"></span>
+      </span>
+    </label>
+  </section>
+
   <main class="levels-page">
     <section class="levels-header card">
       <div class="levels-header-glow"></div>
@@ -52,11 +69,12 @@
 
     <div class="levels-actions">
       <button class="levels-btn secondary-btn" onclick="goBackToSubject()">Back</button>
+      <button class="levels-btn primary-nav-btn" id="nextDifficultyBtn" onclick="goToNextDifficulty()">Medium</button>
     </div>
   </main>
 
-  <script type="module" src="scripts/quiz-levels.js?v=20260409f"></script>
-  <script src="scripts/loading.js?v=20260409f" defer></script>
+  <script type="module" src="scripts/quiz-levels.js?v=20260411d"></script>
+  <script src="scripts/loading.js?v=20260411d" defer></script>
 </body>
 </html>
 

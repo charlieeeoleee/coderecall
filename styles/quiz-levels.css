@@ -66,6 +66,84 @@ body{
   transform: translateY(-4px) scale(1.06);
 }
 
+.levels-sound-panel{
+  position: fixed;
+  left: 26px;
+  bottom: 24px;
+  z-index: 1000;
+}
+
+.sound-toggle-panel{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(10, 16, 31, 0.82);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.22),
+    0 0 18px rgba(0, 217, 255, 0.10);
+}
+
+.sound-toggle-item{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #eaf7ff;
+}
+
+.sound-toggle-label{
+  min-width: 34px;
+}
+
+.sound-toggle-switch{
+  position: relative;
+  display: inline-flex;
+}
+
+.sound-toggle-switch input{
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sound-toggle-slider{
+  position: relative;
+  width: 54px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.sound-toggle-slider::after{
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+  transition: transform 0.25s ease;
+}
+
+.sound-toggle-switch input:checked + .sound-toggle-slider{
+  background: linear-gradient(135deg, #ff2e88, #00d9ff);
+  border-color: transparent;
+}
+
+.sound-toggle-switch input:checked + .sound-toggle-slider::after{
+  transform: translateX(24px);
+}
+
 /* ================= PAGE ================= */
 .levels-page{
   width: min(1100px, 94%);
@@ -246,7 +324,9 @@ body{
 /* ================= ACTIONS ================= */
 .levels-actions{
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
 
 .levels-btn{
@@ -270,6 +350,21 @@ body{
   transform: translateY(-3px) scale(1.04);
   background: linear-gradient(135deg, #6d5dfc, #00d9ff);
   color: white;
+}
+
+.primary-nav-btn{
+  color: #08111f;
+  background: linear-gradient(135deg, #ff2e88, #00d9ff);
+  box-shadow:
+    0 10px 24px rgba(255, 46, 136, 0.22),
+    0 0 18px rgba(0, 217, 255, 0.16);
+}
+
+.primary-nav-btn:hover{
+  transform: translateY(-3px) scale(1.04);
+  box-shadow:
+    0 14px 28px rgba(255, 46, 136, 0.28),
+    0 0 20px rgba(0, 217, 255, 0.22);
 }
 
 /* ================= LIGHT MODE ================= */
@@ -319,6 +414,11 @@ body.light-mode .secondary-btn{
   border: none !important;
 }
 
+body.light-mode .primary-nav-btn{
+  color: #ffffff;
+  background: linear-gradient(135deg, #6d5dfc, #00d9ff);
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 980px){
   .levels-grid{
@@ -348,12 +448,45 @@ body.light-mode .secondary-btn{
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .levels-actions{
+    flex-direction: row;
+  }
+
   .levels-theme-toggle{
     right: 18px;
     bottom: 18px;
     width: 56px;
     height: 56px;
     font-size: 22px;
+  }
+
+  .levels-sound-panel{
+    left: 18px;
+    bottom: 18px;
+  }
+
+  .sound-toggle-panel{
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .sound-toggle-item{
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .sound-toggle-slider{
+    width: 48px;
+    height: 28px;
+  }
+
+  .sound-toggle-slider::after{
+    width: 20px;
+    height: 20px;
+  }
+
+  .sound-toggle-switch input:checked + .sound-toggle-slider::after{
+    transform: translateX(20px);
   }
 }
 
@@ -367,4 +500,21 @@ body.light-mode .levels-theme-toggle{
 
 body.light-mode .levels-theme-toggle:hover{
   background: linear-gradient(135deg, #6d5dfc, #00d9ff) !important;
+}
+
+body.light-mode .sound-toggle-panel{
+  background: rgba(255,255,255,0.88);
+  border-color: rgba(109, 93, 252, 0.14);
+  box-shadow:
+    0 16px 40px rgba(109, 93, 252, 0.12),
+    0 0 18px rgba(0, 217, 255, 0.12);
+}
+
+body.light-mode .sound-toggle-item{
+  color: #111827;
+}
+
+body.light-mode .sound-toggle-slider{
+  background: rgba(17,24,39,0.10);
+  border-color: rgba(17,24,39,0.08);
 }

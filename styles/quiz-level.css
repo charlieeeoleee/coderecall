@@ -245,6 +245,17 @@ body{
   padding: 12px;
 }
 
+.level-question-image-frame{
+  width: min(100%, 360px);
+  margin: 0 auto;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.level-question-image.is-cropped{
+  margin-bottom: calc(var(--question-image-crop-bottom, 0px) * -1);
+}
+
 .level-choices-grid{
   display: grid;
   grid-template-columns: 1fr 1fr;

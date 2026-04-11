@@ -49,6 +49,12 @@ let currentIsGuest = false;
 let currentAchievements = [];
 let leaderboardData = [];
 const SELECTED_SUBJECT_KEY = "selectedSubject";
+const MODULE_XP_REWARD = 5;
+const QUIZ_LEVEL_XP_PER_CORRECT = 2;
+const XP_RULES = {
+  pretest: 1,
+  posttest: 50
+};
 
 /* =========================
    AUTH STATE
@@ -85,7 +91,8 @@ async function loadDashboard() {
   let photo = "https://i.pravatar.cc/40?img=12";
 
   if (docSnap.exists()) {
-    const data = docSnap.data();
+    let data = docSnap.data();
+    data = await reconcileLocalProgressToFirestore(userRef, data);
     xp = data.xp || 0;
     name =
       data.name ||
@@ -108,12 +115,21 @@ async function loadDashboard() {
 
     await setDoc(userRef, {
       xp: 0,
+      xpWeekly: 0,
+      xpChange: 0,
+      lastWeeklyReset: getWeekKey(),
+      progress: {},
+      results: {},
       name: name,
       photo: photo,
       email: currentUser.email || "",
       streak: 1,
       lastActiveDate: getTodayString()
     });
+
+    const refreshedSnap = await getDoc(userRef);
+    const refreshedData = await reconcileLocalProgressToFirestore(userRef, refreshedSnap.data() || {});
+    xp = refreshedData.xp || 0;
   }
 
   currentXP = xp;
@@ -122,6 +138,124 @@ async function loadDashboard() {
   renderDashboardAchievements(xp, false);
   await loadLeaderboard();
   renderDashboardLeaderboardPreview();
+}
+
+async function reconcileLocalProgressToFirestore(userRef, data) {
+  const progress = { ...(data.progress || {}) };
+  const results = { ...(data.results || {}) };
+  const currentWeek = getWeekKey();
+  const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
+
+  let xpDelta = 0;
+  let progressChanged = false;
+  let resultsChanged = false;
+
+  const markProgress = (key, value = true) => {
+    if (progress[key] === value) return false;
+    progress[key] = value;
+    progressChanged = true;
+    return true;
+  };
+
+  const hasLocalDone = (baseKey) =>
+    localStorage.getItem(baseKey) === "true" ||
+    localStorage.getItem(`${baseKey}_done`) === "true" ||
+    localStorage.getItem(`${baseKey}_attempt_done`) === "true";
+
+  ["hardware", "electrical"].forEach((subject) => {
+    ["pretest", "posttest"].forEach((type) => {
+      const baseKey = `${subject}_${type}`;
+      const alreadyTracked = progress[baseKey] === true || results[baseKey] != null;
+
+      if (!alreadyTracked && hasLocalDone(baseKey)) {
+        markProgress(baseKey);
+        results[baseKey] = {
+          subject,
+          type,
+          score: Number(localStorage.getItem(`${baseKey}_score`) || 0),
+          percent: Number(localStorage.getItem(`${baseKey}_percent`) || 0),
+          completedAt: new Date().toISOString()
+        };
+        resultsChanged = true;
+        xpDelta += XP_RULES[type] || 0;
+      }
+    });
+  });
+
+  Object.keys(localStorage).forEach((key) => {
+    if (/_module_\d+_done$/.test(key) && localStorage.getItem(key) === "true") {
+      markProgress(key);
+    }
+
+    if (/_module_\d+_done_xp_awarded$/.test(key) && localStorage.getItem(key) === "true") {
+      if (markProgress(key)) {
+        xpDelta += MODULE_XP_REWARD;
+      }
+    }
+
+    if (/_module_\d+_done_quick_check_best_score$/.test(key)) {
+      const localBest = Number(localStorage.getItem(key) || 0);
+      const remoteBest = Number(progress[key] || 0);
+      if (localBest > remoteBest) {
+        progress[key] = localBest;
+        progressChanged = true;
+        xpDelta += localBest - remoteBest;
+      }
+    }
+
+    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_done$/.test(key) && localStorage.getItem(key) === "true") {
+      markProgress(key);
+    }
+
+    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_result$/.test(key)) {
+      const doneKey = key.replace(/_result$/, "_done");
+      const alreadyTracked = progress[doneKey] === true;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (!alreadyTracked) {
+          progress[doneKey] = true;
+          progressChanged = true;
+          xpDelta += Math.max(0, Number(parsed.score) || 0) * QUIZ_LEVEL_XP_PER_CORRECT;
+        }
+      } catch {
+        // ignore malformed local quiz level payloads
+      }
+    }
+
+    if (/^(hardware|electrical)_(easy|medium|hard)_quiz$/.test(key) && localStorage.getItem(key) === "true") {
+      markProgress(key);
+    }
+  });
+
+  if (!progressChanged && !resultsChanged && xpDelta <= 0) {
+    return data;
+  }
+
+  const currentXP = Number(data.xp || 0);
+  const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
+  const nextData = {
+    ...data,
+    xp: currentXP + xpDelta,
+    xpWeekly: currentWeeklyXP + xpDelta,
+    xpChange: xpDelta > 0 ? xpDelta : Number(data.xpChange || 0),
+    lastWeeklyReset: currentWeek,
+    progress,
+    results
+  };
+
+  await updateDoc(userRef, {
+    xp: nextData.xp,
+    xpWeekly: nextData.xpWeekly,
+    xpChange: nextData.xpChange,
+    lastWeeklyReset: nextData.lastWeeklyReset,
+    progress: nextData.progress,
+    results: nextData.results
+  });
+
+  return nextData;
 }
 
 /* =========================
@@ -635,6 +769,15 @@ function getTodayString() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const firstDay = new Date(year, 0, 1);
+  const pastDays = Math.floor((now - firstDay) / 86400000);
+  const week = Math.ceil((pastDays + firstDay.getDay() + 1) / 7);
+  return `${year}-W${week}`;
 }
 
 function isYesterday(previousDate, currentDate) {

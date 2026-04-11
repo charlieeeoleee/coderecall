@@ -1292,76 +1292,76 @@
         {
           level: 12,
           sub: 1,
-          question: "When working on a computer without an antistatic wrist strap, which alternative safety method should the technician perform?",
+          question: "It is a type of output device that is used to make a hard copy of a digital document.",
           choices: [
-            "Place hands on an insulated surface",
-            "Touch a grounded metal object before handling components",
-            "Wear rubber gloves while touching the motherboard",
-            "Spray water to reduce static in the air"
-          ],
-          answer: "B"
-        },
-        {
-          level: 12,
-          sub: 2,
-          question: "What should be the best way you can do as a CSS student if your computer won’t power on?",
-          choices: [
-            "Ensure all connections are secured.",
-            "Call for a maintenance help",
-            "Search for what might be the problem",
-            "Disassemble it and check again."
+            "Printer",
+            "Scanner",
+            "Plotter",
+            "Photo Printer"
           ],
           answer: "A"
         },
         {
           level: 12,
-          sub: 3,
-          question: "As a css student, how do you think you can identify and fix hardware issues when you disassemble your computer?",
+          sub: 2,
+          question: "It is used to create or print out large graphics or designs like blueprints, maps etc.",
           choices: [
-            "When I disassemble my computer, I just clean it up and bring back its components to its designated location.",
-            "When I disassemble my computer I make sure that no other components are being cleaned roughly.",
-            "When I disassemble my computer I check every component if there are signs of damage and wear which helps me prevent it from getting my computer totally damaged.",
-            "When I disassemble my computer, I am not checking any computer inside because I know I am taking care of it."
+            "Printer",
+            "Scanner",
+            "Plotter",
+            "Projector"
           ],
           answer: "C"
+        },
+        {
+          level: 12,
+          sub: 3,
+          question: "What is being shown in the picture?",
+          choices: [
+            "Graphic Tablet",
+            "Mouse",
+            "Keyboard",
+            "Touch Pad"
+          ],
+          answer: "D"
         }
       ],
       13: [
         {
           level: 13,
           sub: 1,
-          question: "If a motherboard is installed directly onto the metal case without standoffs, what is the most probable result?",
+          question: "It’s used to move the cursor on the screen, which allows us to move, drag, or click data on the monitor screen.",
           choices: [
-            "The board will short-circuit and may fail to boot",
-            "The board will vibrate and loosen connections",
-            "The CPU may not detect the fan",
-            "The power supply will shut down permanently"
+            "Mouse",
+            "Touchscreen",
+            "Touchpad",
+            "Digital pen"
           ],
           answer: "A"
         },
         {
           level: 13,
           sub: 2,
-          question: "In disassembling and assembling a pc or a computer, this tool is useful for prying open cases or removing certain types of screws.",
+          question: "It is used to project images, videos, presentations on a big white screen or board.",
           choices: [
-            "Philips-head screwdriver",
-            "Flat-head screwdriver",
-            "Torx-head screwdriver",
-            "Both A and B"
+            "Projector",
+            "Monitor",
+            "Webcam",
+            "Screen"
           ],
-          answer: "B"
+          answer: "A"
         },
         {
           level: 13,
           sub: 3,
-          question: "After shutting down your pc “cooling down” an essential step before disassembling your computer, what is an advisable minute to apply your components to cool down?",
+          question: "_____ is a flat surface that is commonly used on laptops to move the cursor.",
           choices: [
-            "5 minutes",
-            "20-25 minutes",
-            "15-30 minutes",
-            "3 minutes"
+            "Mouse",
+            "Digital Pen",
+            "Projector",
+            "Touch Pad"
           ],
-          answer: "C"
+          answer: "D"
         }
       ],
       14: [

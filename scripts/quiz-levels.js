@@ -5,7 +5,9 @@ import {
   initSounds,
   initGlobalClickSound,
   tryStartMusic,
-  restartThemeMusic
+  restartThemeMusic,
+  handleSoundToggle,
+  handleMusicToggle
 } from "./sound.js";
 
 function chunkPublishedQuizLevels(items, chunkSize = 3) {
@@ -37,7 +39,7 @@ const difficulty = params.get("difficulty") || "easy";
 
 const QUIZ_LEVEL_COUNTS = {
   electrical: { easy: 25, medium: 25, hard: 25 },
-  hardware: { easy: 23, medium: 25, hard: 25 }
+  hardware: { easy: 25, medium: 25, hard: 25 }
 };
 
 const STATIC_LEVELS = QUIZ_LEVEL_COUNTS[subject]?.[difficulty] || 25;
@@ -85,6 +87,34 @@ function loadTheme() {
   updateIcon();
 }
 
+function syncSoundToggleUI() {
+  const sfxToggle = document.getElementById("sfxToggle");
+  const bgmToggle = document.getElementById("bgmToggle");
+
+  if (sfxToggle) {
+    sfxToggle.checked = localStorage.getItem("soundEnabled") !== "false";
+  }
+
+  if (bgmToggle) {
+    bgmToggle.checked = localStorage.getItem("musicEnabled") !== "false";
+  }
+}
+
+function setupSoundToggles() {
+  const sfxToggle = document.getElementById("sfxToggle");
+  const bgmToggle = document.getElementById("bgmToggle");
+
+  syncSoundToggleUI();
+
+  sfxToggle?.addEventListener("change", (event) => {
+    handleSoundToggle(event.target.checked);
+  });
+
+  bgmToggle?.addEventListener("change", (event) => {
+    handleMusicToggle(event.target.checked);
+  });
+}
+
 window.toggleTheme = function() {
   document.body.classList.toggle("light-mode");
   const mode = document.body.classList.contains("light-mode") ? "light" : "dark";
@@ -96,6 +126,25 @@ window.toggleTheme = function() {
 window.goBackToSubject = function() {
   window.location.href = `quiz-difficulty.html?subject=${subject}`;
 };
+
+window.goToNextDifficulty = function() {
+  if (difficulty === "easy") {
+    window.location.href = `quiz-levels.html?subject=${subject}&difficulty=medium`;
+  }
+};
+
+function configureNextDifficultyButton() {
+  const button = document.getElementById("nextDifficultyBtn");
+  if (!button) return;
+
+  if (difficulty === "easy") {
+    button.hidden = false;
+    button.textContent = "Medium";
+    return;
+  }
+
+  button.hidden = true;
+}
 
 async function loadPublishedQuizLevels() {
   const publishedQuestions = [];
@@ -238,9 +287,11 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 loadTheme();
+configureNextDifficultyButton();
 
 initSounds();
 initGlobalClickSound();
+setupSoundToggles();
 tryStartMusic();
 
 document.body.addEventListener("click", () => {
