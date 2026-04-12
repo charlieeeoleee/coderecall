@@ -1,5 +1,5 @@
-import { electricalQuizData } from "../data/quiz-data-electrical.js?v=20260411c";
-import { hardwareQuizData } from "../data/quiz-data-hardware.js?v=20260411c";
+import { electricalQuizData } from "../data/quiz-data-electrical.js?v=20260412l";
+import { hardwareQuizData } from "../data/quiz-data-hardware.js?v=20260412l";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -118,6 +118,9 @@ const HARDWARE_QUIZ_LEVEL_FALLBACKS = {
 
 const HARDWARE_QUIZ_OVERRIDES = {
   easy: {
+    "2.3": {
+      image: "assets/modules/hardware/easy/module1/image-42.png"
+    },
     "1.3": {
       image: `${HARDWARE_DOC_IMAGE_BASE}/image10.png`
     },
@@ -201,6 +204,7 @@ let selectedChoice = null;
 let score = 0;
 let currentUser = auth.currentUser || null;
 let rationaleNextAction = "advance";
+let currentTotalXP = 0;
 
 function shuffleArray(array) {
   const cloned = [...array];
@@ -426,6 +430,33 @@ async function ensureUserDoc(uid) {
   }
 
   return userRef;
+}
+
+function renderXpDock(totalXP) {
+  currentTotalXP = Number(totalXP || 0);
+  const xpPerLevel = 100;
+  const level = Math.floor(currentTotalXP / xpPerLevel) + 1;
+  const levelXP = currentTotalXP % xpPerLevel;
+  const progressPercent = Math.max(0, Math.min(100, (levelXP / xpPerLevel) * 100));
+
+  const label = document.getElementById("levelXpDockLabel");
+  const fill = document.getElementById("levelXpDockFill");
+  const value = document.getElementById("levelXpDockValue");
+
+  if (label) label.textContent = `LEVEL ${level}`;
+  if (fill) fill.style.width = `${progressPercent}%`;
+  if (value) value.textContent = `${levelXP} / ${xpPerLevel} XP`;
+}
+
+async function syncXpDock() {
+  if (!currentUser) {
+    renderXpDock(parseInt(localStorage.getItem("guest_xp") || "0", 10));
+    return;
+  }
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  renderXpDock(Number(snap.data()?.xp || 0));
 }
 
 function getQuestionBank() {
@@ -665,8 +696,10 @@ window.closeRationale = function () {
 function addLocalXP(amount) {
   const currentXP = parseInt(localStorage.getItem("guest_xp") || "0", 10);
   const currentWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
-  localStorage.setItem("guest_xp", String(currentXP + amount));
+  const nextXP = currentXP + amount;
+  localStorage.setItem("guest_xp", String(nextXP));
   localStorage.setItem("guest_xpWeekly", String(currentWeeklyXP + amount));
+  renderXpDock(nextXP);
 }
 
 async function addLevelXP(amount) {
@@ -691,6 +724,7 @@ async function addLevelXP(amount) {
     xpChange: amount,
     lastWeeklyReset: currentWeek
   });
+  renderXpDock(currentXP + amount);
 }
 
 async function saveLevelCompletion() {
@@ -752,14 +786,8 @@ async function finishLevel() {
   document.getElementById("levelProgressFill").style.width = "100%";
   document.getElementById("levelProgressText").textContent = "100% Completed";
 
-  const alreadyDone =
-    localStorage.getItem(getLevelDoneKey()) === "true" ||
-    (difficulty === "easy" && localStorage.getItem(getLegacyLevelDoneKey()) === "true");
-
-  const earnedXP = alreadyDone ? 0 : score * XP_PER_CORRECT;
-  if (!alreadyDone) {
-    await addLevelXP(earnedXP);
-  }
+  const earnedXP = score * XP_PER_CORRECT;
+  await addLevelXP(earnedXP);
   await saveLevelCompletion();
 
   document.getElementById("resultMessage").textContent =
@@ -831,6 +859,10 @@ function initializePage() {
   prepareQuestions();
   renderQuestion();
   tryStartMusic();
+  syncXpDock().catch((error) => {
+    console.error("Error loading XP dock:", error);
+    renderXpDock(parseInt(localStorage.getItem("guest_xp") || "0", 10));
+  });
 
   document.body.addEventListener("click", () => {
     tryStartMusic();
@@ -839,6 +871,9 @@ function initializePage() {
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
+  syncXpDock().catch((error) => {
+    console.error("Error syncing XP dock:", error);
+  });
 });
 
 initializePage();

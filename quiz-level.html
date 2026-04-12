@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz-level.css?v=20260411b">
+  <link rel="stylesheet" href="styles/quiz-level.css?v=20260412l">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -62,6 +62,7 @@
 
       <div class="level-question-block">
         <h2 class="level-question-text" id="questionText">Loading question...</h2>
+        <div class="level-question-media" id="questionMedia"></div>
       </div>
 
       <div class="level-choices-grid" id="choicesContainer"></div>
@@ -72,6 +73,14 @@
       </div>
     </section>
   </main>
+
+  <aside class="level-xp-dock" id="levelXpDock" aria-label="XP progress">
+    <div class="level-xp-dock-label" id="levelXpDockLabel">LEVEL 1</div>
+    <div class="level-xp-dock-bar">
+      <div class="level-xp-dock-fill" id="levelXpDockFill"></div>
+    </div>
+    <div class="level-xp-dock-value" id="levelXpDockValue">0 / 100 XP</div>
+  </aside>
 
   <div class="level-modal" id="resultModal">
     <div class="level-modal-box">
@@ -97,8 +106,8 @@
       window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
     };
   </script>
-  <script type="module" src="scripts/quiz-level.js?v=20260411l"></script>
-  <script src="scripts/loading.js?v=20260411l" defer></script>
+  <script type="module" src="scripts/quiz-level.js?v=20260412l"></script>
+  <script src="scripts/loading.js?v=20260412l" defer></script>
 </body>
 </html>
 

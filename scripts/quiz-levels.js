@@ -130,6 +130,11 @@ window.goBackToSubject = function() {
 window.goToNextDifficulty = function() {
   if (difficulty === "easy") {
     window.location.href = `quiz-levels.html?subject=${subject}&difficulty=medium`;
+    return;
+  }
+
+  if (difficulty === "medium") {
+    window.location.href = `quiz-levels.html?subject=${subject}&difficulty=hard`;
   }
 };
 
@@ -140,6 +145,12 @@ function configureNextDifficultyButton() {
   if (difficulty === "easy") {
     button.hidden = false;
     button.textContent = "Medium";
+    return;
+  }
+
+  if (difficulty === "medium") {
+    button.hidden = false;
+    button.textContent = "Hard";
     return;
   }
 

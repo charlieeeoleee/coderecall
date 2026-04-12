@@ -892,9 +892,9 @@ export const hardwareQuizData = {
         "level":  2,
         "sub":  3,
         "question":  "This type of storage device is called:",
+        "image":  "assets/modules/hardware/easy/module1/image-42.png",
         "choices":  [
-                        "Hard Disk Drive (HD",
-                        "",
+                        "Hard Disk Drive (HDD)",
                         "Floppy Disk",
                         "Solid State Drive",
                         "SATA"
@@ -928,8 +928,9 @@ export const hardwareQuizData = {
     {
         "level":  3,
         "sub":  3,
-        "question":  "The term UEFI means:A. unified extension firmware interface",
+        "question":  "The term UEFI means:",
         "choices":  [
+                        "unified extension firmware interface",
                         "unity extension firmware internet",
                         "unified extensible firmware interface",
                         "unity extensive frostwire interconnect"
@@ -1229,74 +1230,74 @@ export const hardwareQuizData = {
     {
         "level":  12,
         "sub":  1,
-        "question":  "Which of the following is the best preventive measure to avoid CPU problems?",
+        "question":  "When working on a computer without an antistatic wrist strap, which alternative safety method should the technician perform?",
         "choices":  [
-                        "Regularly clean the CPU fan and heat sink, and apply thermal paste properly.",
-                        "Frequently reinstall the operating system to improve performance.",
-                        "Keep the computer turned on continuously to maintain consistent temperature.",
-                        "Place the CPU near a wall or in an enclosed space to save desk area."
+                        "Place hands on an insulated surface",
+                        "Touch a grounded metal object before handling components",
+                        "Wear rubber gloves while touching the motherboard",
+                        "Spray water to reduce static in the air"
                     ],
-        "answer":  "A"
+        "answer":  "B"
     },
     {
         "level":  12,
         "sub":  2,
-        "question":  "What is the MOST likely cause if a system cannot detect any drives after a BIOS reset?",
+        "question":  "What should be the best way you can do as a CSS student if your computer won’t power on?",
         "choices":  [
-                        "SATA controller disabled by default",
-                        "Corrupt user profile",
-                        "Defective mouse",
-                        "Incorrect display driver"
+                        "Ensure all connections are secured.",
+                        "Call for a maintenance help",
+                        "Search for what might be the problem",
+                        "Disassemble it and check again."
                     ],
         "answer":  "A"
     },
     {
         "level":  12,
         "sub":  3,
-        "question":  "A server shuts down when multiple peripherals are connected. What component is MOST likely undersized?",
+        "question":  "As a CSS student, how do you think you can identify and fix hardware issues when you disassemble your computer?",
         "choices":  [
-                        "Power supply unit",
-                        "Hard disk controller",
-                        "Sound card",
-                        "Monitor adapter"
+                        "When I disassemble my computer, I just clean it up and bring back its components to its designated location.",
+                        "When I disassemble my computer I make sure that no other components are being cleaned roughly.",
+                        "When I disassemble my computer I check every component if there are signs of damage and wear which helps me prevent it from getting my computer totally damaged.",
+                        "When I disassemble my computer, I am not checking any computer inside because I know I am taking care of it."
                     ],
-        "answer":  "A"
+        "answer":  "C"
     },
     {
         "level":  13,
         "sub":  1,
-        "question":  "A computer cannot connect to the network or access the internet, even though the cable and router are working fine. What could be the most likely cause of the problem?",
+        "question":  "If a motherboard is installed directly onto the metal case without standoffs, what is the most probable result?",
         "choices":  [
-                        "The network interface card (NIC) is defective or not properly installed.",
-                        "The hard drive has bad sectors that slow down the system.",
-                        "The hard drive data cable is loose or damaged.",
-                        "The hard drive fan speed is too high, causing overheating."
+                        "The board will short-circuit and may fail to boot",
+                        "The board will vibrate and loosen connections",
+                        "The CPU may not detect the fan",
+                        "The power supply will shut down permanently"
                     ],
         "answer":  "A"
     },
     {
         "level":  13,
         "sub":  2,
-        "question":  "Which issue BEST suggests a firmware-level hardware incompatibility?",
+        "question":  "In disassembling and assembling a pc or a computer, this tool is useful for prying open cases or removing certain types of screws.",
         "choices":  [
-                        "Device works in another system but not in the current one",
-                        "Mouse cursor flickers",
-                        "Slow boot animation",
-                        "Incorrect wallpaper scaling"
+                        "Philips-head screwdriver",
+                        "Flat-head screwdriver",
+                        "Torx-head screwdriver",
+                        "Both A and B"
                     ],
-        "answer":  "A"
+        "answer":  "B"
     },
     {
         "level":  13,
         "sub":  3,
-        "question":  "What is the MOST appropriate FIRST step when troubleshooting an unfamiliar hardware failure?",
+        "question":  "After shutting down your pc “cooling down” an essential step before disassembling your computer, what is an advisable minute to apply your components to cool down?",
         "choices":  [
-                        "Gather system history and error symptoms",
-                        "Replace suspected components immediately",
-                        "Reinstall the operating system",
-                        "Ignore user feedback"
+                        "5 minutes",
+                        "20-25 minutes",
+                        "15-30 minutes",
+                        "3 minutes"
                     ],
-        "answer":  "A"
+        "answer":  "C"
     },
     {
         "level":  14,
@@ -1375,12 +1376,12 @@ export const hardwareQuizData = {
     {
         "level":  16,
         "sub":  1,
-        "question":  "In what year was the first motherboard invented?",
+        "question":  "A fully assembled PC suddenly fails to boot after the technician closes the side panels. Which issue might this indicate?",
         "choices":  [
-                        "1981",
-                        "1971",
-                        "1956",
-                        "1973"
+                        "A loose power or data cable was dislodged while closing the case",
+                        "The BIOS was accidentally erased",
+                        "The CPU was not compatible with the motherboard",
+                        "The mouse driver was corrupted"
                     ],
         "answer":  "A"
     },
@@ -1554,25 +1555,37 @@ export const hardwareQuizData = {
     },
     {
         "level":  21,
-        "sub":  2,
-        "question":  "Who invented the Tabulating Machine?",
+        "sub":  1,
+        "question":  "Before conducting maintenance, what is the first step a technician must perform according to maintenance procedures?",
         "choices":  [
-                        "Charles Babbage",
-                        "Alan Turing",
-                        "Ada Lovelace",
-                        "Herman Hollerith"
+                        "Perform diagnostics immediately on the system.",
+                        "Review job requirements and maintenance schedule.",
+                        "Install updates to ensure the computer is up to date.",
+                        "Open the system unit to check for dust accumulation."
                     ],
-        "answer":  "D"
+        "answer":  "B"
+    },
+    {
+        "level":  21,
+        "sub":  2,
+        "question":  "Which tool is best used to blow away dust from computer components without touching them?",
+        "choices":  [
+                        "Compressed air",
+                        "Damp cloth",
+                        "Vacuum cleaner",
+                        "Duster"
+                    ],
+        "answer":  "A"
     },
     {
         "level":  21,
         "sub":  3,
-        "question":  "Who is being described in the picture?",
+        "question":  "What is the most common cause of a computer emitting a \"siren\" sound followed by an immediate shutdown?",
         "choices":  [
-                        "Alan Turing",
-                        "Ada Lovelace",
-                        "Charles Babbage",
-                        "Herman Hollerith"
+                        "Hard drive failure",
+                        "RAM is not properly installed",
+                        "CPU overheating",
+                        "Defective power supply"
                     ],
         "answer":  "C"
     },
@@ -1675,12 +1688,12 @@ export const hardwareQuizData = {
     {
         "level":  24,
         "sub":  3,
-        "question":  "In what year was the First color video card with 4 colors only known as  IBM CGA Color Graphics Adapter was invented?",
+        "question":  "What is the main purpose of \"5S\" in a computer laboratory or workspace?",
         "choices":  [
-                        "1977",
-                        "1981",
-                        "1984",
-                        "1984"
+                        "To make the computers run faster",
+                        "To maintain an organized, efficient, and safe work environment",
+                        "To increase the number of students in the room",
+                        "To reduce the cost of electricity"
                     ],
         "answer":  "B"
     },

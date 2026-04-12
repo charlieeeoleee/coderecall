@@ -939,10 +939,12 @@
           level: 2,
           sub: 3,
           question: "This type of storage device is called:",
+          image: "assets/modules/hardware/easy/module1/image-42.png",
           choices: [
             "Hard Disk Drive (HDD)",
             "Floppy Disk",
-            "Solid State DriveD. SATA"
+            "Solid State Drive",
+            "SATA"
           ],
           answer: "A"
         }
@@ -975,8 +977,9 @@
         {
           level: 3,
           sub: 3,
-          question: "The term UEFI means:A. unified extension firmware interface",
+          question: "The term UEFI means:",
           choices: [
+            "unified extension firmware interface",
             "unity extension firmware internet",
             "unified extensible firmware interface",
             "unity extensive frostwire interconnect"
@@ -1292,76 +1295,76 @@
         {
           level: 12,
           sub: 1,
-          question: "It is a type of output device that is used to make a hard copy of a digital document.",
+          question: "When working on a computer without an antistatic wrist strap, which alternative safety method should the technician perform?",
           choices: [
-            "Printer",
-            "Scanner",
-            "Plotter",
-            "Photo Printer"
+            "Place hands on an insulated surface",
+            "Touch a grounded metal object before handling components",
+            "Wear rubber gloves while touching the motherboard",
+            "Spray water to reduce static in the air"
+          ],
+          answer: "B"
+        },
+        {
+          level: 12,
+          sub: 2,
+          question: "What should be the best way you can do as a CSS student if your computer won’t power on?",
+          choices: [
+            "Ensure all connections are secured.",
+            "Call for a maintenance help",
+            "Search for what might be the problem",
+            "Disassemble it and check again."
           ],
           answer: "A"
         },
         {
           level: 12,
-          sub: 2,
-          question: "It is used to create or print out large graphics or designs like blueprints, maps etc.",
+          sub: 3,
+          question: "As a CSS student, how do you think you can identify and fix hardware issues when you disassemble your computer?",
           choices: [
-            "Printer",
-            "Scanner",
-            "Plotter",
-            "Projector"
+            "When I disassemble my computer, I just clean it up and bring back its components to its designated location.",
+            "When I disassemble my computer I make sure that no other components are being cleaned roughly.",
+            "When I disassemble my computer I check every component if there are signs of damage and wear which helps me prevent it from getting my computer totally damaged.",
+            "When I disassemble my computer, I am not checking any computer inside because I know I am taking care of it."
           ],
           answer: "C"
-        },
-        {
-          level: 12,
-          sub: 3,
-          question: "What is being shown in the picture?",
-          choices: [
-            "Graphic Tablet",
-            "Mouse",
-            "Keyboard",
-            "Touch Pad"
-          ],
-          answer: "D"
         }
       ],
       13: [
         {
           level: 13,
           sub: 1,
-          question: "It’s used to move the cursor on the screen, which allows us to move, drag, or click data on the monitor screen.",
+          question: "If a motherboard is installed directly onto the metal case without standoffs, what is the most probable result?",
           choices: [
-            "Mouse",
-            "Touchscreen",
-            "Touchpad",
-            "Digital pen"
+            "The board will short-circuit and may fail to boot",
+            "The board will vibrate and loosen connections",
+            "The CPU may not detect the fan",
+            "The power supply will shut down permanently"
           ],
           answer: "A"
         },
         {
           level: 13,
           sub: 2,
-          question: "It is used to project images, videos, presentations on a big white screen or board.",
+          question: "In disassembling and assembling a pc or a computer, this tool is useful for prying open cases or removing certain types of screws.",
           choices: [
-            "Projector",
-            "Monitor",
-            "Webcam",
-            "Screen"
+            "Philips-head screwdriver",
+            "Flat-head screwdriver",
+            "Torx-head screwdriver",
+            "Both A and B"
           ],
-          answer: "A"
+          answer: "B"
         },
         {
           level: 13,
           sub: 3,
-          question: "_____ is a flat surface that is commonly used on laptops to move the cursor.",
+          question: "After shutting down your pc “cooling down” an essential step before disassembling your computer, what is an advisable minute to apply your components to cool down?",
           choices: [
-            "Mouse",
-            "Digital Pen",
-            "Projector",
-            "Touch Pad"
+            "5 minutes",
+            "20-25 minutes",
+            "15-30 minutes",
+            "3 minutes"
           ],
-          answer: "D"
+          answer: "C"
         }
       ],
       14: [
@@ -1446,7 +1449,8 @@
           sub: 1,
           question: "A fully assembled PC suddenly fails to boot after the technician closes the side panels. Which issue might this indicate?",
           choices: [
-            "A loose power or data cable was dislodged while closing the caseB. The BIOS was accidentally erased",
+            "A loose power or data cable was dislodged while closing the case",
+            "The BIOS was accidentally erased",
             "The CPU was not compatible with the motherboard",
             "The mouse driver was corrupted"
           ],
@@ -1632,6 +1636,18 @@
       21: [
         {
           level: 21,
+          sub: 1,
+          question: "Before conducting maintenance, what is the first step a technician must perform according to maintenance procedures?",
+          choices: [
+            "Perform diagnostics immediately on the system.",
+            "Review job requirements and maintenance schedule.",
+            "Install updates to ensure the computer is up to date.",
+            "Open the system unit to check for dust accumulation."
+          ],
+          answer: "B"
+        },
+        {
+          level: 21,
           sub: 2,
           question: "Which tool is best used to blow away dust from computer components without touching them?",
           choices: [
@@ -1766,7 +1782,7 @@
             "To increase the number of students in the room",
             "To reduce the cost of electricity"
           ],
-          answer: "C"
+          answer: "B"
         }
       ],
       25: [
@@ -1828,7 +1844,9 @@
           question: "A desktop powers on, fans spin, but there is no POST beep and no display. Which component should be tested first using a known-working spare?",
           choices: [
             "Power Supply Unit",
-            "RAM moduleC. Hard disk driveD. Operating system files"
+            "RAM module",
+            "Hard disk drive",
+            "Operating system files"
           ],
           answer: "B"
         },
@@ -1837,7 +1855,10 @@
           sub: 3,
           question: "A system freezes only when running virtualization software. Other applications work normally. What is the MOST likely cause?",
           choices: [
-            "Insufficient RAM capacityB. Defective keyboard driverC. Corrupted display settingsD. Loose SATA cable"
+            "Insufficient RAM capacity",
+            "Defective keyboard driver",
+            "Corrupted display settings",
+            "Loose SATA cable"
           ],
           answer: "A"
         }
@@ -1860,7 +1881,10 @@
           sub: 2,
           question: "During POST, the system displays a memory count that is lower than the installed RAM. What is the BEST troubleshooting action?",
           choices: [
-            "Reinstall the operating systemB. Reseat and test RAM sticks individuallyC. Replace the CPU immediatelyD. Update antivirus definitions"
+            "Reinstall the operating system",
+            "Reseat and test RAM sticks individually",
+            "Replace the CPU immediately",
+            "Update antivirus definitions"
           ],
           answer: "B"
         },
@@ -1869,7 +1893,10 @@
           sub: 3,
           question: "A technician notices burn marks near the motherboard’s VRM area. What symptom would MOST likely appear?",
           choices: [
-            "System randomly powers off under loadB. Incorrect screen resolutionC. Slow internet connectivityD. Keyboard input delay"
+            "System randomly powers off under load",
+            "Incorrect screen resolution",
+            "Slow internet connectivity",
+            "Keyboard input delay"
           ],
           answer: "A"
         }
