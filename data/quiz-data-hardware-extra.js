@@ -1863,7 +1863,7 @@ export const hardwareQuizData = {
                         "Loose SATA data cable",
                         "Incorrect time zone settings"
                     ],
-        "answer":  "C"
+        "answer":  "B"
     },
     {
         "level":  4,

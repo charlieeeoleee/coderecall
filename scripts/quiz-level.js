@@ -1,5 +1,6 @@
-import { electricalQuizData } from "../data/quiz-data-electrical.js?v=20260412l";
-import { hardwareQuizData } from "../data/quiz-data-hardware.js?v=20260412l";
+import { electricalQuizData } from "../data/quiz-data-electrical.js?v=20260412n";
+import { hardwareQuizData } from "../data/quiz-data-hardware.js?v=20260412n";
+import { hardwareQuizData as hardwareQuizDataExtra } from "../data/quiz-data-hardware-extra.js?v=20260412n";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -238,6 +239,17 @@ function shuffleAvoidingOriginalOrder(array, identityFn = (item) => item) {
   return shuffled;
 }
 
+function groupQuestionsByLevel(questions) {
+  return (questions || []).reduce((grouped, question) => {
+    const levelKey = String(question.level);
+    if (!grouped[levelKey]) {
+      grouped[levelKey] = [];
+    }
+    grouped[levelKey].push(question);
+    return grouped;
+  }, {});
+}
+
 function normalizeAnswer(question) {
   const choices = Array.isArray(question.choices) ? [...question.choices] : [];
   let answer = question.answer;
@@ -463,8 +475,13 @@ function getQuestionBank() {
   const electricalBank = JSON.parse(JSON.stringify(electricalQuizData.electrical || {}));
 
   const hardwareBank = JSON.parse(JSON.stringify(hardwareQuizData.hardware || {}));
+  const hardwareExtraBank = hardwareQuizDataExtra.hardware || {};
   const hardwareFallbacks = HARDWARE_QUIZ_LEVEL_FALLBACKS[difficulty] || {};
   const hardwareOverrides = HARDWARE_QUIZ_OVERRIDES[difficulty] || {};
+
+  if (difficulty === "hard" && Array.isArray(hardwareExtraBank.hard)) {
+    hardwareBank.hard = groupQuestionsByLevel(JSON.parse(JSON.stringify(hardwareExtraBank.hard)));
+  }
 
   Object.entries(hardwareFallbacks).forEach(([levelKey, levelQuestions]) => {
     if (!hardwareBank[difficulty]?.[levelKey]?.length) {

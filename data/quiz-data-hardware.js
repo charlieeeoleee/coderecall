@@ -1952,9 +1952,11 @@
           question: "A system clock loses time even while the computer is running. What is the MOST likely cause?",
           choices: [
             "Corrupted OS kernel",
-            "Failing motherboard crystal oscillatorC. Loose SATA data cableD. Incorrect time zone settings"
+            "Failing motherboard crystal oscillator",
+            "Loose SATA data cable",
+            "Incorrect time zone settings"
           ],
-          answer: "C"
+          answer: "B"
         },
         {
           level: 4,
