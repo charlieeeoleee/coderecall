@@ -212,10 +212,92 @@ body {
   white-space: pre-line;
 }
 
+.module-document,
 .module-objectives,
 .module-sections,
 .module-challenge {
   padding: 24px;
+}
+
+.module-document-body {
+  display: grid;
+  gap: 18px;
+}
+
+.module-doc-card {
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 22px;
+}
+
+.module-doc-card h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.module-doc-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  opacity: 0.94;
+  white-space: pre-line;
+}
+
+.module-doc-card p + p {
+  margin-top: 12px;
+}
+
+.module-doc-table-wrap {
+  overflow-x: auto;
+}
+
+.module-doc-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.module-doc-table th,
+.module-doc-table td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.module-doc-table th {
+  background: rgba(0, 229, 255, 0.08);
+  color: #eafcff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.module-doc-table td {
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.module-doc-visual {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.module-doc-visual img {
+  width: min(180px, 100%);
+  border-radius: 14px;
+  display: block;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.module-doc-visual span {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.82;
 }
 
 .module-pill-list {
@@ -895,6 +977,24 @@ body.light-mode .module-copy {
   color: #111827;
 }
 
+body.light-mode .module-doc-card {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.015));
+  border-color: rgba(0, 0, 0, 0.06);
+  color: #111827;
+}
+
+body.light-mode .module-doc-table th {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+body.light-mode .module-doc-table td {
+  background: rgba(255, 255, 255, 0.74);
+  color: #111827;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
 body.light-mode .module-pill,
 body.light-mode .module-section-card {
   background: rgba(0, 0, 0, 0.04);
@@ -1024,6 +1124,10 @@ body.light-mode .module-btn.success-btn:disabled {
   .module-gallery-grid,
   .module-form-factor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .module-doc-table {
+    min-width: 620px;
   }
 
   .module-circuit-grid {

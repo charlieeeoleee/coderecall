@@ -18,6 +18,7 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
+import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 
 /* FIREBASE CONFIG */
 const firebaseConfig = {
@@ -155,6 +156,8 @@ window.register = async function(){
 
       await setDoc(userRef, {
         xp: existingData.xp || 0,
+        xpWeekly: existingData.xpWeekly || 0,
+        xpChange: existingData.xpChange || 0,
         name,
         email: pending.email,
         photo: pending.photo || "https://i.pravatar.cc/40?img=12",
@@ -162,6 +165,14 @@ window.register = async function(){
         role: existingData.role || "user",
         createdAt: existingData.createdAt || Date.now(),
         progress: existingData.progress || {}
+      });
+
+      await syncPublicLeaderboardEntry(db, pending.uid, {
+        name,
+        photo: pending.photo || "https://i.pravatar.cc/40?img=12",
+        xp: existingData.xp || 0,
+        xpWeekly: existingData.xpWeekly || 0,
+        xpChange: existingData.xpChange || 0
       });
 
       await transferGuestProgressIfNeeded(pending.uid);
@@ -183,6 +194,8 @@ window.register = async function(){
 
     await setDoc(doc(db, "users", cred.user.uid), {
       xp: 0,
+      xpWeekly: 0,
+      xpChange: 0,
       name,
       email,
       photo: "https://i.pravatar.cc/40?img=12",
@@ -190,6 +203,14 @@ window.register = async function(){
       role: "user",
       createdAt: Date.now(),
       progress: {}
+    });
+
+    await syncPublicLeaderboardEntry(db, cred.user.uid, {
+      name,
+      photo: "https://i.pravatar.cc/40?img=12",
+      xp: 0,
+      xpWeekly: 0,
+      xpChange: 0
     });
 
     await transferGuestProgressIfNeeded(cred.user.uid);

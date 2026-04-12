@@ -22,6 +22,7 @@ import {
   handleMusicToggle
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
+import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -468,6 +469,16 @@ function wireProfileEditor() {
         photo: nextPhoto
       });
 
+      const snap = await getDoc(userRef);
+      const data = snap.data() || {};
+      await syncPublicLeaderboardEntry(db, currentUser.uid, {
+        name: nextName,
+        photo: nextPhoto,
+        xp: Number(data.xp || 0),
+        xpWeekly: Number(data.xpWeekly || 0),
+        xpChange: Number(data.xpChange || 0)
+      });
+
       document.getElementById("usernameTop").textContent = nextName;
       document.getElementById("userPhotoTop").src = nextPhoto;
       document.getElementById("profileName").textContent = nextName;
@@ -539,6 +550,14 @@ window.resetProgress = function() {
             xpChange: 0,
             progress: {},
             results: {}
+          });
+
+          await syncPublicLeaderboardEntry(db, currentUser.uid, {
+            name: data.name || currentUser.displayName || currentUser.email || "User",
+            photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+            xp: 0,
+            xpWeekly: 0,
+            xpChange: 0
           });
         }
       }

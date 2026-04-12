@@ -17,6 +17,7 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
+import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -76,6 +77,15 @@ async function loadUserUI() {
     name = currentUser.displayName || data.name || currentUser.email || "User";
     photo = currentUser.photoURL || data.photo || "https://i.pravatar.cc/40?img=12";
   }
+
+  const data = docSnap.exists() ? docSnap.data() || {} : {};
+  await syncPublicLeaderboardEntry(db, currentUser.uid, {
+    name,
+    photo,
+    xp: Number(data.xp || 0),
+    xpWeekly: Number(data.xpWeekly || 0),
+    xpChange: Number(data.xpChange || 0)
+  });
 
   document.getElementById("username").textContent = name;
   document.getElementById("userPhoto").src = photo;

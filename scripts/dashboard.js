@@ -26,6 +26,7 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
+import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -48,6 +49,8 @@ let currentXP = 0;
 let currentIsGuest = false;
 let currentAchievements = [];
 let leaderboardData = [];
+let leaderboardState = "idle";
+let leaderboardErrorCode = "";
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
@@ -87,6 +90,8 @@ async function loadDashboard() {
   const docSnap = await getDoc(userRef);
 
   let xp = 0;
+  let xpWeekly = 0;
+  let xpChange = 0;
   let name = "User";
   let photo = "https://i.pravatar.cc/40?img=12";
 
@@ -94,6 +99,8 @@ async function loadDashboard() {
     let data = docSnap.data();
     data = await reconcileLocalProgressToFirestore(userRef, data);
     xp = data.xp || 0;
+    xpWeekly = data.xpWeekly || 0;
+    xpChange = data.xpChange || 0;
     name =
       data.name ||
       currentUser.displayName ||
@@ -130,9 +137,18 @@ async function loadDashboard() {
     const refreshedSnap = await getDoc(userRef);
     const refreshedData = await reconcileLocalProgressToFirestore(userRef, refreshedSnap.data() || {});
     xp = refreshedData.xp || 0;
+    xpWeekly = refreshedData.xpWeekly || 0;
+    xpChange = refreshedData.xpChange || 0;
   }
 
   currentXP = xp;
+  await syncPublicLeaderboardEntry(db, currentUser.uid, {
+    name,
+    photo,
+    xp,
+    xpWeekly,
+    xpChange
+  });
   updateUserUI(name, photo);
   updateStatsUI(xp);
   renderDashboardAchievements(xp, false);
@@ -276,25 +292,32 @@ function loadGuestDashboard() {
 ========================= */
 async function loadLeaderboard() {
   try {
-    const q = query(
-      collection(db, "users"),
-      orderBy("xp", "desc"),
-      limit(50)
-    );
+    leaderboardState = "loading";
+    leaderboardErrorCode = "";
+    leaderboardData = await loadPublicLeaderboard(db, "xp", 50);
 
-    const snapshot = await getDocs(q);
+    if (!leaderboardData.length && currentUser) {
+      const q = query(
+        collection(db, "users"),
+        orderBy("xp", "desc"),
+        limit(50)
+      );
 
-    leaderboardData = [];
-    snapshot.forEach((docItem) => {
-      leaderboardData.push({
-        id: docItem.id,
-        ...docItem.data()
+      const snapshot = await getDocs(q);
+      snapshot.forEach((docItem) => {
+        leaderboardData.push({
+          id: docItem.id,
+          ...docItem.data()
+        });
       });
-    });
+    }
 
+    leaderboardState = "ready";
   } catch (error) {
     console.error("Leaderboard Error:", error);
     leaderboardData = [];
+    leaderboardState = "error";
+    leaderboardErrorCode = String(error?.code || "");
   }
 }
 
@@ -323,6 +346,14 @@ function renderDashboardLeaderboardPreview() {
   const topPlayers = buildDashboardLeaderboardPlayers();
 
   if (!topPlayers.length) {
+    if (leaderboardState === "error") {
+      const message = leaderboardErrorCode.includes("permission-denied")
+        ? "Leaderboard unavailable for this account right now."
+        : "Leaderboard is temporarily unavailable.";
+      container.innerHTML = `<div class="preview-empty">${message}</div>`;
+      return;
+    }
+
     container.innerHTML = `<div class="preview-empty">No leaderboard data yet.</div>`;
     return;
   }

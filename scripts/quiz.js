@@ -20,6 +20,7 @@ import {
   handleSoundToggle,
   handleMusicToggle
 } from "./sound.js";
+import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import { hardwarePosttestQuestions } from "../data/hardware-posttest-data.js";
 import {
@@ -651,6 +652,14 @@ async function addXP(amount) {
       xpWeekly: currentWeeklyXP + amount,
       xpChange: amount,
       lastWeeklyReset: currentWeek
+    });
+
+    await syncPublicLeaderboardEntry(db, currentUser.uid, {
+      name: data.name || currentUser.displayName || currentUser.email || "User",
+      photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+      xp: currentXP + amount,
+      xpWeekly: currentWeeklyXP + amount,
+      xpChange: amount
     });
 
     return;

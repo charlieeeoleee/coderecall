@@ -12,6 +12,7 @@ import {
   handleSoundToggle,
   handleMusicToggle
 } from "./sound.js";
+import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -742,6 +743,14 @@ async function addLevelXP(amount) {
     xpWeekly: currentWeeklyXP + amount,
     xpChange: amount,
     lastWeeklyReset: currentWeek
+  });
+
+  await syncPublicLeaderboardEntry(db, currentUser.uid, {
+    name: data.name || currentUser.displayName || currentUser.email || "User",
+    photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+    xp: currentXP + amount,
+    xpWeekly: currentWeeklyXP + amount,
+    xpChange: amount
   });
   renderXpDock(currentXP + amount);
 }

@@ -7,6 +7,7 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
+import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
 import { MODULE_IMAGES } from "../data/module-images.js";
 import { MODULE_SUPPLEMENTAL_IMAGES } from "../data/module-supplemental-images.js";
@@ -131,23 +132,23 @@ const LITERAL_IMAGE_CAPTIONS = {
   "assets/modules/electrical/medium/module2/image-03.jpg": "Direct current circuit example",
   "assets/modules/electrical/medium/module2/image-04.png": "DC and AC comparison diagram",
   "assets/modules/electrical/medium/module2/image-05.png": "Alternating current RLC circuit",
-  "assets/modules/electrical/medium/module3/image-01.jpg": "Single-core and stranded wire conductors",
-  "assets/modules/electrical/medium/module3/image-02.jpg": "Coaxial cable connectors",
+  "assets/modules/electrical/medium/module3/image-01.jpg": "THHN single-conductor wire",
+  "assets/modules/electrical/medium/module3/image-02.jpg": "Coaxial cable",
   "assets/modules/electrical/medium/module3/image-03.jpg": "Shielded multi-core cable",
-  "assets/modules/electrical/medium/module3/image-04.jpg": "Color-coded insulated electrical wires",
-  "assets/modules/electrical/medium/module3/image-05.jpg": "Multi-core power cable",
-  "assets/modules/electrical/medium/module3/image-06.jpg": "Stranded copper wire pair",
-  "assets/modules/electrical/medium/module3/image-07.png": "Wire gauge and ampacity table",
+  "assets/modules/electrical/medium/module3/image-04.jpg": "MTW machine tool wire",
+  "assets/modules/electrical/medium/module3/image-05.jpg": "UF underground feeder cable",
+  "assets/modules/electrical/medium/module3/image-06.jpg": "Stranded copper wire",
+  "assets/modules/electrical/medium/module3/image-07.png": "AWG ampacity reference table",
   "assets/modules/electrical/medium/module3/image-08.jpg": "PVC electrical conduit pipes",
-  "assets/modules/electrical/medium/module3/image-09.jpg": "UTP and STP cable comparison",
+  "assets/modules/electrical/medium/module3/image-09.jpg": "Twisted pair cable (UTP and STP)",
   "assets/modules/electrical/medium/module3/image-10.jpg": "Heat-shrink tubing assortment",
-  "assets/modules/electrical/medium/module3/image-11.jpg": "Metal conduit with insulated conductors",
-  "assets/modules/electrical/medium/module3/image-12.jpg": "Insulated conductor wire samples",
-  "assets/modules/electrical/medium/module3/image-13.jpg": "AWG wire size comparison chart",
-  "assets/modules/electrical/medium/module3/image-14.jpg": "Fiber optic cable connectors",
+  "assets/modules/electrical/medium/module3/image-11.jpg": "Conductors in metal conduit",
+  "assets/modules/electrical/medium/module3/image-12.jpg": "XHHW insulated wire samples",
+  "assets/modules/electrical/medium/module3/image-13.jpg": "AWG wire size comparison",
+  "assets/modules/electrical/medium/module3/image-14.jpg": "Fiber optic cable",
   "assets/modules/electrical/medium/module3/image-15.jpg": "Two-core flexible cable",
-  "assets/modules/electrical/medium/module3/image-16.jpg": "Solid wire gauge comparison",
-  "assets/modules/electrical/medium/module3/image-17.jpg": "Industrial multi-core cable bundle",
+  "assets/modules/electrical/medium/module3/image-16.jpg": "Solid conductor gauge comparison",
+  "assets/modules/electrical/medium/module3/image-17.jpg": "MC armored multi-core cable",
   "assets/modules/electrical/hard/module1/image-01.jpg": "Cable raceway channels",
   "assets/modules/electrical/hard/module1/image-02.jpg": "Inline wire connector",
   "assets/modules/electrical/hard/module1/image-03.png": "Parallel and series circuit comparison",
@@ -1285,6 +1286,14 @@ async function awardModuleXPOnce() {
       lastWeeklyReset: currentWeek,
       progress
     });
+
+    await syncPublicLeaderboardEntry(db, currentUser.uid, {
+      name: data.name || currentUser.displayName || currentUser.email || "User",
+      photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+      xp: currentXP + MODULE_XP_REWARD,
+      xpWeekly: currentWeeklyXP + MODULE_XP_REWARD,
+      xpChange: MODULE_XP_REWARD
+    });
     return MODULE_XP_REWARD;
   }
 
@@ -1338,6 +1347,14 @@ async function awardQuickCheckXP(score) {
       xpChange: delta,
       lastWeeklyReset: currentWeek,
       progress
+    });
+
+    await syncPublicLeaderboardEntry(db, currentUser.uid, {
+      name: data.name || currentUser.displayName || currentUser.email || "User",
+      photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+      xp: currentXP + delta,
+      xpWeekly: currentWeeklyXP + delta,
+      xpChange: delta
     });
 
     return delta;
@@ -1493,23 +1510,23 @@ function getImageInfo(moduleTitle, caption, index) {
     "Direct current circuit example": "This circuit example shows direct current flowing in one direction from the source through the load.",
     "DC and AC comparison diagram": "This diagram compares direct current, which flows one way, with alternating current, which reverses direction.",
     "Alternating current RLC circuit": "This diagram shows an AC circuit with resistor, inductor, and capacitor components responding to a sinusoidal source.",
-    "Single-core and stranded wire conductors": "This image compares solid and stranded conductors used in different electrical wiring situations.",
-    "Coaxial cable connectors": "These coaxial cable connectors are used for shielded signal transmission in communication and video systems.",
-    "Shielded multi-core cable": "This cable contains multiple insulated conductors protected by shielding and an outer jacket.",
-    "Color-coded insulated electrical wires": "These insulated wires use color coding to help identify conductors during installation and maintenance.",
-    "Multi-core power cable": "This power cable groups several insulated conductors inside one outer sheath for organized wiring runs.",
-    "Stranded copper wire pair": "This image shows flexible stranded copper conductors used where easier bending and routing are needed.",
-    "Wire gauge and ampacity table": "This table connects wire size with current capacity to help choose a safe conductor for the load.",
+    "THHN single-conductor wire": "THHN is a single conductor wire with heat-resistant insulation and a nylon coating. It is commonly pulled through conduit in commercial and industrial buildings.",
+    "Coaxial cable": "Coaxial cable uses a single inner conductor, insulation, shielding, and an outer jacket. It is commonly used for cable television, antennas, and internet modems.",
+    "Shielded multi-core cable": "This shielded multi-core cable groups several insulated conductors inside one jacket and adds shielding to reduce interference in communication or control wiring.",
+    "MTW machine tool wire": "MTW machine tool wire is a flexible single conductor that is heat- and oil-resistant. It is commonly used in machines, control panels, and appliance wiring.",
+    "UF underground feeder cable": "UF cable is similar to Romex but is rated for underground use. Its outer sheath resists moisture, soil, and sunlight for outdoor installations.",
+    "Stranded copper wire": "Stranded copper wire is made of many fine strands, making it more flexible than solid wire and easier to route in equipment or movable connections.",
+    "AWG ampacity reference table": "This table relates AWG wire sizes to current capacity so students can match conductor thickness with a safe electrical load.",
     "PVC electrical conduit pipes": "These conduit pipes protect wires from damage and help route conductors through an installation.",
-    "UTP and STP cable comparison": "This comparison shows unshielded and shielded twisted pair cables used in communication wiring.",
+    "Twisted pair cable (UTP and STP)": "Twisted pair cable uses paired conductors to reduce interference. UTP and STP are widely used for Ethernet, telephones, and data transmission.",
     "Heat-shrink tubing assortment": "Heat-shrink tubing is used to insulate, cover, and protect electrical connections after installation.",
-    "Metal conduit with insulated conductors": "This image shows insulated conductors routed inside metal conduit for added mechanical protection.",
-    "Insulated conductor wire samples": "These sample conductors show different insulation colors and internal wire types used in wiring work.",
-    "AWG wire size comparison chart": "This chart compares AWG sizes to show how conductor thickness changes from one wire size to another.",
-    "Fiber optic cable connectors": "These connectors are used with fiber optic cables for high-speed light-based data transmission.",
+    "Conductors in metal conduit": "This image shows conductors installed inside metal conduit, a method commonly used where extra mechanical protection is required.",
+    "XHHW insulated wire samples": "XHHW wire uses durable insulation suitable for wet or dry locations and is often used in industrial installations.",
+    "AWG wire size comparison": "This chart compares wire gauge sizes to show how conductor thickness changes from one AWG value to another.",
+    "Fiber optic cable": "Fiber optic cable uses glass or plastic fibers to transmit light signals and is used for high-speed data and telecommunication systems.",
     "Two-core flexible cable": "This flexible cable contains two conductors inside one outer jacket for portable or light-duty connections.",
-    "Solid wire gauge comparison": "This comparison shows how solid conductors vary in thickness across different wire gauge sizes.",
-    "Industrial multi-core cable bundle": "This bundle shows several heavy-duty multi-core cables used for larger electrical and industrial applications.",
+    "Solid conductor gauge comparison": "This comparison shows how solid conductors vary in thickness across different wire gauge sizes for different current needs.",
+    "MC armored multi-core cable": "MC or armored cable encloses multiple conductors inside a protective metal sheath and is commonly used in exposed commercial runs or retrofit work.",
     "Cable raceway channels": "These raceway channels are used to organize and protect conductors along structured wiring paths.",
     "Inline wire connector": "This inline connector joins conductors in a wiring run while keeping the connection enclosed.",
     "Parallel and series circuit comparison": "This diagram compares parallel and series circuit layouts to show how current paths differ.",
@@ -1616,6 +1633,499 @@ function curateModuleImages(title, images) {
   });
 }
 
+const DOCUMENT_LAYOUTS = {
+  "Introduction to Electricity and Electronics": {
+    sections: [
+      {
+        heading: "What Is Electricity?",
+        paragraphs: [
+          "Electricity is a form of energy created by the movement of electrons. It powers tools, appliances, machines, and modern systems used in daily life.",
+          "Atoms contain protons, neutrons, and electrons. When electrons move from one atom to another, electric charge and electric current are produced."
+        ]
+      },
+      {
+        heading: "What A Circuit Needs",
+        paragraphs: [
+          "A simple circuit usually needs a source, a conductive path, a load, and sometimes a switch to control current flow.",
+          "When the path is complete, electrons can move through the conductor and the load."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Two Main Forms of Electricity",
+        columns: ["Type", "How It Behaves", "Common Example"],
+        rows: [
+          ["Static Electricity", "Electricity at rest caused by an imbalance of charge on a surface.", "A balloon rubbed on hair or a shock from a doorknob."],
+          ["Current Electricity", "Continuous flow of electrons through a conductor.", "Lighting, appliances, phones, and machines."]
+        ]
+      }
+    ]
+  },
+  "Personal Protective Equipment (PPE)": {
+    sections: [
+      {
+        heading: "Why PPE Matters",
+        paragraphs: [
+          "PPE is a vital line of defense against electric shock, arc flash burns, flying debris, and noise exposure.",
+          "It reduces injury severity and protects important parts of the body while working around energized circuits or high-voltage equipment."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Common Electrical PPE and Their Functions",
+        columns: ["PPE Item", "Visual", "Description", "Example Use"],
+        rows: [
+          [
+            "Insulated gloves",
+            { src: "assets/modules/electrical/easy/module2/image-06.jpg", caption: "Insulated protective gloves" },
+            "Provide a barrier between the skin and electric current.",
+            "Used when working on live wires or exposed conductors."
+          ],
+          [
+            "Safety goggles / face shield",
+            { src: "assets/modules/electrical/easy/module2/image-03.jpg", caption: "Face shield helmet" },
+            "Protect the eyes and face from arc flashes, sparks, and flying fragments.",
+            "Used while grinding, soldering, or testing circuits."
+          ],
+          [
+            "Rubber-soled boots",
+            { src: "assets/modules/electrical/easy/module2/image-05.jpg", caption: "Electrical safety boots" },
+            "Help prevent grounding through the body by insulating the wearer from the floor.",
+            "Used on wet floors, metallic floors, or outdoor setups."
+          ],
+          [
+            "Flame-resistant clothing",
+            { src: "assets/modules/electrical/easy/module1/image-04.png", caption: "High-visibility work coveralls" },
+            "Made from materials that resist ignition and melting under heat or arc flash exposure.",
+            "Worn during high-voltage or industrial electrical work."
+          ]
+        ]
+      }
+    ]
+  },
+  "Tools for Electrical Work": {
+    sections: [
+      {
+        heading: "Use The Right Tool",
+        paragraphs: [
+          "The right tool improves safety, accuracy, and speed. The wrong tool can damage equipment, create hazards, or cause poor electrical connections."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Essential Electrical Tools and Their Uses",
+        columns: ["Tool", "Visual", "Purpose", "Example Use"],
+        rows: [
+          ["Insulated screwdriver", { src: "assets/modules/electrical/easy/module3/image-05.jpg", caption: "Insulated screwdriver set" }, "Tightens or loosens terminals with added protection.", "Installing switches, outlets, or terminal blocks."],
+          ["Combination pliers", { src: "assets/modules/electrical/easy/module3/image-09.jpg", caption: "Lineman pliers" }, "Grips, bends, twists, and cuts wires.", "Twisting wires together before connecting them."],
+          ["Wire stripper", { src: "assets/modules/electrical/easy/module3/image-03.jpg", caption: "Wire stripper" }, "Removes insulation without damaging the conductor.", "Preparing wires before connection."],
+          ["Needle-nose pliers", { src: "assets/modules/electrical/easy/module3/image-07.jpg", caption: "Long nose pliers" }, "Reaches into tight spaces and holds small wires.", "Guiding wires inside boxes or enclosures."],
+          ["Multimeter", { src: "assets/modules/electrical/easy/module3/image-01.jpg", caption: "Digital multimeter" }, "Measures voltage, current, resistance, and continuity.", "Checking outlet voltage or diagnosing a fault."],
+          ["Fish tape", { src: "assets/modules/electrical/easy/module3/image-08.jpg", caption: "Fish tape wire puller" }, "Pulls wires through conduits, ceilings, or wall cavities.", "Routing new conductors in a building."]
+        ]
+      }
+    ]
+  },
+  "Basic Electrical Quantities": {
+    sections: [
+      {
+        heading: "Core Electrical Values",
+        paragraphs: [
+          "Voltage, current, resistance, and power are the four main electrical quantities students must understand before solving circuit problems.",
+          "Each quantity has its own meaning, unit, and measuring method inside a circuit."
+        ]
+      },
+      {
+        heading: "Using Ohm's Law",
+        paragraphs: [
+          "Ohm's Law links voltage, current, and resistance through the relationship V = I x R.",
+          "It is one of the most important tools for circuit analysis, design, and troubleshooting."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Electrical Quantities Reference",
+        columns: ["Quantity", "Symbol", "Unit", "Measuring Tool"],
+        rows: [
+          ["Voltage", "V", "Volt", "Voltmeter"],
+          ["Current", "I", "Ampere", "Ammeter"],
+          ["Resistance", "R", "Ohm", "Ohmmeter / Multimeter"],
+          ["Power", "P", "Watt", "Calculated"]
+        ]
+      }
+    ]
+  },
+  "Direct Current (DC) vs. Alternating Current (AC)": {
+    sections: [
+      {
+        heading: "Direct Current",
+        paragraphs: [
+          "Direct current flows in one direction only and is common in batteries, power banks, solar panels, and many portable devices.",
+          "It is steady and well suited for low-voltage electronics."
+        ]
+      },
+      {
+        heading: "Alternating Current",
+        paragraphs: [
+          "Alternating current reverses direction periodically and is the standard form used in homes, schools, and power distribution networks.",
+          "Its main advantage is that it can be stepped up or down more easily for efficient transmission."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "DC vs AC Comparison",
+        columns: ["Type", "Direction of Flow", "Frequency", "Common Sources"],
+        rows: [
+          ["Direct Current (DC)", "Flows in one direction only", "0 Hz", "Batteries, solar panels, USB chargers"],
+          ["Alternating Current (AC)", "Reverses direction periodically", "50 or 60 Hz", "Household outlets, generators, appliances"]
+        ]
+      }
+    ]
+  },
+  "Types of Wires and Cables": {
+    sections: [
+      {
+        heading: "Wire and Cable Basics",
+        paragraphs: [
+          "A wire is a single conductor, while a cable groups multiple conductors inside one sheath or jacket.",
+          "This distinction is important when selecting materials for power, signal, or communication work."
+        ]
+      },
+      {
+        heading: "Choosing The Right One",
+        paragraphs: [
+          "Selection depends on the environment, the required current, the type of insulation, and how much physical protection the installation needs.",
+          "Gauge and insulation both affect safety, efficiency, and code compliance."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Common Types of Wires and Cables",
+        columns: ["Type", "Description", "Typical Application"],
+        rows: [
+          ["THHN", "Single conductor wire with heat-resistant insulation and nylon coating.", "Commercial or industrial conduit runs"],
+          ["Romex", "Non-metallic sheathed cable with hot, neutral, and ground conductors.", "Residential lighting, outlets, and switches"],
+          ["UF Cable", "Underground feeder cable with moisture-resistant outer sheath.", "Outdoor and underground installations"],
+          ["Coaxial Cable", "Single inner conductor with shielding to reduce signal loss.", "TV, cable, and internet modems"],
+          ["Twisted Pair", "Paired conductors twisted to reduce interference.", "Ethernet, telephones, and data transmission"],
+          ["MC Cable", "Metal-clad cable with built-in physical protection.", "Commercial exposed runs without conduit"]
+        ]
+      }
+    ]
+  },
+  "Wiring Methods": {
+    sections: [
+      {
+        heading: "Why Wiring Methods Matter",
+        paragraphs: [
+          "Wiring methods determine how conductors are routed, protected, and maintained in real installations.",
+          "The correct method improves safety and makes future inspection and repair easier."
+        ]
+      },
+      {
+        heading: "From Route To Connection",
+        paragraphs: [
+          "This module also supports understanding of how series, parallel, and splice connections work inside practical wiring setups.",
+          "The installation method and the type of connection both affect circuit performance and serviceability."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Common Wiring Methods",
+        columns: ["Method", "Description", "Typical Use"],
+        rows: [
+          ["Conduit Wiring", "Conductors are enclosed in rigid or flexible tubing.", "Industrial plants, commercial buildings, outdoor areas"],
+          ["Cable Tray", "Cables rest on a ventilated support structure.", "Factories, data centers, utility tunnels"],
+          ["Raceway", "Surface-mounted enclosed channel for wires.", "Offices, schools, visible classroom wiring"],
+          ["Direct Burial", "Outdoor-rated cable is buried directly in soil.", "Garden lighting, outdoor feeders"],
+          ["Armored Cable", "Cable includes metal armor for mechanical protection.", "Retrofits and commercial remodels"],
+          ["Flexible Metal Conduit", "Spiral-wrapped conduit bends easily around equipment.", "Motors, HVAC units, pumps"]
+        ]
+      }
+    ]
+  },
+  "Passive Components": {
+    sections: [
+      {
+        heading: "Passive Component Roles",
+        paragraphs: [
+          "Passive components do not generate energy. Instead, they limit, store, or shape electrical energy in a circuit.",
+          "Resistors, capacitors, and inductors each affect current and voltage in different ways."
+        ]
+      },
+      {
+        heading: "Identification and Application",
+        paragraphs: [
+          "Students should be able to identify symbols, units, and common uses for each passive component type.",
+          "This includes resistor color codes, capacitor polarity, and the magnetic behavior of inductors."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Main Passive Components",
+        columns: ["Component", "Main Function", "Unit", "Example Use"],
+        rows: [
+          ["Resistor", "Limits current or divides voltage.", "Ohm", "LED protection, signal conditioning, voltage dividers"],
+          ["Capacitor", "Stores and releases electrical energy.", "Farad", "Filtering, timing, power smoothing"],
+          ["Inductor", "Stores energy in a magnetic field and resists current change.", "Henry", "Power supplies, filters, RF circuits"]
+        ]
+      }
+    ]
+  },
+  "Active Components": {
+    sections: [
+      {
+        heading: "How Active Parts Differ",
+        paragraphs: [
+          "Active components require power and actively control the movement of current or signals in a circuit.",
+          "They are used for switching, amplifying, regulating, and combining multiple circuit functions."
+        ]
+      },
+      {
+        heading: "Building Real Electronic Systems",
+        paragraphs: [
+          "This lesson connects single active parts like diodes and transistors to integrated circuits, relays, switches, and connectors.",
+          "That helps students see how active devices work together in practical electronics."
+        ]
+      }
+    ],
+    tables: [
+      {
+        title: "Main Active Components",
+        columns: ["Component", "Main Function", "Example Use"],
+        rows: [
+          ["Diode", "Allows current to flow in one direction.", "Rectifiers, voltage regulation, LEDs"],
+          ["Transistor", "Acts as a switch or amplifier.", "Turning motors or LEDs on and off, boosting signals"],
+          ["Integrated Circuit", "Combines many components in one package.", "Timers, logic gates, amplifiers"]
+        ]
+      }
+    ]
+  },
+  "Parts of the Computer and Input Output Devices": {
+    tables: [
+      {
+        title: "Common Computer Parts",
+        columns: ["Category", "Examples", "Main Function"],
+        rows: [
+          ["Input devices", "Keyboard, mouse, microphone", "Send data or commands into the computer"],
+          ["Output devices", "Monitor, printer, speakers", "Present information from the computer to the user"],
+          ["Internal parts", "CPU, RAM, PSU, HDD, BIOS, CMOS", "Process, store, power, and manage system operation"]
+        ]
+      }
+    ]
+  },
+  "Safety Tools": {
+    tables: [
+      {
+        title: "Safety and ESD Tools",
+        columns: ["Tool", "Main Protection", "Example Use"],
+        rows: [
+          ["Safety goggles and gloves", "Protect the technician from debris and handling risks", "Computer repair and cleaning tasks"],
+          ["Anti-static wrist strap", "Prevents electrostatic discharge from damaging parts", "Handling RAM, motherboard, and add-on cards"],
+          ["Anti-static mat", "Creates a safer grounded work surface", "Bench repair and component handling"],
+          ["Compressed air and cleaning cloth", "Supports safe cleaning without damaging components", "Preventive maintenance and dust removal"]
+        ]
+      }
+    ]
+  },
+  OHS: {
+    tables: [
+      {
+        title: "OHS Focus Areas",
+        columns: ["Focus", "Why It Matters", "Typical Practice"],
+        rows: [
+          ["Clean workspace", "Reduces accidents and protects equipment", "Keep tools arranged and remove clutter"],
+          ["Correct behavior", "Prevents unsafe actions in the lab", "Follow instructions and avoid horseplay"],
+          ["Hazard awareness", "Helps learners avoid preventable risks", "Recognize electrical, chemical, and physical hazards"]
+        ]
+      }
+    ]
+  },
+  Motherboard: {
+    tables: [
+      {
+        title: "Motherboard Parts and Functions",
+        columns: ["Part", "Role", "Why It Matters"],
+        rows: [
+          ["CPU socket", "Holds the processor", "Determines processor compatibility"],
+          ["RAM slots", "Hold memory modules", "Affect memory capacity and upgrade path"],
+          ["PCIe slots", "Support expansion cards", "Allow GPUs, network cards, and other add-ons"],
+          ["SATA / NVMe interfaces", "Connect storage devices", "Affect drive support and performance"],
+          ["CMOS battery", "Keeps time and firmware settings", "Preserves BIOS or UEFI configuration"]
+        ]
+      }
+    ]
+  },
+  "Basic Computer Configuration Setup": {
+    tables: [
+      {
+        title: "Configuration Workflow",
+        columns: ["Stage", "Main Focus", "Example Task"],
+        rows: [
+          ["Preparation", "Safety and workspace readiness", "Power down, use ESD protection, organize tools"],
+          ["Disassembly", "Remove parts in safe order", "Disconnect cables and remove components carefully"],
+          ["Assembly", "Install parts in proper sequence", "Mount board, install CPU and RAM, connect PSU"],
+          ["Testing", "Check POST and startup behavior", "Listen for beeps and confirm drives are detected"]
+        ]
+      }
+    ]
+  },
+  "Preventive Maintenance": {
+    tables: [
+      {
+        title: "Preventive Maintenance Checklist",
+        columns: ["Area", "What To Do", "Purpose"],
+        rows: [
+          ["Planning", "Review schedule and requirements first", "Keeps maintenance organized and complete"],
+          ["Cleaning", "Use compressed air and proper tools", "Removes dust and reduces heat buildup"],
+          ["Inspection", "Check RAM seating, cables, screws, and wear", "Helps find faults before failure happens"],
+          ["Software safety", "Create a System Restore Point before updates", "Protects the system during software maintenance"]
+        ]
+      }
+    ]
+  },
+  Troubleshooting: {
+    tables: [
+      {
+        title: "Troubleshooting Paths",
+        columns: ["Symptom", "Possible Cause", "First Check"],
+        rows: [
+          ["No power", "PSU, cable, switch, or outlet issue", "Verify power source and PSU switch"],
+          ["No display or beep", "RAM, motherboard, or POST issue", "Reseat or test RAM and inspect startup clues"],
+          ["Sudden shutdown", "Overheating or unstable power", "Check fans, heatsinks, and airflow"],
+          ["No boot device", "Drive, cable, or BIOS detection issue", "Inspect storage connection and firmware settings"]
+        ]
+      }
+    ]
+  },
+  History: {
+    tables: [
+      {
+        title: "Computer History Figures",
+        columns: ["Name", "Known For", "Historical Importance"],
+        rows: [
+          ["Charles Babbage", "Analytical Engine", "Early concept of programmable computation"],
+          ["Ada Lovelace", "Algorithm design", "Often cited as an early programming pioneer"],
+          ["Alan Turing", "Computation theory", "Helped shape modern computer science"],
+          ["Tim Berners-Lee", "World Wide Web", "Transformed how information is shared online"]
+        ]
+      }
+    ]
+  }
+};
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function getDocumentLayout(data, lessonDetails) {
+  const preset = DOCUMENT_LAYOUTS[data?.title] || {};
+  const overview = String(data?.content || "")
+    .split(/\n\s*\n/)[0]
+    ?.trim();
+
+  if (preset.sections || preset.tables) {
+    return {
+      structured: true,
+      sections: [
+        ...(overview ? [{
+          heading: "Lesson Overview",
+          paragraphs: [overview]
+        }] : []),
+        ...(preset.sections || [])
+      ],
+      tables: preset.tables || []
+    };
+  }
+
+  const baseSections = String(data?.content || "")
+    .split(/\n\s*\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((paragraph, index) => ({
+      heading: index === 0 ? "Lesson Overview" : `Lesson Note ${index + 1}`,
+      paragraphs: [paragraph]
+    }));
+
+  return {
+    structured: false,
+    sections: [...baseSections, ...((lessonDetails?.sections || []).map((item) => ({
+      heading: item.heading,
+      paragraphs: [item.body]
+    })))],
+    tables: []
+  };
+}
+
+function renderDocumentLayout(data, lessonDetails) {
+  const section = document.getElementById("moduleDocumentSection");
+  const container = document.getElementById("moduleDocument");
+  if (!section || !container || !data) return;
+
+  const layout = getDocumentLayout(data, lessonDetails);
+  const hasContent = layout.sections.length || layout.tables.length;
+  section.hidden = !hasContent;
+  container.innerHTML = "";
+
+  if (!hasContent) return;
+
+  layout.sections.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "module-doc-card";
+    const paragraphs = (item.paragraphs || [])
+      .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+      .join("");
+    card.innerHTML = `<h3>${escapeHtml(item.heading)}</h3>${paragraphs}`;
+    container.appendChild(card);
+  });
+
+  layout.tables.forEach((table) => {
+    const card = document.createElement("article");
+    card.className = "module-doc-card";
+    const head = table.columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
+    const rows = table.rows.map((row) => {
+      const cols = row.map((cell) => {
+        if (cell && typeof cell === "object" && cell.src) {
+          return `
+            <td>
+              <div class="module-doc-visual">
+                <img src="${escapeHtml(cell.src)}" alt="${escapeHtml(cell.caption || "Module visual")}">
+                <span>${escapeHtml(cell.caption || "")}</span>
+              </div>
+            </td>
+          `;
+        }
+        return `<td>${escapeHtml(cell)}</td>`;
+      }).join("");
+      return `<tr>${cols}</tr>`;
+    }).join("");
+
+    card.innerHTML = `
+      <h3>${escapeHtml(table.title)}</h3>
+      <div class="module-doc-table-wrap">
+        <table class="module-doc-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
 function getNextModuleUrl() {
   if (moduleNumber >= totalModulesForDifficulty) {
     return `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
@@ -1639,6 +2149,8 @@ async function renderModulePage() {
   const challengePoints = document.getElementById("challengePoints");
 
   const lessonDetails = data ? buildGamifiedLesson(data) : null;
+  const documentLayout = data ? getDocumentLayout(data, lessonDetails) : null;
+  const sectionCardsShell = sections?.closest(".module-sections");
 
   document.getElementById("moduleSubject").textContent = subjectName;
   document.getElementById("moduleDifficulty").textContent = difficultyName;
@@ -1692,7 +2204,11 @@ async function renderModulePage() {
     moduleNumber < totalModulesForDifficulty ? "Next Module" : "Return to Modules";
   document.getElementById("moduleActionBtn").onclick = startQuiz;
   renderPills(objectives, lessonDetails?.objectives || []);
-  renderSections(sections, lessonDetails?.sections || []);
+  renderSections(sections, documentLayout?.structured ? [] : (lessonDetails?.sections || []));
+  if (sectionCardsShell) {
+    sectionCardsShell.hidden = Boolean(documentLayout?.structured);
+  }
+  renderDocumentLayout(data, lessonDetails);
   renderChallenge(challengeTitle, challengePrompt, challengePoints, lessonDetails?.challenge);
   renderHistoryTimeline(data);
   renderSolderingProcess(data);
