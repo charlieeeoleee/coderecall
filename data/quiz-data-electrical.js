@@ -192,6 +192,18 @@
         }
       ],
       6: [
+                {
+          level: 6,
+          sub: 1,
+          question: "Which tool is used to tighten or loosen nuts and bolts in electrical equipment? ",
+          choices: [
+            "Screwdriver",
+            "Pliers",
+            "Wrench ",
+            "Hammer"
+          ],
+          answer: "C"
+        },
         {
           level: 6,
           sub: 2,
@@ -468,7 +480,7 @@
             "Emitter, base, collector",
             "Positive, negative, ground"
           ],
-          answer: "B"
+          answer: "C"
         },
         {
           level: 13,
@@ -484,6 +496,18 @@
         }
       ],
       14: [
+        {
+          level: 14,
+          sub: 1,
+          question: "What is a schematic diagram",
+          choices: [
+            "A photograph of an electrical circuit",
+            "A drawing of a building's floor plan",
+            "A symbolic representation of an electrical circuit",
+            "A list of electrical components "
+          ],
+          answer: "C"
+        },
         {
           level: 14,
           sub: 2,
@@ -646,7 +670,7 @@
             "Green or bare copper",
             "White"
           ],
-          answer: "D"
+          answer: "C"
         },
         {
           level: 18,
@@ -689,12 +713,12 @@
         {
           level: 19,
           sub: 3,
-          question: "What type of current does a transformer operate on? D. Static current",
+          question: "What type of current does a transformer operate on?",
           choices: [
-            "Direct current (D",
-            "(-1)",
+            "Direct current (DC) (-1)",
             "Pulsating DC (-2)",
-            "Alternating current (A"
+            "Alternating current (AC)",
+            "Static current"
           ],
           answer: "C"
         }
@@ -1000,9 +1024,9 @@
             "Ammeter",
             "Ohmmeter",
             "Voltmeter",
-            "Wattmeter Answer: C"
+            "Wattmeter"
           ],
-          answer: null
+          answer: "C"
         }
       ],
       3: [
@@ -1333,6 +1357,18 @@
             "Fixed polarity"
           ],
           answer: "C"
+        },
+        {
+          level: 11,
+          sub: 3,
+          question: "In comparison to Alternating Current (AC), which key characteristic definitively defines Direct Current (DC) as used in battery-powered devices?",
+          choices: [
+            "It changes direction periodically.",
+            "It flows in one direction only.",
+            "It alternates 60 times per second.",
+            "It reverses polarity frequently."
+          ],
+          answer: "B"
         }
       ],
       12: [
@@ -1429,7 +1465,7 @@
           sub: 2,
           question: "A circuit protection device designed to interrupt power when excessive current flows, preventing damage from overloads or short circuits, is called:",
           choices: [
-            "Miniature Circuit Breaker (MC",
+            "Miniature Circuit Breaker (MCB)",
             "RCD or GFCI",
             "Fuse Holder",
             "Rectifier"
@@ -1465,14 +1501,14 @@
         {
           level: 15,
           sub: 2,
-          question: "Which protection device is designed to automatically reset or be manually reset after interrupting a circuit due to an overload or short circuit? Answer B",
+          question: "Which protection device is designed to automatically reset or be manually reset after interrupting a circuit due to an overload or short circuit?",
           choices: [
             "Fuse",
             "Circuit Breaker",
             "Resistor",
             "Capacitor"
           ],
-          answer: null
+          answer: "B"
         },
         {
           level: 15,
@@ -1794,6 +1830,18 @@
       24: [
         {
           level: 24,
+          sub: 1,
+          question: "In all electrical wiring applications, what is the critical and primary function of the insulating jacket applied over the metal conductor?",
+          choices: [
+            "Improve conductivity",
+            "Prevent shock and short circuits",
+            "Make wires heavier",
+            "Reduce voltage"
+          ],
+          answer: "B"
+        },
+        {
+          level: 24,
           sub: 2,
           question: "In residential wiring, what is the main reason for using PVC or thermoplastic insulation on copper conductors?",
           choices: [
@@ -1885,7 +1933,7 @@
         {
           level: 1,
           sub: 3,
-          question: "In a DC circuit, a voltage of 20 V is applied across a resistor, producing a current of 4 A. What is the resistance of the resistor?",
+          question: "In a DC circuit, a voltage of 20 V is applied across a resistor, producing a current of 4A. What is the resistance of the resistor?",
           choices: [
             "2 Ω (–1)",
             "4 Ω (–1)",
@@ -2231,7 +2279,7 @@
           choices: [
             "670 Ω ±1%",
             "67 kΩ ±1%",
-            "67 kΩ ±1%",
+            "670 kΩ ±1%",
             "6.7 MΩ ±1%"
           ],
           answer: "B"
@@ -2336,7 +2384,7 @@
             "Screw Terminal",
             "JST Connector"
           ],
-          answer: "B"
+          answer: "C"
         },
         {
           level: 13,
@@ -2586,7 +2634,7 @@
           question: "In industrial environments prone to mechanical damage from machinery or heavy equipment, which wiring method offers the highest level of physical protection for electrical conductors?",
           choices: [
             "Cable Tray System",
-            "Rigid Metal Conduit (RM",
+            "Rigid Metal Conduit (RMC)",
             "Armored Cable (BX)",
             "Direct Burial Wiring"
           ],
@@ -2673,7 +2721,7 @@
           sub: 2,
           question: "Which wiring method is suitable for outdoor areas where mechanical protection is needed, such as along walkways or driveways, while keeping cables off the ground?",
           choices: [
-            "Rigid Metal Conduit (RM",
+            "Rigid Metal Conduit (RMC)",
             "Direct Burial Wiring",
             "Cable Tray System",
             "Raceway System"
@@ -2742,7 +2790,7 @@
             "Air Core",
             "Ceramic Core"
           ],
-          answer: "B"
+          answer: "A"
         },
         {
           level: 24,

@@ -1,4 +1,4 @@
-﻿export const hardwareQuizData = {
+export const hardwareQuizData = {
   hardware: {
     easy: {
       1: [
@@ -2219,7 +2219,8 @@
           choices: [
             "SATA controller disabled by default",
             "Corrupt user profile",
-            "Defective mouseD. Incorrect display driver"
+            "Defective mouse",
+            "Incorrect display driver"
           ],
           answer: "A"
         },
@@ -2229,7 +2230,9 @@
           question: "A server shuts down when multiple peripherals are connected. What component is MOST likely undersized?",
           choices: [
             "Power supply unit",
-            "Hard disk controllerC. Sound cardD. Monitor adapter"
+            "Hard disk controller",
+            "Sound card",
+            "Monitor adapter"
           ],
           answer: "A"
         }
@@ -2252,7 +2255,10 @@
           sub: 2,
           question: "Which issue BEST suggests a firmware-level hardware incompatibility?",
           choices: [
-            "Device works in another system but not in the current oneB. Mouse cursor flickersC. Slow boot animationD. Incorrect wallpaper scaling"
+            "Device works in another system but not in the current one",
+            "Mouse cursor flickers",
+            "Slow boot animation",
+            "Incorrect wallpaper scaling"
           ],
           answer: "A"
         },
@@ -2261,7 +2267,10 @@
           sub: 3,
           question: "What is the MOST appropriate FIRST step when troubleshooting an unfamiliar hardware failure?",
           choices: [
-            "Gather system history and error symptomsB. Replace suspected components immediatelyC. Reinstall the operating systemD. Ignore user feedback"
+            "Gather system history and error symptoms",
+            "Replace suspected components immediately",
+            "Reinstall the operating system",
+            "Ignore user feedback"
           ],
           answer: "A"
         }
@@ -2491,7 +2500,7 @@
             "1830",
             "1991"
           ],
-          answer: "A"
+          answer: "D"
         }
       ],
       20: [
@@ -2725,4 +2734,5 @@
     }
   }
 };
+
 

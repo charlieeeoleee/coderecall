@@ -604,6 +604,122 @@ export const MODULE_IMAGES = {
                                                     }
                                                 ]
                                 },
+                       "medium":  {
+                                      "module2":  [
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module2/image-01.jpg",
+                                                          "alt":  "electrical medium module2 image-01",
+                                                          "caption":  "Reference visual 01"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module2/image-02.png",
+                                                          "alt":  "electrical medium module2 image-02",
+                                                          "caption":  "Reference visual 02"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module2/image-03.jpg",
+                                                          "alt":  "electrical medium module2 image-03",
+                                                          "caption":  "Reference visual 03"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module2/image-04.png",
+                                                          "alt":  "electrical medium module2 image-04",
+                                                          "caption":  "Reference visual 04"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module2/image-05.png",
+                                                          "alt":  "electrical medium module2 image-05",
+                                                          "caption":  "Reference visual 05"
+                                                      }
+                                                  ],
+                                      "module3":  [
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-01.jpg",
+                                                          "alt":  "electrical medium module3 image-01",
+                                                          "caption":  "Reference visual 01"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-02.jpg",
+                                                          "alt":  "electrical medium module3 image-02",
+                                                          "caption":  "Reference visual 02"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-03.jpg",
+                                                          "alt":  "electrical medium module3 image-03",
+                                                          "caption":  "Reference visual 03"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-04.jpg",
+                                                          "alt":  "electrical medium module3 image-04",
+                                                          "caption":  "Reference visual 04"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-05.jpg",
+                                                          "alt":  "electrical medium module3 image-05",
+                                                          "caption":  "Reference visual 05"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-06.jpg",
+                                                          "alt":  "electrical medium module3 image-06",
+                                                          "caption":  "Reference visual 06"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-07.png",
+                                                          "alt":  "electrical medium module3 image-07",
+                                                          "caption":  "Reference visual 07"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-08.jpg",
+                                                          "alt":  "electrical medium module3 image-08",
+                                                          "caption":  "Reference visual 08"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-09.jpg",
+                                                          "alt":  "electrical medium module3 image-09",
+                                                          "caption":  "Reference visual 09"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-10.jpg",
+                                                          "alt":  "electrical medium module3 image-10",
+                                                          "caption":  "Reference visual 10"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-11.jpg",
+                                                          "alt":  "electrical medium module3 image-11",
+                                                          "caption":  "Reference visual 11"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-12.jpg",
+                                                          "alt":  "electrical medium module3 image-12",
+                                                          "caption":  "Reference visual 12"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-13.jpg",
+                                                          "alt":  "electrical medium module3 image-13",
+                                                          "caption":  "Reference visual 13"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-14.jpg",
+                                                          "alt":  "electrical medium module3 image-14",
+                                                          "caption":  "Reference visual 14"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-15.jpg",
+                                                          "alt":  "electrical medium module3 image-15",
+                                                          "caption":  "Reference visual 15"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-16.jpg",
+                                                          "alt":  "electrical medium module3 image-16",
+                                                          "caption":  "Reference visual 16"
+                                                      },
+                                                      {
+                                                          "src":  "assets/modules/electrical/medium/module3/image-17.jpg",
+                                                          "alt":  "electrical medium module3 image-17",
+                                                          "caption":  "Reference visual 17"
+                                                      }
+                                                  ]
+                                  },
                        "hard":  {
                                     "module1":  [
                                                     {
@@ -732,6 +848,98 @@ export const MODULE_IMAGES = {
                                                         "src":  "assets/modules/electrical/hard/module2/image-10.jpg",
                                                         "alt":  "electrical hard module2 image-10",
                                                         "caption":  "Reference visual 10"
+                                                    }
+                                                ],
+                                    "module3":  [
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-01.jpg",
+                                                        "alt":  "electrical hard module3 image-01",
+                                                        "caption":  "Reference visual 01"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-02.jpg",
+                                                        "alt":  "electrical hard module3 image-02",
+                                                        "caption":  "Reference visual 02"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-03.jpg",
+                                                        "alt":  "electrical hard module3 image-03",
+                                                        "caption":  "Reference visual 03"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-04.jpg",
+                                                        "alt":  "electrical hard module3 image-04",
+                                                        "caption":  "Reference visual 04"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-05.jpg",
+                                                        "alt":  "electrical hard module3 image-05",
+                                                        "caption":  "Reference visual 05"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-06.jpg",
+                                                        "alt":  "electrical hard module3 image-06",
+                                                        "caption":  "Reference visual 06"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-07.jpg",
+                                                        "alt":  "electrical hard module3 image-07",
+                                                        "caption":  "Reference visual 07"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-08.png",
+                                                        "alt":  "electrical hard module3 image-08",
+                                                        "caption":  "Reference visual 08"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-09.jpg",
+                                                        "alt":  "electrical hard module3 image-09",
+                                                        "caption":  "Reference visual 09"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-10.png",
+                                                        "alt":  "electrical hard module3 image-10",
+                                                        "caption":  "Reference visual 10"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-11.jpg",
+                                                        "alt":  "electrical hard module3 image-11",
+                                                        "caption":  "Reference visual 11"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-12.jpg",
+                                                        "alt":  "electrical hard module3 image-12",
+                                                        "caption":  "Reference visual 12"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-13.jpg",
+                                                        "alt":  "electrical hard module3 image-13",
+                                                        "caption":  "Reference visual 13"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-14.jpg",
+                                                        "alt":  "electrical hard module3 image-14",
+                                                        "caption":  "Reference visual 14"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-15.jpg",
+                                                        "alt":  "electrical hard module3 image-15",
+                                                        "caption":  "Reference visual 15"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-16.jpg",
+                                                        "alt":  "electrical hard module3 image-16",
+                                                        "caption":  "Reference visual 16"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-17.jpg",
+                                                        "alt":  "electrical hard module3 image-17",
+                                                        "caption":  "Reference visual 17"
+                                                    },
+                                                    {
+                                                        "src":  "assets/modules/electrical/hard/module3/image-18.jpg",
+                                                        "alt":  "electrical hard module3 image-18",
+                                                        "caption":  "Reference visual 18"
                                                     }
                                                 ],
                                     "module4":  [

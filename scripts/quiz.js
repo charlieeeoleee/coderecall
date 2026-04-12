@@ -65,7 +65,7 @@ sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
 
 const XP_RULES = {
   pretest: 1,
-  posttest: 50,
+  posttest: 4,
   quizLevel: 6
 };
 

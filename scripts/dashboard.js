@@ -53,7 +53,7 @@ const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 const XP_RULES = {
   pretest: 1,
-  posttest: 50
+  posttest: 4
 };
 
 /* =========================

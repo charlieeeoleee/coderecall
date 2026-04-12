@@ -1,0 +1,470 @@
+      13: [
+        {
+          level: 13,
+          sub: 1,
+          question: "A computer cannot connect to the network or access the internet, even though the cable and router are working fine. What could be the most likely cause of the problem?",
+          choices: [
+            "The network interface card (NIC) is defective or not properly installed.",
+            "The hard drive has bad sectors that slow down the system.",
+            "The hard drive data cable is loose or damaged.",
+            "The hard drive fan speed is too high, causing overheating."
+          ],
+          answer: "A"
+        },
+        {
+          level: 13,
+          sub: 2,
+          question: "Which issue BEST suggests a firmware-level hardware incompatibility?",
+          choices: [
+            "Device works in another system but not in the current oneB. Mouse cursor flickersC. Slow boot animationD. Incorrect wallpaper scaling"
+          ],
+          answer: "A"
+        },
+        {
+          level: 13,
+          sub: 3,
+          question: "What is the MOST appropriate FIRST step when troubleshooting an unfamiliar hardware failure?",
+          choices: [
+            "Gather system history and error symptomsB. Replace suspected components immediatelyC. Reinstall the operating systemD. Ignore user feedback"
+          ],
+          answer: "A"
+        }
+      ],
+      14: [
+        {
+          level: 14,
+          sub: 1,
+          question: "In what year did Charles Babbage design the Analytical Engine?",
+          choices: [
+            "1830",
+            "1877",
+            "1973",
+            "1868"
+          ],
+          answer: "A"
+        },
+        {
+          level: 14,
+          sub: 2,
+          question: "In the year 1623 a German astronomer and mathematician named ________ built the first calculator known as the Calculating Clock.",
+          choices: [
+            "Johannes Kepler",
+            "Wilhelm Schickard",
+            "Enmund Gunter",
+            "Charles Babbage"
+          ],
+          answer: "B"
+        },
+        {
+          level: 14,
+          sub: 3,
+          question: "In what year did The Foundation Era (Pre-GPU) happen?",
+          choices: [
+            "1970",
+            "1868",
+            "1830",
+            "1973"
+          ],
+          answer: "A"
+        }
+      ],
+      15: [
+        {
+          level: 15,
+          sub: 1,
+          question: "Who is considered the father of computers?",
+          choices: [
+            "Alan Turing",
+            "Ada Lovelace",
+            "Charles Babbage",
+            "John Von Neumann"
+          ],
+          answer: "C"
+        },
+        {
+          level: 15,
+          sub: 2,
+          question: "In the year 1930 engineer Vannaver Bush developed the first?",
+          choices: [
+            "Modern analog computer",
+            "Pascaline",
+            "Abacus",
+            "Calculating Clock"
+          ],
+          answer: "A"
+        },
+        {
+          level: 15,
+          sub: 3,
+          question: "In what year was the first computer with a bitmap display and frame buffer named Xerox Alto invented?",
+          choices: [
+            "1868",
+            "1981",
+            "1972",
+            "1956"
+          ],
+          answer: "C"
+        }
+      ],
+      16: [
+        {
+          level: 16,
+          sub: 1,
+          question: "In what year was the first motherboard invented?",
+          choices: [
+            "1981",
+            "1971",
+            "1956",
+            "1973"
+          ],
+          answer: "A"
+        },
+        {
+          level: 16,
+          sub: 2,
+          question: "In the year 1801 a French merchant inventor invented a loom which is used to punch wooden cards which is similar to early computer punch cards. This person is known as?",
+          choices: [
+            "Alan Turing",
+            "Ada Lovelace",
+            "Thomas de Colmar",
+            "Joseph Marie"
+          ],
+          answer: "D"
+        },
+        {
+          level: 16,
+          sub: 3,
+          question: "In what computer generation does integrated circuits be introduced?",
+          choices: [
+            "First Generation",
+            "Second Generation",
+            "Third Generation",
+            "Fourth Generation"
+          ],
+          answer: "C"
+        }
+      ],
+      17: [
+        {
+          level: 17,
+          sub: 1,
+          question: "In the IBM PC that was released in 1981, what is the primary storage that they used?",
+          choices: [
+            "Flash Drive",
+            "Hard Disk Drive",
+            "Optical Disc",
+            "Floppy Disk Drive"
+          ],
+          answer: "D"
+        },
+        {
+          level: 17,
+          sub: 2,
+          question: "In the year 1941 a German inventor and engineer invented the world’s earliest digital computer known as?",
+          choices: [
+            "Tim Berners-Lee",
+            "Bill Gates",
+            "Robert Metcalfe",
+            "Konrad Zuse"
+          ],
+          answer: "D"
+        },
+        {
+          level: 17,
+          sub: 3,
+          question: "In what year was the Birth of Dedicated Video Cards happen?",
+          choices: [
+            "1980",
+            "1868",
+            "1830",
+            "1973"
+          ],
+          answer: "A"
+        }
+      ],
+      18: [
+        {
+          level: 18,
+          sub: 1,
+          question: "What was the earliest known calculating device?",
+          choices: [
+            "Scientific Calculator",
+            "Abacus",
+            "Calculator",
+            "Pascaline"
+          ],
+          answer: "B"
+        },
+        {
+          level: 18,
+          sub: 2,
+          question: "On what date did Microsoft launch their Windows 7?",
+          choices: [
+            "October 22, 1980",
+            "October 22, 1970",
+            "October 22, 2009",
+            "October 22, 2010"
+          ],
+          answer: "C"
+        },
+        {
+          level: 18,
+          sub: 3,
+          question: "On what year did the The Rise of 2D/3D Accelerators & the First GPUs happen?",
+          choices: [
+            "1990",
+            "1868",
+            "1830",
+            "1973"
+          ],
+          answer: "A"
+        }
+      ],
+      19: [
+        {
+          level: 19,
+          sub: 1,
+          question: "Who was the first woman to be known as the first computer programmer?",
+          choices: [
+            "Florence Nightingale",
+            "Grace Hopper",
+            "Ada Lovelace",
+            "Rose Parks"
+          ],
+          answer: "C"
+        },
+        {
+          level: 19,
+          sub: 2,
+          question: "Robert Metcalfe develops _____ which is used for connecting multiple computers and other hardware.",
+          choices: [
+            "Ethernet",
+            "LAN",
+            "HDMI",
+            "Network Cable"
+          ],
+          answer: "A"
+        },
+        {
+          level: 19,
+          sub: 3,
+          question: "In what year was the S3 Graphics introducing the S3 86C911 known as one of the first 2D accelerators?",
+          choices: [
+            "1990",
+            "1868",
+            "1830",
+            "1991"
+          ],
+          answer: "A"
+        }
+      ],
+      20: [
+        {
+          level: 20,
+          sub: 1,
+          question: "In the year 1971, which company developed the first microprocessor known as Intel 4004?",
+          choices: [
+            "IBM",
+            "Motorola",
+            "Intel Corporation",
+            "Apple"
+          ],
+          answer: "C"
+        },
+        {
+          level: 20,
+          sub: 2,
+          question: "Vacuum Tubes are in what generation of computers?",
+          choices: [
+            "Second Generation",
+            "First Generation",
+            "Third Generation",
+            "Fourth Generation"
+          ],
+          answer: "B"
+        },
+        {
+          level: 20,
+          sub: 3,
+          question: "In what year was the GPU evolved from fixed-function pipelines to fully programmable shaders?",
+          choices: [
+            "2000",
+            "1868",
+            "1830",
+            "1973"
+          ],
+          answer: "A"
+        }
+      ],
+      21: [
+        {
+          level: 21,
+          sub: 1,
+          question: "When was UNIVAC I released?",
+          choices: [
+            "1945",
+            "1981",
+            "1963",
+            "1951"
+          ],
+          answer: "D"
+        },
+        {
+          level: 21,
+          sub: 2,
+          question: "Who invented the Tabulating Machine?",
+          choices: [
+            "Charles Babbage",
+            "Alan Turing",
+            "Ada Lovelace",
+            "Herman Hollerith"
+          ],
+          answer: "D"
+        },
+        {
+          level: 21,
+          sub: 3,
+          question: "Who is being described in the picture?",
+          choices: [
+            "Alan Turing",
+            "Ada Lovelace",
+            "Charles Babbage",
+            "Herman Hollerith"
+          ],
+          answer: "C"
+        }
+      ],
+      22: [
+        {
+          level: 22,
+          sub: 1,
+          question: "Which company introduced the first hard disk drive (HDD) in 1956?",
+          choices: [
+            "Motorola",
+            "Toshiba",
+            "IBM",
+            "Samsung"
+          ],
+          answer: "C"
+        },
+        {
+          level: 22,
+          sub: 2,
+          question: "What is the first electronic computer that was introduced in the year 1930?",
+          choices: [
+            "Pascaline",
+            "Abacus",
+            "Differential Analyzer",
+            "Analytical Engine"
+          ],
+          answer: "C"
+        },
+        {
+          level: 22,
+          sub: 3,
+          question: "In what year did the vector displays and raster scan displays begin to emerge?",
+          choices: [
+            "1970",
+            "1868",
+            "1830",
+            "1973"
+          ],
+          answer: "A"
+        }
+      ],
+      23: [
+        {
+          level: 23,
+          sub: 1,
+          question: "In 1932 Gustav Tauschek invented the earliest form of computer memory. What is it called?",
+          choices: [
+            "Magnetic Drum Memory",
+            "Hard Disk Drive",
+            "Flash Drive",
+            "Blue-ray"
+          ],
+          answer: "A"
+        },
+        {
+          level: 23,
+          sub: 2,
+          question: "In what year was the Apple II developed by Steve Jobs and Steve Wozniak?",
+          choices: [
+            "1981",
+            "1977",
+            "1984",
+            "1990"
+          ],
+          answer: "B"
+        },
+        {
+          level: 23,
+          sub: 3,
+          question: "In what year was the IBM MDA (Monochrome Display Adapter) invented?",
+          choices: [
+            "1977",
+            "1990",
+            "1984",
+            "1981"
+          ],
+          answer: "D"
+        }
+      ],
+      24: [
+        {
+          level: 24,
+          sub: 1,
+          question: "In the year 1943 the British engineers were the first to use electronic valves, also known as vacuum tubes. For what purpose?",
+          choices: [
+            "To decrypt German codes during WW II",
+            "To help the Philippines decrypt a code for WW II",
+            "To participate in a coding competition",
+            "To know more about Computer"
+          ],
+          answer: "A"
+        },
+        {
+          level: 24,
+          sub: 2,
+          question: "In what generation of computers was the microprocessor invented?",
+          choices: [
+            "First Generation",
+            "Second Generation",
+            "Third Generation",
+            "Fourth Generation"
+          ],
+          answer: "D"
+        },
+        {
+          level: 24,
+          sub: 3,
+          question: "In what year was the First color video card with 4 colors only known as IBM CGA Color Graphics Adapter was invented?",
+          choices: [
+            "1977",
+            "1981",
+            "1984",
+            "1984"
+          ],
+          answer: "B"
+        }
+      ],
+      25: [
+        {
+          level: 25,
+          sub: 1,
+          question: "In what year was the first computer mouse invented?",
+          choices: [
+            "1945-1946",
+            "1963",
+            "1981",
+            "1991"
+          ],
+          answer: "B"
+        },
+        {
+          level: 25,
+          sub: 2,
+          question: "Abacus is known for what purpose?",
+          choices: [
+            "Because it is used to identify the Pre-era of alphabets",
+            "Because it is known for its contribution to science",

@@ -1,7 +1,7 @@
-﻿export const electricalPosttestQuestions = [
+export const electricalPosttestQuestions = [
   {
     n: 1,
-    question: "A 24V source is connected to a circuit with total resistance of 12Ω. What is the current?",
+    question: "A 24V source is connected to a circuit with total resistance of 12 ohms. What is the current?",
     choices: [
       "1 A",
       "2 A",
@@ -12,12 +12,12 @@
   },
   {
     n: 2,
-    question: "Three resistors (6Ω each) are connected in parallel. What is the equivalent resistance?",
+    question: "Three resistors (6 ohms each) are connected in parallel. What is the equivalent resistance?",
     choices: [
-      "2Ω",
-      "18Ω",
-      "3Ω",
-      "6Ω"
+      "2 ohms",
+      "18 ohms",
+      "3 ohms",
+      "6 ohms"
     ],
     answer: "A"
   },
@@ -47,10 +47,10 @@
     n: 5,
     question: "A 100W light bulb is connected to a 200V supply. What is its resistance?",
     choices: [
-      "100Ω",
-      "200Ω",
-      "400Ω",
-      "50Ω"
+      "100 ohms",
+      "200 ohms",
+      "400 ohms",
+      "50 ohms"
     ],
     answer: "C"
   },
@@ -74,7 +74,7 @@
       "Voltage decreases to zero",
       "Current increases"
     ],
-    answer: null
+    answer: "B"
   },
   {
     n: 8,
@@ -134,13 +134,8 @@
   {
     n: 13,
     question: "If a 12V battery is connected to a 6-ohm resistor, what is the current flowing through it?",
-    choices: [],
-    answer: null
-  },
-  {
-    n: 0,
-    question: "5 Amps",
     choices: [
+      "0.5 Amps",
       "72 Amps",
       "2 Amps",
       "18 Amps"
@@ -173,10 +168,10 @@
     n: 16,
     question: "Arc flash incidents can release temperatures up to:",
     choices: [
-      "1,000°C",
-      "5,000°C",
-      "19,000°C",
-      "100,000°C"
+      "1,000 C",
+      "5,000 C",
+      "19,000 C",
+      "100,000 C"
     ],
     answer: "C"
   },
@@ -271,13 +266,8 @@
   {
     n: 25,
     question: "Calculate the value of a resistor with Yellow, Violet, and Orange bands.",
-    choices: [],
-    answer: null
-  },
-  {
-    n: 4,
-    question: "7k ohms",
     choices: [
+      "4.7k ohms",
       "470 ohms",
       "470k ohms",
       "47k ohms"
@@ -323,14 +313,9 @@
     choices: [
       "8 ohms",
       "21 ohms",
-      "72 ohms"
+      "72 ohms",
+      "0.125 ohms"
     ],
-    answer: null
-  },
-  {
-    n: 0,
-    question: "125 ohms",
-    choices: [],
     answer: "A"
   },
   {

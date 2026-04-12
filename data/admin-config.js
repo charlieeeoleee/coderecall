@@ -1,7 +1,10 @@
 export const ADMIN_EMAILS = [
-  // Add teacher or co-member emails here to grant admin access immediately.
+  "marvicdatulmansibang@gmail.com",
+  "biancadenisemedel@gmail.com",
+  "reinbarb27@gmail.com"
 ];
 
 export const SUPER_ADMIN_EMAILS = [
-  "charlesvrobeso@gmail.com"
+  "charlesvrobeso@gmail.com",
+  "robesocharles03@gmail.com"
 ];

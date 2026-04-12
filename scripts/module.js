@@ -310,6 +310,23 @@ const GAMIFIED_DETAILS = {
         "Match voltage with volts",
         "Match current with amperes",
         "Explain how power relates to voltage and current"
+      ],
+      quiz: [
+        {
+          question: "Which unit is used to measure electrical current?",
+          options: ["Volts", "Amperes", "Ohms", "Watts"],
+          answer: "Amperes"
+        },
+        {
+          question: "What quantity opposes the flow of electric charge in a circuit?",
+          options: ["Voltage", "Resistance", "Power", "Frequency"],
+          answer: "Resistance"
+        },
+        {
+          question: "Which formula correctly represents electrical power?",
+          options: ["P = V x I", "R = V + I", "I = P x R", "V = P + I"],
+          answer: "P = V x I"
+        }
       ]
     }
   },
@@ -332,6 +349,23 @@ const GAMIFIED_DETAILS = {
         "A wall outlet at home",
         "A battery-powered flashlight",
         "A USB charger"
+      ],
+      quiz: [
+        {
+          question: "Which type of current flows in one direction only?",
+          options: ["DC", "AC", "Both DC and AC", "Neither"],
+          answer: "DC"
+        },
+        {
+          question: "Which source commonly provides AC power?",
+          options: ["Battery", "Wall outlet", "USB charger", "Power bank"],
+          answer: "Wall outlet"
+        },
+        {
+          question: "Why is AC widely used in power distribution?",
+          options: ["It can be easily transformed to different voltages", "It only works with LEDs", "It stores energy permanently", "It has no resistance"],
+          answer: "It can be easily transformed to different voltages"
+        }
       ]
     }
   },
@@ -354,6 +388,23 @@ const GAMIFIED_DETAILS = {
         "Residential indoor wiring",
         "Underground outdoor installation",
         "Signal transmission with shielding"
+      ],
+      quiz: [
+        {
+          question: "What best describes a wire?",
+          options: ["A single conductor", "A group of breakers", "A measuring device", "A grounding rod"],
+          answer: "A single conductor"
+        },
+        {
+          question: "Which cable type is commonly used for underground outdoor installation?",
+          options: ["UF cable", "Romex only", "Coaxial only", "Speaker wire"],
+          answer: "UF cable"
+        },
+        {
+          question: "Which type is commonly associated with shielded signal transmission?",
+          options: ["Coaxial cable", "Bare wire", "Fuse link", "Bus bar"],
+          answer: "Coaxial cable"
+        }
       ]
     }
   },
@@ -376,6 +427,23 @@ const GAMIFIED_DETAILS = {
         "Industrial area with mechanical hazards",
         "Open route carrying grouped control cables",
         "Location needing easy maintenance access"
+      ],
+      quiz: [
+        {
+          question: "Which wiring method is suited to areas with mechanical hazards?",
+          options: ["Conduit", "Loose cable only", "Open splice", "Bare conductor route"],
+          answer: "Conduit"
+        },
+        {
+          question: "Which setup is useful for grouped control cables on an open route?",
+          options: ["Cable tray", "Loose extension cord", "Battery clip", "Fuse holder"],
+          answer: "Cable tray"
+        },
+        {
+          question: "Why does wiring method choice matter?",
+          options: ["It affects protection and maintenance access", "It changes the color of electricity", "It replaces grounding", "It removes the need for testing"],
+          answer: "It affects protection and maintenance access"
+        }
       ]
     }
   },
@@ -398,6 +466,23 @@ const GAMIFIED_DETAILS = {
         "List the main soldering tools needed",
         "Explain why flux is useful",
         "State one safety practice for hot tools or fumes"
+      ],
+      quiz: [
+        {
+          question: "What is soldering used for?",
+          options: ["Joining metal parts with filler metal", "Measuring current", "Removing insulation", "Cooling a processor"],
+          answer: "Joining metal parts with filler metal"
+        },
+        {
+          question: "Which material helps solder flow and clean the joint?",
+          options: ["Flux", "Concrete", "Paint", "Grease only"],
+          answer: "Flux"
+        },
+        {
+          question: "What is desoldering used for?",
+          options: ["Removing or correcting a joint", "Increasing voltage", "Bundling wires", "Testing continuity only"],
+          answer: "Removing or correcting a joint"
+        }
       ]
     }
   },
@@ -420,6 +505,23 @@ const GAMIFIED_DETAILS = {
         "Which component limits current?",
         "Which component stores electrical charge?",
         "Which component stores magnetic energy?"
+      ],
+      quiz: [
+        {
+          question: "Which passive component limits current?",
+          options: ["Resistor", "Diode", "Transistor", "IC"],
+          answer: "Resistor"
+        },
+        {
+          question: "Which passive component stores electrical charge?",
+          options: ["Capacitor", "Fuse", "Switch", "Relay"],
+          answer: "Capacitor"
+        },
+        {
+          question: "Which passive component stores energy in a magnetic field?",
+          options: ["Inductor", "Capacitor", "LED", "Battery"],
+          answer: "Inductor"
+        }
       ]
     }
   },
@@ -442,6 +544,23 @@ const GAMIFIED_DETAILS = {
         "Name the part that directs current one way",
         "Name the part that switches or amplifies",
         "Explain why ICs are important in modern electronics"
+      ],
+      quiz: [
+        {
+          question: "Which active component allows current mainly in one direction?",
+          options: ["Diode", "Resistor", "Inductor", "Capacitor"],
+          answer: "Diode"
+        },
+        {
+          question: "Which active component commonly acts as a switch or amplifier?",
+          options: ["Transistor", "Fuse", "Cable tie", "Coil only"],
+          answer: "Transistor"
+        },
+        {
+          question: "What does an IC provide?",
+          options: ["Many electronic functions in one package", "A mechanical fastening point", "Only wire insulation", "A storage shelf"],
+          answer: "Many electronic functions in one package"
+        }
       ]
     }
   },

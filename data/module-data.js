@@ -16,22 +16,33 @@ export const MODULE_CATALOG = {
     easy: {
       module1: {
         title: "Introduction to Electricity and Electronics",
-        content:
-          "This lesson introduces electricity as a form of energy created by the movement of electrons. It explains the basic parts of the atom, how electric current is produced, how conductors allow electricity to flow, and what a working circuit needs: a source, a path, and a load. It also introduces static electricity and helps students connect the idea of electric charge to everyday experiences.",
+        content: `Electricity is a fundamental form of energy that powers many of the tools, appliances, and machines used every day. At its core, electricity comes from the movement of electrons, which are negatively charged particles found in atoms. Atoms contain protons, neutrons, and electrons. When electrons are forced to move from one atom to another, electric charge or electric current is produced.
+
+Electricity works best when electrons move through conductors such as copper, aluminum, and silver. A working circuit usually needs a source, a path, a load, and sometimes a switch to control the flow. When the circuit is closed, electrons flow through the conductor and the load, then return to the source.
+
+This lesson also introduces the two main forms of electricity. Static electricity is electricity at rest, often caused by an imbalance of charges on a material's surface. Current electricity is the continuous flow of electrons through a conductor and is the type used in homes, schools, industries, and devices. Students also meet direct current (DC), which flows in one direction, and alternating current (AC), which reverses direction periodically.
+
+Electricity is important because it supports lighting, heating and cooling, communication, transportation, and medical equipment. Studying electricity and electronics builds the foundation for work in electrical engineering, construction, appliance servicing, computer systems, telecommunications, renewable energy, robotics, and automation.`,
         tip: "Focus first on the movement of electrons, then connect that idea to conductors, circuits, and static electricity.",
         images: []
       },
       module2: {
         title: "Personal Protective Equipment (PPE)",
-        content:
-          "This module explains why PPE is a critical safety requirement in electrical work. It covers how protective clothing, insulated gear, and safety equipment reduce the risk of electric shock, arc flash burns, falling hazards, noise exposure, and flying debris. The lesson also introduces common PPE items such as insulated gloves, face shields, rubber-soled boots, and other protection used in electrical environments.",
+        content: `Personal Protective Equipment, or PPE, is a vital line of defense when working with electricity. It helps protect workers and students from electric shock, arc flash burns, falling hazards, loud noise, and flying debris. Because electricity is invisible and fast-acting, even a brief contact with a live conductor can cause serious injury or death.
+
+This lesson introduces common PPE used in electrical work, including insulated gloves, safety goggles or face shields, rubber-soled boots, flame-resistant clothing, hard hats, and hearing protection. Each item has a specific purpose, such as protecting the hands from live conductors, shielding the eyes from sparks, or insulating the body from the ground.
+
+PPE should always match the task and the level of risk. It must be inspected before use for cracks, wear, or other damage, and it should only be used if it is properly rated for electrical work. PPE does not replace safe procedures, but it works together with correct techniques, lockout and tagout practices, and careful planning to reduce injury.`,
         tip: "Study each PPE item by matching it to the hazard it helps prevent.",
         images: []
       },
       module3: {
         title: "Tools for Electrical Work",
-        content:
-          "This lesson introduces the essential hand tools and measuring tools used in electrical work. It explains the purpose of insulated screwdrivers, pliers, wire strippers, needle-nose pliers, multimeters, and clamp meters, while stressing that correct tool use improves safety, efficiency, and accuracy. It also helps students understand when each tool should be used in actual electrical tasks.",
+        content: `Using the right tool is an essential part of safe and accurate electrical work. The correct tool makes a task easier, improves precision, and lowers the risk of injury or equipment damage. The wrong tool can damage parts, cause poor electrical connections, or expose the worker to shock.
+
+This module covers essential electrical hand tools and testing tools. Students are introduced to insulated screwdrivers, combination pliers, wire strippers, needle-nose pliers, fish tape, electrician's knives, crimping tools, multimeters, clamp meters, and voltage testers. Each tool is paired with a real purpose, such as stripping insulation, gripping wires in tight spaces, measuring voltage or current, or pulling conductors through conduits.
+
+The lesson also emphasizes safe tool use. Tools with insulated handles rated for electrical work should be used whenever electricity is involved, especially when working near live circuits. Good tool selection is part of good electrical practice.`,
         tip: "Try to remember each tool by pairing its name with one real job it performs.",
         images: []
       }
@@ -39,22 +50,31 @@ export const MODULE_CATALOG = {
     medium: {
       module1: {
         title: "Basic Electrical Quantities",
-        content:
-          "This module introduces the four core electrical quantities: voltage, current, resistance, and power. It explains what each quantity means, how each one behaves inside a circuit, the units used to measure them, and the instruments commonly used to test them. The lesson builds the foundation students need before solving circuit problems or using electrical measuring tools.",
+        content: `Before working with electrical circuits, students need to understand four basic electrical quantities: voltage, current, resistance, and power. Voltage is the electrical pressure that pushes electrons through a circuit. Current is the flow of electrons through a conductor. Resistance is the opposition to that flow, and power is the rate at which electrical energy is used or converted into heat, light, motion, or another form.
+
+This lesson also connects each quantity to its unit and measuring tool. Voltage is measured in volts using a voltmeter. Current is measured in amperes using an ammeter. Resistance is measured in ohms using an ohmmeter or a multimeter. Power is measured in watts and is commonly calculated using the formula P = V x I.
+
+The module then introduces Ohm's Law, one of the most important principles in electricity. Ohm's Law explains the relationship between voltage, current, and resistance using the formula V = I x R. Students learn how to rearrange it to solve for current or resistance and how to apply it in circuit problems. Real examples show how Ohm's Law is used in LED circuits, home wiring, automotive repair, and solar setups.`,
         tip: "Memorize the symbol, unit, and meaning of each quantity together, not separately.",
         images: []
       },
       module2: {
         title: "Direct Current (DC) vs. Alternating Current (AC)",
-        content:
-          "This lesson compares the two main ways electricity flows. It explains how direct current moves in one direction while alternating current reverses direction repeatedly. The module also covers common sources of DC and AC, their basic characteristics, and where each type of current is commonly used in real devices, household systems, and power distribution.",
+        content: `Electricity can flow in two main ways: direct current and alternating current. Direct current, or DC, flows in one direction only. It has constant polarity and is commonly supplied by batteries, solar panels, power banks, USB ports, and many small electronic systems. Devices like flashlights, remote-control toys, and battery-powered gadgets rely on DC.
+
+Alternating current, or AC, reverses direction periodically. In most systems this happens 50 or 60 times per second, which is called frequency. AC is the form used in household outlets, large appliances, and power distribution systems. Its waveform is commonly shown as a sine wave, while DC is often shown as a straight line.
+
+This lesson compares the flow direction, sources, uses, and practical advantages of both systems. A major reason AC is used in homes and power distribution is that it can be stepped up or stepped down easily using transformers. That makes long-distance transmission more efficient. DC, on the other hand, is easy to store and ideal for low-voltage electronic devices.`,
         tip: "Compare DC and AC by source, direction of flow, and common application.",
         images: []
       },
       module3: {
         title: "Types of Wires and Cables",
-        content:
-          "This module explains the difference between a wire and a cable, then introduces common electrical wiring types such as THHN, Romex, UF cable, and coaxial cable. It emphasizes construction, protection, and typical applications so students can identify where each type is best used in residential, commercial, and outdoor setups.",
+        content: `This lesson begins with the difference between a wire and a cable. A wire is a single electrical conductor that may be solid or stranded. A cable is made of two or more wires grouped together inside a protective sheath. Understanding that difference helps students recognize the correct material for each type of installation.
+
+The module introduces common wire and cable types such as THHN, Romex, UF cable, coaxial cable, twisted pair cable, MTW, XHHW, MC cable, armored cable, and fiber optic cable. Each one is linked to its typical use, such as residential outlets, underground installations, industrial equipment, data transmission, or exposed commercial runs.
+
+The lesson also explains wire gauge and insulation. Students learn that smaller AWG numbers mean thicker conductors, and thicker conductors can safely carry more current. The module shows why choosing the correct gauge matters for safety, efficiency, and code compliance. It also introduces insulation materials such as PVC, rubber, XLPE, and Teflon or PTFE, along with their roles in protecting against shock, heat, moisture, and short circuits.`,
         tip: "Study each wire or cable type by linking its structure to its best application.",
         images: []
       }
@@ -62,29 +82,41 @@ export const MODULE_CATALOG = {
     hard: {
       module1: {
         title: "Wiring Methods",
-        content:
-          "This lesson covers the major wiring methods used in buildings, industrial spaces, and outdoor environments. It explains how conduit systems, cable tray systems, raceways, and other wiring approaches are selected based on environment, electrical load, regulations, accessibility, and safety. The module helps students understand why proper wiring method selection matters in real installations.",
+        content: `Wiring methods are the systems used to install electrical conductors safely and efficiently in buildings, industrial plants, and outdoor environments. Choosing the correct method depends on the location, the electrical load, code requirements, protection from damage, and future maintenance access.
+
+This lesson covers common wiring methods including conduit wiring, cable tray systems, raceways, direct burial wiring, armored cable, flexible metal conduit, and metal-clad cable. Students learn what each method looks like, where it is typically used, and why one method may be chosen over another in commercial, industrial, classroom, or outdoor settings.
+
+The module also explains types of electrical connections. Series connections place components end to end so the same current flows through each one, while parallel connections create separate current paths so devices can work independently. Splice connections such as pigtail, Western Union, T-tap, and butt splices are also introduced so students can connect wiring methods to real-world installation and repair work.`,
         tip: "Think about each wiring method in terms of where it is used and what problem it solves.",
         images: []
       },
       module2: {
         title: "Soldering and Desoldering Techniques",
-        content:
-          "This module teaches the basics of making and removing permanent electrical connections. It explains the purpose of soldering, the tools and materials involved, and the importance of clean, stable, low-resistance joints in electronics and wiring work. It also introduces desoldering as a repair and rework skill used when components or wires must be removed safely.",
+        content: `Soldering is the process of joining two or more metal parts by melting solder into the joint to create a strong electrical and mechanical connection. It is widely used in electronics assembly, repair work, circuit prototyping, and wire joining. A good soldered joint helps keep resistance low and circuit operation stable.
+
+This lesson introduces the tools and materials needed for soldering, including the soldering iron, solder wire, flux, helping hands, a soldering stand, and safety gear. Students are guided through the standard steps: stripping insulation, applying flux, tinning the tip, heating the joint, applying solder, cooling the joint, and inspecting the final result. The lesson also explains what makes a joint strong and how to recognize a bad or cold solder joint.
+
+Desoldering is presented as the reverse process used to remove solder for repairs, corrections, and part replacement. The module introduces desoldering pumps, desoldering braid, and hot air rework stations, along with safety reminders about ventilation, heat, eye protection, and careful handling of hot tools.`,
         tip: "Focus on the purpose of each soldering tool and the qualities of a good electrical joint.",
         images: []
       },
       module3: {
         title: "Passive Components",
-        content:
-          "This lesson introduces passive electronic components that do not generate energy but instead resist, store, or filter it. It focuses on resistors, capacitors, and inductors, including their functions, symbols, units, and common uses in circuits. The module helps students understand how passive parts shape current, voltage, timing, and energy behavior in electronics.",
+        content: `Passive components are electronic parts that do not generate energy on their own. Instead, they resist, store, or filter electrical energy. This lesson focuses on the three most common passive components: resistors, capacitors, and inductors.
+
+Resistors limit current or divide voltage in a circuit. Students are introduced to resistor types such as carbon film, wire-wound, metal film, potentiometers, and surface-mount resistors. The lesson also explains the resistor color code system and shows how to read values and tolerance from resistor bands.
+
+Capacitors store and release electrical energy using an electric field between two conductive plates. The lesson distinguishes between polarized and non-polarized capacitors and introduces common types such as electrolytic, ceramic, film, tantalum, and supercapacitors. Inductors, meanwhile, store energy in a magnetic field when current flows through a coil. Students learn the basic idea behind air-core, ferrite-core, and iron-core inductors and how inductors resist sudden changes in current.`,
         tip: "Learn passive components by asking what each one does to energy in a circuit.",
         images: []
       },
       module4: {
         title: "Active Components",
-        content:
-          "This module covers active components that control electrical flow and require power to operate. It introduces diodes, transistors, and integrated circuits, explains how they guide or amplify current, and gives examples of how they are used in practical electronic systems. The lesson helps students distinguish active components from passive ones by function and behavior.",
+        content: `Active components are parts that control the flow of electricity and require a power source to operate. This lesson introduces three major groups: diodes, transistors, and integrated circuits.
+
+Diodes allow current to flow in only one direction and are commonly used for protection and rectification. The lesson includes rectifier diodes, Zener diodes, and LEDs, along with example uses such as AC-to-DC conversion, voltage regulation, and light emission. Transistors are presented as switches or amplifiers. Students learn the basic difference between NPN and PNP transistors and how these parts are used to turn loads on and off or increase weak signals.
+
+The module also introduces integrated circuits, or ICs, which contain many components inside one small package. Examples include the 555 timer, 7400 series logic ICs, and the LM324 operational amplifier. The lesson closes by connecting these active components to switches, relays, and connectors so students can see how active devices work together inside real electronic systems.`,
         tip: "Separate each active component by its job: direction control, switching, amplification, or integrated processing.",
         images: []
       }
