@@ -496,7 +496,7 @@ export const hardwareQuizData = {
         {
           level: 16,
           sub: 1,
-          question: "Which of the following is not a type of EDS tool?",
+          question: "Which of the following is not a type of ESD tool?",
           choices: [
             "Anti-Static Mat",
             "Anti-static wrist strap",

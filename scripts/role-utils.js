@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { ADMIN_EMAILS, SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
+import { SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
 
 const ROLE_ORDER = {
   guest: 0,
@@ -23,8 +23,21 @@ export async function resolveUserRole(db, user) {
   if (!user) return "guest";
   const normalizedEmail = (user.email || "").trim().toLowerCase();
 
+  try {
+    if (normalizedEmail) {
+      const accessKey = encodeURIComponent(normalizedEmail);
+      const accessSnap = await getDoc(doc(db, "accessRoles", accessKey));
+      const accessData = accessSnap.exists() ? accessSnap.data() || {} : {};
+
+      if (accessData.role === "super_admin" || accessData.role === "admin" || accessData.role === "user") {
+        return accessData.role;
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to resolve user role from email grants.", error);
+  }
+
   if (SUPER_ADMIN_EMAILS.includes(normalizedEmail)) return "super_admin";
-  if (ADMIN_EMAILS.includes(normalizedEmail)) return "admin";
 
   try {
     const userSnap = await getDoc(doc(db, "users", user.uid));
@@ -39,16 +52,6 @@ export async function resolveUserRole(db, user) {
   }
 
   try {
-    if (normalizedEmail) {
-      const accessKey = encodeURIComponent(normalizedEmail);
-      const accessSnap = await getDoc(doc(db, "accessRoles", accessKey));
-      const accessData = accessSnap.exists() ? accessSnap.data() || {} : {};
-
-      if (accessData.role === "super_admin" || accessData.role === "admin" || accessData.role === "user") {
-        return accessData.role;
-      }
-    }
-
     const snap = await getDoc(doc(db, "users", user.uid));
     const data = snap.exists() ? snap.data() || {} : {};
     return getRoleFromUserData(data);

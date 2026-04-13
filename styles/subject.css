@@ -567,12 +567,16 @@ body.light-mode .subject-card:not(.locked):hover p{
 
 body.light-mode .subject-logo-code{
   color: #ff7a1a;
-  text-shadow: none;
+  text-shadow:
+    0 0 5px rgba(255,255,255,0.35),
+    0 0 10px rgba(255,138,42,0.16);
 }
 
 body.light-mode .subject-logo-recall{
   color: #ff2e88;
-  text-shadow: none;
+  text-shadow:
+    0 0 5px rgba(255,255,255,0.35),
+    0 0 10px rgba(255,46,136,0.16);
 }
 
 body.light-mode .subject-back-btn{

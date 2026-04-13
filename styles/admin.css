@@ -4,7 +4,7 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .sidebar { width: 240px; background: #1a1140; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
 .top-section { display: flex; flex-direction: column; gap: 30px; }
 .logo-link { text-decoration: none; }
-.logo { font-family: "Press Start 2P", cursive; font-size: 14px; line-height: 1.5; background: linear-gradient(90deg, #ff8c00, #ff2e97); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+.logo { font-family: "Press Start 2P", cursive; font-size: 14px; line-height: 1.5; background: linear-gradient(90deg, #ff982e 0%, #ff7c2e 28%, #ff4d95 68%, #ff4fb8 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 0; filter: drop-shadow(0 0 6px rgba(255,138,42,0.45)) drop-shadow(0 0 14px rgba(255,46,151,0.28)); }
 .menu { display: flex; flex-direction: column; gap: 30px; padding-top: 14px; }
 .menu a { color: white; text-decoration: none; opacity: 0.82; font-size: 14px; display: flex; align-items: center; gap: 10px; line-height: 1.2; padding: 2px 0; }
 .menu a:hover, .menu a.active-link { opacity: 1; transform: translateX(5px); }
@@ -149,6 +149,63 @@ body.light-mode .inline-select {
 }
 .form-status { margin: 0; font-size: 13px; min-height: 20px; color: #8df6cb; }
 .theme-toggle { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; background: linear-gradient(90deg, #ff2e97, #22d3ee); color: white; font-size: 22px; box-shadow: 0 0 25px rgba(0, 255, 200, 0.35); }
+.popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 26, 0.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 120;
+}
+.popup.active { display: flex; }
+.popup-box {
+  width: min(460px, 100%);
+  border-radius: 24px;
+  background: #2c1f5f;
+  padding: 22px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.popup-box h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+.popup-box p {
+  margin: 0;
+  opacity: 0.86;
+  line-height: 1.6;
+}
+.popup-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+.popup-actions button,
+.secondary-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+.secondary-btn {
+  background: rgba(255,255,255,0.12);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+body.light-mode .popup-box {
+  background: rgba(255,255,255,0.95);
+  color: #1e1547;
+}
+body.light-mode .secondary-btn {
+  background: rgba(130, 99, 255, 0.12);
+  color: #1e1547;
+  border-color: rgba(130, 99, 255, 0.18);
+}
 @media (max-width: 1100px) {
   .overview-grid,
   .admin-grid,

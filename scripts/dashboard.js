@@ -59,6 +59,32 @@ const XP_RULES = {
   posttest: 4
 };
 
+function syncMobileSidebarButton() {
+  const layout = document.querySelector(".layout");
+  const toggle = document.querySelector(".sidebar-toggle");
+  if (!layout || !toggle) return;
+
+  const isOpen = layout.classList.contains("mobile-nav-open");
+  toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  toggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+}
+
+window.toggleMobileSidebar = function() {
+  const layout = document.querySelector(".layout");
+  if (!layout || window.innerWidth > 900) return;
+
+  layout.classList.toggle("mobile-nav-open");
+  syncMobileSidebarButton();
+};
+
+function closeMobileSidebar() {
+  const layout = document.querySelector(".layout");
+  if (!layout) return;
+
+  layout.classList.remove("mobile-nav-open");
+  syncMobileSidebarButton();
+}
+
 /* =========================
    AUTH STATE
 ========================= */
@@ -774,6 +800,8 @@ function clearGuestSession() {
    LOGOUT
 ========================= */
 window.logout = async function() {
+  closeMobileSidebar();
+
   if (currentIsGuest) {
     if (hasGuestProgress()) {
       openGuestLogoutPopup(true);
@@ -851,6 +879,32 @@ loadTheme();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".menu a").forEach((link) => {
+    link.addEventListener("click", closeMobileSidebar);
+  });
+
+  syncMobileSidebarButton();
+});
+
+document.addEventListener("click", (event) => {
+  const layout = document.querySelector(".layout");
+  const sidebar = document.querySelector(".sidebar");
+  const toggle = document.querySelector(".sidebar-toggle");
+  if (!layout || !sidebar || !toggle) return;
+  if (!layout.classList.contains("mobile-nav-open")) return;
+  if (window.innerWidth > 900) return;
+  if (sidebar.contains(event.target) || toggle.contains(event.target)) return;
+
+  closeMobileSidebar();
+});
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 900) {
+    closeMobileSidebar();
+  }
+});
 
 document.body.addEventListener("click", () => {
   tryStartMusic();

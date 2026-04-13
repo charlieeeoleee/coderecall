@@ -30,6 +30,7 @@ import {
   fetchModuleDrafts,
   fetchQuizDrafts
 } from "./supabase-content.js";
+import { SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -45,6 +46,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
+let systemPopupAction = null;
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -118,6 +120,31 @@ async function syncGrantedRoleToExistingUsers(email, role) {
       progress: {
         ...(data.progress || {}),
         role
+      }
+    });
+    updatedCount += 1;
+  }
+
+  return updatedCount;
+}
+
+async function clearGrantedRoleFromExistingUsers(email) {
+  if (!email) return 0;
+
+  const matchingUsers = await getDocs(
+    query(collection(db, "users"), where("email", "==", email))
+  );
+
+  let updatedCount = 0;
+  const nextRole = SUPER_ADMIN_EMAILS.includes(email) ? "super_admin" : "user";
+
+  for (const userSnap of matchingUsers.docs) {
+    const data = userSnap.data() || {};
+    await updateDoc(doc(db, "users", userSnap.id), {
+      role: nextRole,
+      progress: {
+        ...(data.progress || {}),
+        role: nextRole
       }
     });
     updatedCount += 1;
@@ -361,12 +388,17 @@ function renderUserTable(users) {
     button.addEventListener("click", async () => {
       const userId = button.getAttribute("data-delete-user");
       if (!userId || userId === currentUser.uid) return;
-      const confirmed = window.confirm("Delete this user record from Firestore? This will not remove the Firebase Auth account.");
-      if (!confirmed) return;
-      await deleteDoc(doc(db, "users", userId));
-      await writeAuditLog("user_record_deleted", `Deleted Firestore record for user ${userId}`);
-      setStatus("User record removed. Reloading table...");
-      await loadSuperAdminDashboard();
+      openSystemPopup(
+        "Delete User Record",
+        "Delete this user record from Firestore? This will not remove the Firebase Auth account.",
+        async () => {
+          await deleteDoc(doc(db, "users", userId));
+          await writeAuditLog("user_record_deleted", `Deleted Firestore record for user ${userId}`);
+          setStatus("User record removed. Reloading table...");
+          closeSystemPopup();
+          await loadSuperAdminDashboard();
+        }
+      );
     });
   });
 }
@@ -481,12 +513,22 @@ function renderAccessGrantList(grants) {
     button.addEventListener("click", async () => {
       const grantId = button.getAttribute("data-remove-grant");
       if (!grantId) return;
-      const confirmed = window.confirm("Remove this email access grant?");
-      if (!confirmed) return;
-      await deleteDoc(doc(db, "accessRoles", grantId));
-      await writeAuditLog("email_access_removed", `Removed email access grant ${grantId}`);
-      setGrantStatus("Email access removed.");
-      await loadSuperAdminDashboard();
+      openSystemPopup(
+        "Remove Email Access",
+        "Remove this email access grant?",
+        async () => {
+          await deleteDoc(doc(db, "accessRoles", grantId));
+          const syncedUsers = await clearGrantedRoleFromExistingUsers(grant.email || "");
+          await writeAuditLog("email_access_removed", `Removed email access grant ${grantId}`);
+          setGrantStatus(
+            syncedUsers
+              ? `Email access removed. Reverted ${syncedUsers} existing user record(s).`
+              : "Email access removed."
+          );
+          closeSystemPopup();
+          await loadSuperAdminDashboard();
+        }
+      );
     });
   });
 }
@@ -549,6 +591,32 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+function openSystemPopup(title, message, confirmAction) {
+  const popup = document.getElementById("systemPopup");
+  const titleEl = document.getElementById("systemPopupTitle");
+  const messageEl = document.getElementById("systemPopupMessage");
+  const confirmBtn = document.getElementById("systemPopupConfirmBtn");
+  if (!popup || !titleEl || !messageEl || !confirmBtn) return;
+
+  systemPopupAction = confirmAction;
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  confirmBtn.onclick = async () => {
+    if (typeof systemPopupAction === "function") {
+      await systemPopupAction();
+    }
+  };
+  popup.classList.add("active");
+}
+
+window.closeSystemPopup = function() {
+  const popup = document.getElementById("systemPopup");
+  const confirmBtn = document.getElementById("systemPopupConfirmBtn");
+  systemPopupAction = null;
+  if (confirmBtn) confirmBtn.onclick = null;
+  if (popup) popup.classList.remove("active");
+};
 
 window.logout = async function() {
   if (auth.currentUser) {

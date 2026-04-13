@@ -49,13 +49,16 @@ body{
   font-family:'Press Start 2P', cursive;
   font-size:14px;
   line-height:1.5;
-  background:linear-gradient(90deg,#ff8c00,#ff2e97);
+  background:linear-gradient(90deg,#ff982e 0%,#ff7c2e 28%,#ff4d95 68%,#ff4fb8 100%);
   -webkit-background-clip:text;
   background-clip:text;
   -webkit-text-fill-color:transparent;
   margin:0;
   cursor:pointer;
   transition:transform 0.25s ease;
+  filter:
+    drop-shadow(0 0 6px rgba(255,138,42,0.45))
+    drop-shadow(0 0 14px rgba(255,46,151,0.28));
 }
 
 .logo-link:hover .logo{
