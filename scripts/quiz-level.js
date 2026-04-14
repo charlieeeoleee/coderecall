@@ -13,6 +13,7 @@ import {
   handleMusicToggle
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -148,7 +149,7 @@ const HARDWARE_QUIZ_OVERRIDES = {
       question: "Which of the following is a microphone?",
       choices: ["Option A", "Option B", "Option C", "Option D"],
       choiceImages: [
-        `${HARDWARE_DOC_IMAGE_BASE}/image7.png`,
+        `${HARDWARE_DOC_IMAGE_BASE}/image7.jpg`,
         `${HARDWARE_DOC_IMAGE_BASE}/image23.png`,
         `${HARDWARE_DOC_IMAGE_BASE}/image14.png`,
         `${HARDWARE_DOC_IMAGE_BASE}/image12.png`
@@ -665,6 +666,24 @@ function buildRationale(question, isCorrect) {
     : "Not quite. Review the question carefully and try to connect it to the lesson before moving on.";
 }
 
+function buildWrongAnswerReviewPayload(question, selectedAnswer) {
+  return {
+    source: "quiz-level",
+    subject,
+    difficulty,
+    quizType: "quiz-level",
+    quizLevel,
+    level: question?.level || quizLevel,
+    sub: question?.sub || currentIndex + 1,
+    title: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} ${difficulty} Level ${quizLevel}`,
+    question: String(question?.question || ""),
+    selectedAnswer: String(selectedAnswer || ""),
+    correctAnswer: String(question?.answer || ""),
+    rationale: buildRationale(question, false),
+    actionUrl: `quiz-level.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&quizLevel=${encodeURIComponent(quizLevel)}`
+  };
+}
+
 function showRationale(isCorrect, question) {
   document.getElementById("rationaleTitle").textContent = isCorrect ? "Correct ✔" : "Wrong ✖";
   document.getElementById("rationaleText").textContent = buildRationale(question, isCorrect);
@@ -835,6 +854,13 @@ window.handleNext = function () {
   const questionState = recordQuestionAttempt(currentQuestion, isCorrect);
 
   if (isCorrect) {
+    resolveWrongAnswerReview({
+      db,
+      user: currentUser,
+      payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
+    }).catch((error) => {
+      console.warn("Unable to resolve wrong-answer review item.", error);
+    });
     score += 1;
     playSound("correct");
     currentIndex += 1;
@@ -844,6 +870,13 @@ window.handleNext = function () {
     });
   } else {
     playSound("wrong");
+    saveWrongAnswerReview({
+      db,
+      user: currentUser,
+      payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
+    }).catch((error) => {
+      console.warn("Unable to save wrong-answer review item.", error);
+    });
     const remainingTries = Math.max(0, MAX_DAILY_TRIES_PER_QUESTION - questionState.attempts);
 
     if (remainingTries > 0) {
@@ -905,5 +938,4 @@ onAuthStateChanged(auth, (user) => {
 });
 
 initializePage();
-
 

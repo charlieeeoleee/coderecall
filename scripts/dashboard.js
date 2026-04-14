@@ -27,6 +27,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import { loadWrongAnswerReview } from "./review-store.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -177,6 +178,7 @@ async function loadDashboard() {
   });
   updateUserUI(name, photo);
   updateStatsUI(xp);
+  await renderWrongAnswerReviewPreview();
   renderDashboardAchievements(xp, false);
   await loadLeaderboard();
   renderDashboardLeaderboardPreview();
@@ -309,8 +311,21 @@ function loadGuestDashboard() {
   currentXP = guestXP;
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   updateStatsUI(guestXP);
+  renderWrongAnswerReviewPreview();
   renderDashboardAchievements(guestXP, true);
   renderDashboardLeaderboardPreview();
+}
+
+async function renderWrongAnswerReviewPreview() {
+  const countEl = document.getElementById("wrongAnswerReviewCount");
+  if (!countEl) return;
+
+  const items = await loadWrongAnswerReview({
+    db,
+    user: currentUser
+  });
+
+  countEl.textContent = String(items.length);
 }
 
 /* =========================
@@ -412,6 +427,10 @@ function escapeHtml(text) {
 
 window.goToLeaderboard = function() {
   window.location.href = "leaderboard.html";
+};
+
+window.goToWrongAnswerReview = function() {
+  window.location.href = "review.html";
 };
 
 /* =========================
@@ -780,9 +799,11 @@ function clearGuestSession() {
   const keysToRemove = [
     "guest",
     "guest_xp",
+    "guest_xpWeekly",
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
+    "wrong_answer_review_items",
     "hardware_pretest",
     "hardware_modules",
     "hardware_quiz",

@@ -43,6 +43,29 @@ const db = getFirestore(app);
 let currentUser = null;
 let learnersCache = [];
 
+function syncMobileSidebarButton() {
+  const layout = document.querySelector(".layout");
+  const toggle = document.querySelector(".sidebar-toggle");
+  if (!layout || !toggle) return;
+  const isOpen = layout.classList.contains("mobile-nav-open");
+  toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  toggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+}
+
+window.toggleMobileSidebar = function() {
+  const layout = document.querySelector(".layout");
+  if (!layout || window.innerWidth > 980) return;
+  layout.classList.toggle("mobile-nav-open");
+  syncMobileSidebarButton();
+};
+
+function closeMobileSidebar() {
+  const layout = document.querySelector(".layout");
+  if (!layout) return;
+  layout.classList.remove("mobile-nav-open");
+  syncMobileSidebarButton();
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "auth.html";
@@ -605,6 +628,7 @@ function escapeHtml(text) {
 }
 
 window.logout = async function() {
+  closeMobileSidebar();
   if (auth.currentUser) {
     await signOut(auth);
   }
@@ -641,3 +665,25 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".menu a").forEach((link) => {
+    link.addEventListener("click", closeMobileSidebar);
+  });
+  syncMobileSidebarButton();
+});
+
+document.addEventListener("click", (event) => {
+  const layout = document.querySelector(".layout");
+  const sidebar = document.querySelector(".sidebar");
+  const toggle = document.querySelector(".sidebar-toggle");
+  if (!layout || !sidebar || !toggle) return;
+  if (!layout.classList.contains("mobile-nav-open")) return;
+  if (window.innerWidth > 980) return;
+  if (sidebar.contains(event.target) || toggle.contains(event.target)) return;
+  closeMobileSidebar();
+});
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 980) closeMobileSidebar();
+});

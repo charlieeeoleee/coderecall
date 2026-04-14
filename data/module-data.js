@@ -173,8 +173,8 @@ The module also introduces integrated circuits, or ICs, which contain many compo
       module1: {
         title: "Troubleshooting",
         content:
-          "This lesson covers the troubleshooting process and common hardware faults in computer systems. It discusses problem identification, theory building, testing, and diagnosis of failures involving the PSU, motherboard, CPU overheating, RAM, storage devices, SATA cables, BIOS issues, and intermittent faults. The module helps students classify symptoms and connect them to practical repair strategies.",
-        tip: "Always connect the symptom to the most probable hardware cause before trying fixes.",
+          "Troubleshooting is the process of identifying faults, testing likely causes, and choosing the correct repair based on symptoms.",
+        tip: "Follow the troubleshooting flow from the source: identify the problem, build a theory, test the theory, then classify the fault before deciding on repair.",
         images: []
       },
       module2: {

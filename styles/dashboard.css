@@ -965,21 +965,25 @@ body.light-mode .view-full-btn{
   }
 
   .topbar{
-    flex-direction:column;
-    align-items:flex-start;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:nowrap;
   }
 
   .achievements-grid{
     grid-template-columns:1fr;
   }
 
-    .section-head{
+  .section-head{
     flex-direction:column;
     align-items:flex-start;
   }
 
   .user-top{
-    align-self:flex-start;
+    margin-left:auto;
+    align-self:auto;
+    flex-shrink:0;
   }
 }
 
@@ -989,11 +993,31 @@ body.light-mode .view-full-btn{
   }
 
   .topbar{
-    gap:14px;
+    gap:10px;
   }
 
   .topbar-title{
-    width:100%;
+    flex:1;
+    min-width:0;
+  }
+
+  .topbar h2{
+    font-size:22px;
+  }
+
+  .user-top{
+    padding:8px 10px;
+    gap:8px;
+  }
+
+  .user-top span{
+    font-size:13px;
+    white-space:nowrap;
+  }
+
+  .user-top img{
+    width:34px;
+    height:34px;
   }
 
   .sidebar{
@@ -1006,5 +1030,194 @@ body.light-mode .view-full-btn{
   .menu{
     gap:20px;
     padding-top:8px;
+  }
+}
+
+.review-tools-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+  margin-top:16px;
+}
+
+.review-tool-card{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:16px;
+  padding:18px 20px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.review-tool-icon{
+  width:52px;
+  height:52px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,rgba(255,46,151,0.24),rgba(0,229,255,0.2));
+  font-size:24px;
+}
+
+.review-tool-copy h4{
+  margin:0 0 6px;
+  font-size:18px;
+}
+
+.review-tool-copy p{
+  margin:0;
+  opacity:0.85;
+  line-height:1.5;
+}
+
+.review-tool-metric{
+  min-width:76px;
+  text-align:right;
+}
+
+.review-tool-metric span{
+  display:block;
+  font-size:30px;
+  font-weight:700;
+}
+
+.review-tool-metric small{
+  opacity:0.75;
+}
+
+.review-page-section{
+  min-height:260px;
+}
+
+.wrong-answer-review-list{
+  display:grid;
+  gap:16px;
+  margin-top:18px;
+}
+
+.wrong-answer-card{
+  padding:20px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.wrong-answer-card h4{
+  margin:0 0 12px;
+  font-size:20px;
+  line-height:1.4;
+}
+
+.wrong-answer-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.wrong-answer-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+  background:rgba(0,229,255,0.16);
+  color:#7ff7ff;
+}
+
+.wrong-answer-chip.secondary{
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+}
+
+.wrong-answer-detail{
+  margin:8px 0;
+  line-height:1.5;
+}
+
+.wrong-answer-rationale{
+  margin:14px 0 0;
+  opacity:0.9;
+  line-height:1.6;
+}
+
+.wrong-answer-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:16px;
+}
+
+.review-open-btn,
+.review-clear-btn{
+  border:none;
+  border-radius:12px;
+  padding:12px 16px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.review-open-btn{
+  background:linear-gradient(90deg,#ff2e97,#00e5ff);
+  color:#fff;
+}
+
+.review-clear-btn{
+  background:transparent;
+  border:2px solid rgba(255,255,255,0.16);
+  color:#fff;
+}
+
+.review-empty-state{
+  padding:28px 20px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.04);
+  border:1px dashed rgba(255,255,255,0.16);
+  text-align:center;
+}
+
+.review-empty-state h4{
+  margin:0 0 10px;
+  font-size:20px;
+}
+
+.review-empty-state p{
+  margin:0;
+  opacity:0.82;
+}
+
+body.light-mode .review-tool-card,
+body.light-mode .wrong-answer-card{
+  background:rgba(255,255,255,0.72);
+  border-color:rgba(60, 40, 120, 0.08);
+}
+
+body.light-mode .wrong-answer-chip.secondary{
+  background:rgba(58,37,117,0.1);
+  color:#2b1e5a;
+}
+
+body.light-mode .review-clear-btn{
+  color:#2b1e5a;
+  border-color:rgba(58,37,117,0.18);
+}
+
+body.light-mode .review-empty-state{
+  background:rgba(255,255,255,0.7);
+  border-color:rgba(58,37,117,0.14);
+}
+
+@media(max-width:900px){
+  .review-tool-card{
+    grid-template-columns:1fr;
+    text-align:left;
+  }
+
+  .review-tool-metric{
+    text-align:left;
   }
 }

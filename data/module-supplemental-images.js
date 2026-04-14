@@ -49,32 +49,7 @@ export const MODULE_SUPPLEMENTAL_IMAGES = {
       ]
     },
     hard: {
-      module1: [
-        {
-          src: "assets/modules/hardware/hard/module1/troubleshooting-01-no-power.svg",
-          alt: "No power checklist",
-          caption: "No power checklist",
-          info: "This visual helps learners follow the first checks for systems that do not turn on at all."
-        },
-        {
-          src: "assets/modules/hardware/hard/module1/troubleshooting-02-post.svg",
-          alt: "POST and startup clues",
-          caption: "POST and startup clues",
-          info: "This image highlights how beep codes, lights, and screen behavior can guide early diagnosis."
-        },
-        {
-          src: "assets/modules/hardware/hard/module1/troubleshooting-03-heat.svg",
-          alt: "Overheating symptoms",
-          caption: "Overheating symptoms",
-          info: "This visual connects heat-related symptoms to cooling, airflow, and maintenance issues."
-        },
-        {
-          src: "assets/modules/hardware/hard/module1/troubleshooting-04-storage.svg",
-          alt: "Storage and boot issues",
-          caption: "Storage and boot issues",
-          info: "This image helps explain how boot errors can be traced through storage devices, cables, and BIOS settings."
-        }
-      ],
+      module1: [],
       module2: [
         {
           src: "assets/modules/hardware/hard/module2/charles-babbage.jpg",

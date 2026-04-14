@@ -3,7 +3,7 @@
 <head>
   <title>Code Recall Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260414c">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -17,6 +17,7 @@
         </a>
         <nav class="menu">
           <a href="dashboard.html" class="active-link">&#127968; Dashboard</a>
+          <a href="review.html">&#128221; Review</a>
           <a href="subjects.html">&#128218; Subjects</a>
           <a href="achievements.html">&#127942; Badges</a>
           <a href="leaderboard.html">&#129351; Leaderboard</a>
@@ -72,6 +73,29 @@
         <div class="subjects">
           <button onclick="startGame('hardware')">&#128421; Computer Hardware</button>
           <button onclick="startGame('electrical')">&#9889; Electrical Wiring and Electronics Circuit Components</button>
+        </div>
+      </div>
+
+      <div class="card section review-tools-section">
+        <div class="section-head">
+          <div>
+            <h3>Review Tools</h3>
+            <span class="section-note">Go back to questions you missed</span>
+          </div>
+          <button class="view-full-btn" onclick="goToWrongAnswerReview()">Open Wrong-Answer Review</button>
+        </div>
+        <div class="review-tools-grid">
+          <article class="review-tool-card">
+            <div class="review-tool-icon">&#128221;</div>
+            <div class="review-tool-copy">
+              <h4>Wrong-Answer Review</h4>
+              <p>Retry missed questions with the correct answer and rationale beside them.</p>
+            </div>
+            <div class="review-tool-metric">
+              <span id="wrongAnswerReviewCount">0</span>
+              <small>items</small>
+            </div>
+          </article>
         </div>
       </div>
 
@@ -135,8 +159,8 @@
   <!-- CONFETTI -->
   <div id="confettiContainer" class="confetti-container"></div>
 
-  <script type="module" src="scripts/dashboard.js?v=20260411a"></script>
-  <script src="scripts/loading.js?v=20260411a" defer></script>
+  <script type="module" src="scripts/dashboard.js?v=20260414c"></script>
+  <script src="scripts/loading.js?v=20260414c" defer></script>
 </body>
 </html>
 

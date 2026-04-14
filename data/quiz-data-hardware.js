@@ -435,14 +435,14 @@ export const hardwareQuizData = {
         {
           level: 14,
           sub: 2,
-          question: "It is used to turn any physical document into a digital one.",
+          question: "It is used to turn digital document into a physical printed material.",
           choices: [
-            "Word File -2",
-            "Printer -1",
-            "Microsoft -1",
+            "Word File",
+            "Printer",
+            "Microsoft Office",
             "Scanner"
           ],
-          answer: "D"
+          answer: "B"
         },
         {
           level: 14,

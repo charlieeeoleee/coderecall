@@ -2,6 +2,8 @@ html, body { margin: 0; min-height: 100%; }
 body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradient(135deg, #0b0f2a, #2b1e5a); color: white; min-height: 100vh; }
 .layout { display: flex; min-height: 100vh; }
 .sidebar { width: 240px; background: #1a1140; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+.sidebar-toggle { display: none; width: 46px; height: 46px; border: none; border-radius: 14px; background: rgba(255,255,255,0.08); cursor: pointer; align-items: center; justify-content: center; flex-direction: column; gap: 5px; padding: 0; flex-shrink: 0; }
+.sidebar-toggle span { width: 20px; height: 2px; background: #fff; border-radius: 999px; display: block; transition: transform 0.25s ease, opacity 0.25s ease, background 0.35s ease; }
 .top-section { display: flex; flex-direction: column; gap: 30px; }
 .logo-link { text-decoration: none; }
 .logo { font-family: "Press Start 2P", cursive; font-size: 14px; line-height: 1.5; background: linear-gradient(90deg, #ff982e 0%, #ff7c2e 28%, #ff4d95 68%, #ff4fb8 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 0; filter: drop-shadow(0 0 6px rgba(255,138,42,0.45)) drop-shadow(0 0 14px rgba(255,46,151,0.28)); }
@@ -13,6 +15,7 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .logout-btn { width: 100%; padding: 12px; background: #ff2e97; color: white; font-weight: 600; }
 .main { flex: 1; padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.topbar-title { display: flex; align-items: flex-start; gap: 12px; }
 .page-title { margin: 0; font-size: 32px; }
 .page-subtitle { margin: 8px 0 0; opacity: 0.82; font-size: 14px; max-width: 760px; }
 .user-top { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 14px; }
@@ -107,6 +110,8 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .danger-action:disabled { opacity: 0.45; cursor: not-allowed; }
 .light-mode body, body.light-mode { background: linear-gradient(135deg, #f3f0ff, #dff9ff); color: #1e1547; }
 body.light-mode .sidebar { background: #e9e0ff; }
+body.light-mode .sidebar-toggle { background: rgba(108,76,255,0.1); }
+body.light-mode .sidebar-toggle span { background: #1a1140; }
 body.light-mode .menu a { color: #1e1547; }
 body.light-mode .overview-card,
 body.light-mode .panel-card,
@@ -214,11 +219,36 @@ body.light-mode .secondary-btn {
   .review-grid,
   .profile-stats,
   .profile-columns { grid-template-columns: 1fr; }
-  .layout { flex-direction: column; }
-  .sidebar { width: 100%; min-height: auto; }
+}
+
+@media (max-width: 980px) {
+  .layout { flex-direction: column; position: relative; }
+  .sidebar-toggle { display: inline-flex; }
+  .sidebar { display: none; position: fixed; top: 84px; left: 12px; right: 12px; width: auto; min-height: auto; max-height: calc(100vh - 108px); overflow: auto; border-radius: 22px; box-shadow: 0 18px 42px rgba(6,8,28,0.4); border: 1px solid rgba(255,255,255,0.08); z-index: 1200; }
+  .layout.mobile-nav-open .sidebar { display: flex; }
+  .layout.mobile-nav-open .sidebar-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .layout.mobile-nav-open .sidebar-toggle span:nth-child(2) { opacity: 0; }
+  .layout.mobile-nav-open .sidebar-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .main { padding: 20px; }
+  .topbar { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: nowrap; }
+  .user-top { margin-left: auto; align-self: auto; flex-shrink: 0; }
+  .overview-grid, .admin-grid { grid-template-columns: 1fr; }
+  .analytics-grid, .bottleneck-grid, .health-grid { grid-template-columns: 1fr; }
+  .role-row, .pending-grid, .filter-bar, .action-row { flex-direction: column; align-items: stretch; }
+  .access-table th, .access-table td, .admin-table th, .admin-table td { white-space: nowrap; }
 }
 
 @media (max-width: 720px) {
+  .main { padding: 16px 12px 24px; }
+  .topbar { gap: 10px; }
+  .topbar-title { flex: 1; min-width: 0; }
+  .page-title { font-size: 28px; }
+  .page-subtitle { display: none; }
+  .user-top { padding: 8px 10px; gap: 8px; }
+  .user-top span { font-size: 13px; white-space: nowrap; }
+  .user-top img { width: 34px; height: 34px; }
+  .sidebar { top: 72px; left: 10px; right: 10px; padding: 18px; }
+  .menu { gap: 20px; padding-top: 8px; }
   .profile-row {
     grid-template-columns: 1fr;
     gap: 6px;

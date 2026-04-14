@@ -21,6 +21,7 @@ import {
   handleMusicToggle
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import { hardwarePosttestQuestions } from "../data/hardware-posttest-data.js";
 import {
@@ -588,6 +589,23 @@ function buildReviewRationale(question) {
   return baseExplanation;
 }
 
+function buildWrongAnswerReviewPayload(question, selectedAnswer) {
+  return {
+    source: "quiz",
+    subject,
+    quizType: type,
+    difficulty: level,
+    level: question?.level || 0,
+    sub: question?.sub || currentIndex + 1,
+    title: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} ${type === "pretest" ? "Pre-Test" : type === "posttest" ? "Post-Test" : "Quiz"}`,
+    question: String(question?.question || ""),
+    selectedAnswer: String(selectedAnswer || ""),
+    correctAnswer: getCorrectAnswerText(question),
+    rationale: buildReviewRationale(question),
+    actionUrl: `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`
+  };
+}
+
 window.closeRationaleAndContinue = function () {
   document.getElementById("rationaleModal").classList.remove("active");
 
@@ -780,6 +798,13 @@ window.handleNext = function () {
   const isCorrect = selectedChoice === currentQuestion.answer;
 
   if (isCorrect) {
+    resolveWrongAnswerReview({
+      db,
+      user: currentUser,
+      payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
+    }).catch((error) => {
+      console.warn("Unable to resolve wrong-answer review item.", error);
+    });
     score += 1;
     playSound("correct");
     continueToNext();
@@ -787,6 +812,13 @@ window.handleNext = function () {
   }
 
   playSound("wrong");
+  saveWrongAnswerReview({
+    db,
+    user: currentUser,
+    payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
+  }).catch((error) => {
+    console.warn("Unable to save wrong-answer review item.", error);
+  });
   pendingContinue = continueToNext;
   showRationale(buildReviewRationale(currentQuestion));
 };

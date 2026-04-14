@@ -737,24 +737,27 @@ const GAMIFIED_DETAILS = {
     }
   },
   Troubleshooting: {
-    subtitle: "Diagnosis mission: connect symptoms to the most probable hardware fault.",
+    subtitle: "Learn how to diagnose common computer hardware faults.",
     objectives: [
-      "Describe the troubleshooting process",
-      "Identify common hardware fault symptoms",
-      "Classify faults as transient, permanent, or intermittent"
+      "Explain the troubleshooting steps emphasized in the source",
+      "Identify the literal hardware symptoms and causes listed in the module",
+      "Classify faults and BIOS issues using the exact categories from the source"
     ],
     sections: [
-      { heading: "Problem-Solving Process", body: "Troubleshooting starts by identifying the problem, establishing a probable cause, and testing the theory logically." },
-      { heading: "Hardware Symptoms", body: "Overheating, bad RAM, failed drives, PSU issues, and BIOS faults each produce useful symptoms for diagnosis." },
-      { heading: "Fault Classification", body: "Some faults happen once, some repeat consistently, and others appear unpredictably, which changes how repair decisions are made." }
+      { heading: "1. The Troubleshooting Process", body: "While Preventive Maintenance is proactive (cleaning and updating to prevent issues), Troubleshooting is reactive (fixing an existing failure). Cisco defines a six-step process. The quiz emphasizes the first and most critical steps: Identify the Problem by always gathering system history and error symptoms first. Establish a Theory of Probable Cause by starting with the simplest issues, such as checking if the power cable is plugged into the outlet. Test the Theory by checking components like RAM using a known-working spare if a PC will not POST." },
+      { heading: "2A. Power and Motherboard Issues", body: "Power Supply (PSU): If a PC restarts the moment a graphics-heavy app launches, the PSU wattage may be insufficient. Motherboard Failures: Bulging or leaking capacitors indicate a failing motherboard. If the system only boots outside the case, there is likely a short circuit due to improper grounding. VRM and Voltage: Burn marks near the VRM area or failing voltage regulators lead to inconsistent system stability under load." },
+      { heading: "2B. CPU and Thermal Management", body: "Overheating: If the temperature rises too fast, check BIOS fan speeds or the thermal paste. A system that shuts down exactly 30 seconds after booting is usually hitting a thermal protection limit. Ventilation: In a lab, CPUs must be spaced apart to allow for proper airflow." },
+      { heading: "2C. Memory (RAM) and Storage", body: "RAM Errors: Symptoms like Blue Screens (BSOD) or a memory count lower than what is installed suggest faulty or poorly seated RAM. Use a memory diagnostic utility to find cells that POST might miss. Storage (HDD/SSD): A \"No bootable device found\" message indicates a failed or disconnected drive. If installation takes a very long time, the drive likely has bad sectors. Cables: Frequent CRC errors usually point to a faulty SATA data cable rather than the drive itself." },
+      { heading: "3. Classifying Faults", body: "Technicians must categorize errors to decide on a repair strategy. Transient Fault: A \"one-time\" error that does not recur if you try the operation again. Permanent Fault: An error that recurs every single time until the part is replaced (e.g., a dead NIC). Intermittent Fault: An error that happens randomly or produces different symptoms (like different beep codes) every time." },
+      { heading: "4. BIOS and Firmware Issues", body: "CMOS/Clock: If the system clock loses time while the PC is running (not just off), the motherboard's crystal oscillator is likely failing. Corruption: Intermittent failure to detect boot devices can suggest BIOS corruption. Hardware ID: Replacing a motherboard often triggers OS activation issues because of a Hardware ID mismatch. Cisco Networking Academy. (2011). IT essentials: PC hardware and software companion guide (4th ed.). Cisco Press. https://ptgmedia.pearsoncmg.com/images/9781587132636/samplechapter/9781587132636_ch04.pdf" }
     ],
     challenge: {
       title: "Fault Hunt Challenge",
-      prompt: "Use symptoms to reason like a technician.",
+      prompt: "Use the source symptoms and classifications to reason like a technician.",
       points: [
-        "What could cause a system to shut down from heat?",
-        "What might explain a no bootable device error?",
-        "What type of fault happens randomly with changing symptoms?"
+        "State the first three troubleshooting steps emphasized in the lesson",
+        "Match a symptom to PSU, motherboard, CPU, RAM, storage, or cable faults",
+        "Explain the difference between transient, permanent, and intermittent faults"
       ]
     }
   },
@@ -1145,6 +1148,55 @@ const IMAGE_CURATION = {
   },
   History: {
     captionPrefix: "Computer history reference"
+  }
+  ,
+  Troubleshooting: {
+    sections: [
+      {
+        heading: "The Troubleshooting Process",
+        paragraphs: [
+          "While Preventive Maintenance is proactive (cleaning and updating to prevent issues), Troubleshooting is reactive (fixing an existing failure).",
+          "Cisco defines a six-step process. The lesson emphasizes the first and most critical steps: identify the problem by gathering system history and error symptoms first, establish a theory of probable cause by starting with the simplest issues such as checking if the power cable is plugged into the outlet, and test the theory by trying components like RAM using a known-working spare."
+        ]
+      },
+      {
+        heading: "Power, Motherboard, and Thermal Issues",
+        paragraphs: [
+          "Power Supply (PSU): If a PC restarts the moment a graphics-heavy app launches, the PSU wattage may be insufficient.",
+          "Motherboard Failures: Bulging or leaking capacitors indicate a failing motherboard. If the system only boots outside the case, there is likely a short circuit due to improper grounding.",
+          "VRM and Voltage: Burn marks near the VRM area or failing voltage regulators lead to inconsistent system stability under load.",
+          "Overheating: If the temperature rises too fast, check BIOS fan speeds or the thermal paste. A system that shuts down exactly 30 seconds after booting is usually hitting a thermal protection limit.",
+          "Ventilation: In a lab, CPUs must be spaced apart to allow for proper airflow."
+        ]
+      },
+      {
+        heading: "Memory (RAM) and Storage",
+        paragraphs: [
+          "RAM Errors: Symptoms like Blue Screens (BSOD) or a memory count lower than what is installed suggest faulty or poorly seated RAM. Use a memory diagnostic utility to find cells that POST might miss.",
+          "Storage (HDD/SSD): A \"No bootable device found\" message indicates a failed or disconnected drive. If installation takes a very long time, the drive likely has bad sectors.",
+          "Cables: Frequent CRC errors usually point to a faulty SATA data cable rather than the drive itself."
+        ]
+      },
+      {
+        heading: "Classifying Faults",
+        paragraphs: [
+          "Technicians must categorize errors to decide on a repair strategy.",
+          "Transient Fault: A \"one-time\" error that does not recur if you try the operation again.",
+          "Permanent Fault: An error that recurs every single time until the part is replaced (e.g., a dead NIC).",
+          "Intermittent Fault: An error that happens randomly or produces different symptoms (like different beep codes) every time."
+        ]
+      },
+      {
+        heading: "BIOS and Firmware Issues",
+        paragraphs: [
+          "CMOS/Clock: If the system clock loses time while the PC is running (not just off), the motherboard's crystal oscillator is likely failing.",
+          "Corruption: Intermittent failure to detect boot devices can suggest BIOS corruption.",
+          "Hardware ID: Replacing a motherboard often triggers OS activation issues because of a Hardware ID mismatch.",
+          "Cisco Networking Academy. (2011). IT essentials: PC hardware and software companion guide (4th ed.). Cisco Press. https://ptgmedia.pearsoncmg.com/images/9781587132636/samplechapter/9781587132636_ch04.pdf"
+        ]
+      }
+    ],
+    tables: []
   }
 };
 
@@ -2204,11 +2256,28 @@ async function renderModulePage() {
     moduleNumber < totalModulesForDifficulty ? "Next Module" : "Return to Modules";
   document.getElementById("moduleActionBtn").onclick = startQuiz;
   renderPills(objectives, lessonDetails?.objectives || []);
-  renderSections(sections, documentLayout?.structured ? [] : (lessonDetails?.sections || []));
+  const useLessonPathForTroubleshooting = data.title === "Troubleshooting";
+  renderSections(
+    sections,
+    useLessonPathForTroubleshooting
+      ? (lessonDetails?.sections || [])
+      : (documentLayout?.structured ? [] : (lessonDetails?.sections || []))
+  );
   if (sectionCardsShell) {
-    sectionCardsShell.hidden = Boolean(documentLayout?.structured);
+    sectionCardsShell.hidden = useLessonPathForTroubleshooting ? false : Boolean(documentLayout?.structured);
   }
-  renderDocumentLayout(data, lessonDetails);
+  if (useLessonPathForTroubleshooting) {
+    const documentSection = document.getElementById("moduleDocumentSection");
+    const documentContainer = document.getElementById("moduleDocument");
+    if (documentSection) {
+      documentSection.hidden = true;
+    }
+    if (documentContainer) {
+      documentContainer.innerHTML = "";
+    }
+  } else {
+    renderDocumentLayout(data, lessonDetails);
+  }
   renderChallenge(challengeTitle, challengePrompt, challengePoints, lessonDetails?.challenge);
   renderHistoryTimeline(data);
   renderSolderingProcess(data);
@@ -2940,7 +3009,10 @@ function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleDat
   gallery.innerHTML = "";
   gallery.classList.remove("module-gallery-grid-single");
 
-  if (moduleData?.title === "History") {
+  if (
+    moduleData?.title === "History" ||
+    (moduleData?.title === "Troubleshooting" && images.length === 0)
+  ) {
     if (gallerySection) {
       gallerySection.hidden = true;
     }
