@@ -8,9 +8,8 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import { saveStudyHistory } from "./study-history-store.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
-import { MODULE_IMAGES } from "../data/module-images.js";
-import { MODULE_SUPPLEMENTAL_IMAGES } from "../data/module-supplemental-images.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -31,6 +30,21 @@ let autoCheckpointInFlight = false;
 const MODULE_XP_REWARD = 5;
 const QUICK_CHECK_XP_PER_CORRECT = 1;
 const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
+let moduleImageBanksPromise = null;
+
+async function loadModuleImageBanks() {
+  if (!moduleImageBanksPromise) {
+    moduleImageBanksPromise = Promise.all([
+      import("../data/module-images.js"),
+      import("../data/module-supplemental-images.js")
+    ]).then(([embeddedModule, supplementalModule]) => ({
+      moduleImages: embeddedModule.MODULE_IMAGES || {},
+      supplementalImages: supplementalModule.MODULE_SUPPLEMENTAL_IMAGES || {}
+    }));
+  }
+
+  return moduleImageBanksPromise;
+}
 
 /* =========================
    AUTH CHECK
@@ -1200,7 +1214,7 @@ const IMAGE_CURATION = {
   }
 };
 
-function getModuleData() {
+async function getModuleData() {
   if (moduleNumber > STATIC_MODULE_COUNT) {
     const publishedModule = publishedModules[moduleNumber - STATIC_MODULE_COUNT - 1] || null;
     if (!publishedModule) return null;
@@ -1218,14 +1232,15 @@ function getModuleData() {
   const base = MODULE_CATALOG[subject]?.[difficulty]?.[moduleKey] || null;
   if (!base) return null;
 
-  const embeddedImages = MODULE_IMAGES?.[subject]?.[difficulty]?.[moduleKey] || [];
-  const supplementalImages = MODULE_SUPPLEMENTAL_IMAGES?.[subject]?.[difficulty]?.[moduleKey] || [];
+  const { moduleImages, supplementalImages } = await loadModuleImageBanks();
+  const embeddedImages = moduleImages?.[subject]?.[difficulty]?.[moduleKey] || [];
+  const supplementalImageSet = supplementalImages?.[subject]?.[difficulty]?.[moduleKey] || [];
 
   return {
     ...base,
     images: curateModuleImages(
       base.title,
-      [...embeddedImages, ...supplementalImages, ...(base.images || [])]
+      [...embeddedImages, ...supplementalImageSet, ...(base.images || [])]
     )
   };
 }
@@ -2154,7 +2169,7 @@ function renderDocumentLayout(data, lessonDetails) {
           return `
             <td>
               <div class="module-doc-visual">
-                <img src="${escapeHtml(cell.src)}" alt="${escapeHtml(cell.caption || "Module visual")}">
+                <img src="${escapeHtml(cell.src)}" alt="${escapeHtml(cell.caption || "Module visual")}" loading="lazy" decoding="async">
                 <span>${escapeHtml(cell.caption || "")}</span>
               </div>
             </td>
@@ -2188,7 +2203,7 @@ function getNextModuleUrl() {
 
 async function renderModulePage() {
   await loadPublishedModuleEntries();
-  const data = getModuleData();
+  const data = await getModuleData();
   const subjectName = subjectNames[subject] || "Subject";
   const difficultyName = difficultyNames[difficulty] || "Difficulty";
   const gallery = document.getElementById("moduleGallery");
@@ -2203,6 +2218,24 @@ async function renderModulePage() {
   const lessonDetails = data ? buildGamifiedLesson(data) : null;
   const documentLayout = data ? getDocumentLayout(data, lessonDetails) : null;
   const sectionCardsShell = sections?.closest(".module-sections");
+
+  if (data) {
+    saveStudyHistory({
+      db,
+      user: currentUser,
+      payload: {
+        key: `module|${subject}|${difficulty}|${moduleKey}`,
+        kind: "module",
+        title: data.title,
+        subject,
+        difficulty,
+        detail: `Module ${moduleNumber} • ${difficultyName} • ${subjectName}`,
+        actionUrl: `module.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&module=${encodeURIComponent(moduleKey)}`
+      }
+    }).catch((error) => {
+      console.warn("Unable to save study history for module.", error);
+    });
+  }
 
   document.getElementById("moduleSubject").textContent = subjectName;
   document.getElementById("moduleDifficulty").textContent = difficultyName;
@@ -2503,7 +2536,7 @@ function renderHistoryTimeline(moduleData) {
   }
 
   section.hidden = false;
-  visual.innerHTML = `<img src="${timelineImage.src}" alt="${timelineImage.alt || "Computer history timeline"}">`;
+  visual.innerHTML = `<img src="${timelineImage.src}" alt="${timelineImage.alt || "Computer history timeline"}" loading="lazy" decoding="async">`;
   strip.innerHTML = getHistoryTimelineItems().map((item) => `
     <article class="module-timeline-item">
       <span class="module-timeline-year">${item.year}</span>
@@ -2585,7 +2618,7 @@ function renderSolderingProcess(moduleData) {
   grid.innerHTML = steps.map((step, index) => `
     <article class="module-step-card">
       <div class="module-step-media">
-        ${step.image ? `<img src="${step.image.src}" alt="${step.image.alt || step.caption}">` : ""}
+        ${step.image ? `<img src="${step.image.src}" alt="${step.image.alt || step.caption}" loading="lazy" decoding="async">` : ""}
       </div>
       <div class="module-step-copy">
         <span class="module-step-index">Step ${index + 1}</span>
@@ -2939,7 +2972,7 @@ function renderMotherboardFormFactors(moduleData) {
       </div>
       <div class="module-form-factor-media">
         <div class="module-form-factor-panel">
-          <img src="${card.boardSrc}" alt="${card.boardAlt}">
+          <img src="${card.boardSrc}" alt="${card.boardAlt}" loading="lazy" decoding="async">
           <div class="module-form-factor-panel-copy">
             <p class="module-form-factor-label">${card.boardLabel}</p>
             <p class="module-form-factor-text">${card.boardText}</p>
@@ -2990,7 +3023,7 @@ function renderTroubleshootingSteps(images, gallery, galleryChip, galleryNote) {
     return `
       <article class="module-step-card">
         <div class="module-step-media">
-          <img src="${image.src}" alt="${image.alt || image.caption || "Troubleshooting step"}">
+          <img src="${image.src}" alt="${image.alt || image.caption || "Troubleshooting step"}" loading="lazy" decoding="async">
         </div>
         <div class="module-step-copy">
           <span class="module-step-index">Step ${index + 1}</span>
@@ -3082,7 +3115,7 @@ function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleDat
     const figure = document.createElement("figure");
     figure.className = "module-figure";
     figure.innerHTML = `
-      <img src="${image.src}" alt="${image.alt || "Module image"}">
+      <img src="${image.src}" alt="${image.alt || "Module image"}" loading="lazy" decoding="async">
       <figcaption>
         <span class="module-figure-title">${image.caption || ""}</span>
         <span class="module-figure-info">${image.info || ""}</span>

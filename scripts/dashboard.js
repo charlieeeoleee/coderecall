@@ -28,6 +28,7 @@ import {
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { loadWrongAnswerReview } from "./review-store.js";
+import { loadStudyHistory } from "./study-history-store.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -179,6 +180,7 @@ async function loadDashboard() {
   updateUserUI(name, photo);
   updateStatsUI(xp);
   await renderWrongAnswerReviewPreview();
+  await renderStudyHistoryPreview();
   renderDashboardAchievements(xp, false);
   await loadLeaderboard();
   renderDashboardLeaderboardPreview();
@@ -312,6 +314,7 @@ function loadGuestDashboard() {
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   updateStatsUI(guestXP);
   renderWrongAnswerReviewPreview();
+  renderStudyHistoryPreview();
   renderDashboardAchievements(guestXP, true);
   renderDashboardLeaderboardPreview();
 }
@@ -326,6 +329,26 @@ async function renderWrongAnswerReviewPreview() {
   });
 
   countEl.textContent = String(items.length);
+}
+
+async function renderStudyHistoryPreview() {
+  const countEl = document.getElementById("studyHistoryCount");
+  const textEl = document.getElementById("studyHistoryPreviewText");
+  if (!countEl || !textEl) return;
+
+  const items = await loadStudyHistory({
+    db,
+    user: currentUser
+  });
+
+  countEl.textContent = String(items.length);
+  if (!items.length) {
+    textEl.textContent = "Your recent modules and quizzes will appear here.";
+    return;
+  }
+
+  const latest = items[0];
+  textEl.textContent = `${latest.title} • ${latest.detail || "Recent activity"}`;
 }
 
 /* =========================
@@ -431,6 +454,10 @@ window.goToLeaderboard = function() {
 
 window.goToWrongAnswerReview = function() {
   window.location.href = "review.html";
+};
+
+window.goToStudyHistory = function() {
+  window.location.href = "history.html";
 };
 
 /* =========================

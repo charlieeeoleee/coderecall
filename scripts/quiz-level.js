@@ -1,5 +1,3 @@
-import { electricalQuizData } from "../data/quiz-data-electrical.js?v=20260412r";
-import { hardwareQuizData } from "../data/quiz-data-hardware.js?v=20260412r";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -14,6 +12,7 @@ import {
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
+import { saveStudyHistory } from "./study-history-store.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -215,6 +214,7 @@ let score = 0;
 let currentUser = auth.currentUser || null;
 let rationaleNextAction = "advance";
 let currentTotalXP = 0;
+let questionBankCache = null;
 
 function shuffleArray(array) {
   const cloned = [...array];
@@ -257,6 +257,24 @@ function groupQuestionsByLevel(questions) {
     grouped[levelKey].push(question);
     return grouped;
   }, {});
+}
+
+async function loadQuestionBank() {
+  if (questionBankCache) {
+    return questionBankCache;
+  }
+
+  if (subject === "electrical") {
+    questionBankCache = import("../data/quiz-data-electrical.js?v=20260414perf").then((module) => ({
+      electrical: module.electricalQuizData?.electrical || {}
+    }));
+    return questionBankCache;
+  }
+
+  questionBankCache = import("../data/quiz-data-hardware.js?v=20260414perf").then((module) => ({
+    hardware: module.hardwareQuizData?.hardware || {}
+  }));
+  return questionBankCache;
 }
 
 function normalizeAnswer(question) {
@@ -480,10 +498,10 @@ async function syncXpDock() {
   renderXpDock(Number(snap.data()?.xp || 0));
 }
 
-function getQuestionBank() {
-  const electricalBank = JSON.parse(JSON.stringify(electricalQuizData.electrical || {}));
-
-  const hardwareBank = JSON.parse(JSON.stringify(hardwareQuizData.hardware || {}));
+async function getQuestionBank() {
+  const baseBank = await loadQuestionBank();
+  const electricalBank = JSON.parse(JSON.stringify(baseBank.electrical || {}));
+  const hardwareBank = JSON.parse(JSON.stringify(baseBank.hardware || {}));
   const hardwareFallbacks = HARDWARE_QUIZ_LEVEL_FALLBACKS[difficulty] || {};
   const hardwareOverrides = HARDWARE_QUIZ_OVERRIDES[difficulty] || {};
 
@@ -508,14 +526,13 @@ function getQuestionBank() {
     });
   });
 
-  return {
-    electrical: electricalBank,
-    hardware: hardwareBank
-  };
+  return subject === "electrical"
+    ? { electrical: electricalBank }
+    : { hardware: hardwareBank };
 }
 
-function getQuestionSet() {
-  const bank = getQuestionBank();
+async function getQuestionSet() {
+  const bank = await getQuestionBank();
   const bySubject = bank[subject] || {};
   const byDifficulty = bySubject[difficulty] || {};
   if (byDifficulty[quizLevel]?.length) {
@@ -529,15 +546,15 @@ function getQuestionSet() {
   return [];
 }
 
-function getTotalLevels() {
-  const bank = getQuestionBank();
+async function getTotalLevels() {
+  const bank = await getQuestionBank();
   const bySubject = bank[subject] || {};
   const byDifficulty = bySubject[difficulty] || {};
   return Object.keys(byDifficulty).length;
 }
 
-function prepareQuestions() {
-  const levelQuestions = getQuestionSet();
+async function prepareQuestions() {
+  const levelQuestions = await getQuestionSet();
   const preparedQuestions = levelQuestions.map((question) => shuffleQuestionChoices(normalizeAnswer(question)));
   questions = shuffleAvoidingOriginalOrder(
     preparedQuestions,
@@ -618,6 +635,8 @@ function renderQuestion() {
         <img
           src="${currentQuestion.image}"
           alt="Question visual"
+          loading="lazy"
+          decoding="async"
           class="level-question-image${currentQuestion.imageCropBottom ? " is-cropped" : ""}"
           style="${currentQuestion.imageCropBottom ? `--question-image-crop-bottom: ${currentQuestion.imageCropBottom}px;` : ""}"
         >
@@ -636,7 +655,7 @@ function renderQuestion() {
     if (currentQuestion.choiceImages?.[index]) {
       button.innerHTML = `
         <span class="choice-media-wrap">
-          <img src="${currentQuestion.choiceImages[index]}" alt="Choice ${index + 1}" class="choice-media-image">
+          <img src="${currentQuestion.choiceImages[index]}" alt="Choice ${index + 1}" class="choice-media-image" loading="lazy" decoding="async">
         </span>
         <span class="choice-media-label">${choice}</span>
       `;
@@ -789,7 +808,7 @@ async function saveLevelCompletion() {
     completedAt: new Date().toISOString()
   }));
 
-  const totalLevels = getTotalLevels();
+  const totalLevels = await getTotalLevels();
   const allDone = Array.from({ length: totalLevels }, (_, index) => index + 1).every((level) => {
     if (level === quizLevel) return true;
     return localStorage.getItem(`${subject}_${difficulty}_quiz_level_${level}_done`) === "true";
@@ -841,7 +860,7 @@ async function finishLevel() {
     `You completed Level ${quizLevel} with a score of ${score}/${questions.length} and earned ${earnedXP} XP.`;
   const finishLevelBtn = document.getElementById("finishLevelBtn");
   if (finishLevelBtn) {
-    finishLevelBtn.textContent = quizLevel < getTotalLevels() ? "Next Level" : "Back to Levels";
+    finishLevelBtn.textContent = quizLevel < await getTotalLevels() ? "Next Level" : "Back to Levels";
   }
   document.getElementById("resultModal").classList.add("active");
 }
@@ -901,8 +920,8 @@ window.goBackToLevels = function () {
   window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
 };
 
-window.finishLevelFlow = function () {
-  const totalLevels = getTotalLevels();
+window.finishLevelFlow = async function () {
+  const totalLevels = await getTotalLevels();
   if (quizLevel < totalLevels) {
     window.location.href = `quiz-level.html?subject=${subject}&difficulty=${difficulty}&quizLevel=${quizLevel + 1}`;
     return;
@@ -911,13 +930,28 @@ window.finishLevelFlow = function () {
   window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
 };
 
-function initializePage() {
+async function initializePage() {
   loadTheme();
   initSounds();
   initGlobalClickSound();
   setupSoundToggles();
   renderHeader();
-  prepareQuestions();
+  saveStudyHistory({
+    db,
+    user: currentUser,
+    payload: {
+      key: `quiz-level|${subject}|${difficulty}|${quizLevel}`,
+      kind: "quiz-level",
+      title: `Level ${quizLevel}`,
+      subject,
+      difficulty,
+      detail: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} • ${difficulty} quiz`,
+      actionUrl: `quiz-level.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&quizLevel=${encodeURIComponent(quizLevel)}`
+    }
+  }).catch((error) => {
+    console.warn("Unable to save study history for quiz level.", error);
+  });
+  await prepareQuestions();
   renderQuestion();
   tryStartMusic();
   syncXpDock().catch((error) => {
@@ -938,4 +972,3 @@ onAuthStateChanged(auth, (user) => {
 });
 
 initializePage();
-

@@ -1,45 +1,39 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leaderboard - Code Recall</title>
-
+  <title>Study History - Code Recall</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="styles/leaderboard.css?v=20260414a">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260414d">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
   <div class="layout">
-    <!-- SIDEBAR -->
     <aside class="sidebar">
       <div class="top-section">
         <a href="index.html" class="logo-link">
           <h2 class="logo">CODE:RECALL!</h2>
         </a>
-
         <nav class="menu">
           <a href="dashboard.html">&#127968; Dashboard</a>
           <a href="review.html">&#128221; Review</a>
-          <a href="history.html">&#128340; History</a>
+          <a href="history.html" class="active-link">&#128340; History</a>
           <a href="subjects.html">&#128218; Subjects</a>
           <a href="achievements.html">&#127942; Badges</a>
-          <a href="leaderboard.html" class="active-link">&#129351; Leaderboard</a>
+          <a href="leaderboard.html">&#129351; Leaderboard</a>
           <a href="settings.html">&#9881; Settings</a>
           <a href="admin.html" data-role-link="admin" hidden>&#128736; Admin</a>
           <a href="super-admin.html" data-role-link="super_admin" hidden>&#128081; Super Admin</a>
         </nav>
       </div>
-
       <div class="bottom-section">
         <button onclick="logout()" class="logout-btn">Logout</button>
       </div>
     </aside>
 
-    <!-- MAIN -->
     <div class="main">
       <div class="topbar">
         <div class="topbar-title">
@@ -49,78 +43,48 @@
             <span></span>
           </button>
           <div>
-          <h2 class="page-title">Leaderboard</h2>
-          <p class="page-subtitle">Top players in Code Recall ranked by XP.</p>
+            <h2 class="page-title">Study History</h2>
+            <p class="page-subtitle">Your recent modules, quizzes, and test pages appear here so you can jump back in quickly.</p>
           </div>
         </div>
-
         <div class="user-top">
           <span id="username">User</span>
           <img id="userPhoto" src="https://i.pravatar.cc/40?img=12" alt="User Photo">
         </div>
       </div>
 
-      <!-- OVERVIEW -->
-      <div class="overview-grid">
-        <div class="overview-card">
-          <h3>Your Rank</h3>
-          <p id="yourRank">--</p>
+      <div class="stats-grid">
+        <div class="card stat-card">
+          <h3>Recent Items</h3>
+          <p id="historyItemCount">0</p>
         </div>
-
-        <div class="overview-card">
-          <h3>Your XP</h3>
-          <p id="yourXP">0</p>
+        <div class="card stat-card">
+          <h3>Subjects Covered</h3>
+          <p id="historySubjectCount">0</p>
         </div>
-
-        <div class="overview-card">
-          <h3>Total Players</h3>
-          <p id="totalPlayers">0</p>
+        <div class="card stat-card">
+          <h3>Latest Activity</h3>
+          <p id="historyLatestTitle">-</p>
         </div>
       </div>
 
-      <div class="leaderboard-toggle">
-       <button onclick="setLeaderboardMode('all')" id="btnAll" class="active">
-        All-Time
-       </button>
-
-       <button onclick="setLeaderboardMode('weekly')" id="btnWeekly">
-        Weekly
-       </button>
-     </div>
-
-      <!-- TOP 3 -->
-      <div class="card section">
+      <div class="card section review-page-section">
         <div class="section-head">
-          <h3>Top 3 Players</h3>
-          <span class="section-note">Best performers in the system</span>
+          <div>
+            <h3>Recent Learning Activity</h3>
+            <span class="section-note">The newest activity stays at the top.</span>
+          </div>
+          <button class="view-full-btn" onclick="clearHistoryItems()">Clear History</button>
         </div>
-
-        <div id="topThree" class="top-three"></div>
-      </div>
-
-      <!-- TOP MOVERS -->
-      <div class="card section">
-        <div class="section-head">
-          <h3>Top Movers</h3>
-          <span class="section-note">Players with the biggest XP gain</span>
-        </div>
-
-        <div id="topMovers" class="movers-grid"></div>
-      </div>
-
-      <!-- FULL RANKING -->
-      <div class="card section">
-        <div class="section-head">
-          <h3>Full Rankings</h3>
-          <span class="section-note">All players ranked by XP</span>
-        </div>
-
-        <div id="leaderboardList" class="leaderboard-list"></div>
+        <div id="studyHistoryList" class="wrong-answer-review-list"></div>
       </div>
     </div>
   </div>
 
-  <!-- GUEST LOGOUT POPUP -->
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">&#127769;</span>
+  </button>
+
   <div id="guestLogoutPopup" class="popup">
     <div class="popup-box">
       <h3 id="guestLogoutTitle">Save Your Progress</h3>
@@ -135,14 +99,7 @@
     </div>
   </div>
 
-  <!-- THEME BUTTON -->
-  <button class="theme-toggle" onclick="toggleTheme()">
-    <span id="themeIcon">&#127769;</span>
-  </button>
-
-  <script type="module" src="scripts/leaderboard.js?v=20260414a"></script>
-  <script src="scripts/loading.js?v=20260414a" defer></script>
+  <script type="module" src="scripts/history.js?v=20260414d"></script>
+  <script src="scripts/loading.js?v=20260414d" defer></script>
 </body>
 </html>
-
-

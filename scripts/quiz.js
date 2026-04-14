@@ -22,6 +22,7 @@ import {
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
+import { saveStudyHistory } from "./study-history-store.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import { hardwarePosttestQuestions } from "../data/hardware-posttest-data.js";
 import {
@@ -117,6 +118,22 @@ const currentMeta = quizMeta[subject]?.[type] || {
 document.getElementById("quizTag").textContent = currentMeta.tag;
 document.getElementById("quizTitle").textContent = currentMeta.title;
 document.getElementById("quizSubtitle").textContent = currentMeta.subtitle;
+
+saveStudyHistory({
+  db,
+  user: currentUser,
+  payload: {
+    key: `quiz|${subject}|${type}|${level}`,
+    kind: type,
+    title: currentMeta.title,
+    subject,
+    difficulty: level,
+    detail: `${currentMeta.tag} • ${level}`,
+    actionUrl: `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`
+  }
+}).catch((error) => {
+  console.warn("Unable to save study history for quiz page.", error);
+});
 
 const electricalPretestQuestions = [
   {
@@ -516,7 +533,7 @@ function renderQuestion() {
   }
 
   media.innerHTML = currentQuestion.image
-    ? `<img src="${currentQuestion.image}" alt="Question visual" class="quiz-question-image">`
+    ? `<img src="${currentQuestion.image}" alt="Question visual" class="quiz-question-image" loading="lazy" decoding="async">`
     : "";
 
   const choicesContainer = document.getElementById("choicesContainer");
