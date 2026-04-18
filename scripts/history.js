@@ -164,6 +164,7 @@ function renderHistoryItems(items) {
 }
 
 async function loadHistoryPage() {
+  localStorage.setItem("study_history_opened", "true");
   historyItems = await loadStudyHistory({
     db,
     user: currentUser
@@ -236,7 +237,10 @@ function clearGuestSession() {
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
-    "wrong_answer_review_items"
+    "wrong_answer_review_items",
+    "study_history_items",
+    "review_page_opened",
+    "study_history_opened"
   ];
 
   keysToRemove.forEach((key) => localStorage.removeItem(key));

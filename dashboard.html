@@ -3,7 +3,7 @@
 <head>
   <title>Code Recall Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260414d">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260418b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -77,6 +77,26 @@
         </div>
       </div>
 
+      <div class="card section continue-learning-section">
+        <div class="section-head">
+          <div>
+            <h3>Continue Learning</h3>
+            <span class="section-note">Jump straight back into your latest lesson or quiz</span>
+          </div>
+          <button id="continueLearningBtn" class="view-full-btn" onclick="continueLatestActivity()">Resume Now</button>
+        </div>
+        <div id="continueLearningCard" class="insight-card is-loading">
+          <div class="insight-icon">&#9205;</div>
+          <div class="insight-copy">
+            <h4 id="continueLearningTitle">Finding your latest activity...</h4>
+            <p id="continueLearningDetail">We’re checking your recent module and quiz history.</p>
+          </div>
+          <div class="insight-meta">
+            <span id="continueLearningKind" class="insight-pill">loading</span>
+          </div>
+        </div>
+      </div>
+
       <div class="card section review-tools-section">
         <div class="section-head">
           <div>
@@ -86,7 +106,7 @@
           <button class="view-full-btn" onclick="goToWrongAnswerReview()">Open Wrong-Answer Review</button>
         </div>
         <div class="review-tools-grid">
-          <article class="review-tool-card">
+          <article id="wrongAnswerReviewCard" class="review-tool-card is-loading">
             <div class="review-tool-icon">&#128221;</div>
             <div class="review-tool-copy">
               <h4>Wrong-Answer Review</h4>
@@ -100,6 +120,25 @@
         </div>
       </div>
 
+      <div class="card section missed-topics-section">
+        <div class="section-head">
+          <div>
+            <h3>Most Missed Topics</h3>
+            <span class="section-note">Spot the questions or lessons that keep coming back</span>
+          </div>
+          <button class="view-full-btn" onclick="goToWrongAnswerReview()">Open Review</button>
+        </div>
+        <div id="missedTopicsList" class="missed-topics-list is-loading">
+          <article class="missed-topic-card">
+            <div class="missed-topic-copy">
+              <h4>Loading review insights...</h4>
+              <p>We’re grouping your missed questions now.</p>
+            </div>
+            <strong class="missed-topic-count">...</strong>
+          </article>
+        </div>
+      </div>
+
       <div class="card section review-tools-section">
         <div class="section-head">
           <div>
@@ -109,7 +148,7 @@
           <button class="view-full-btn" onclick="goToStudyHistory()">Open Full History</button>
         </div>
         <div class="review-tools-grid">
-          <article class="review-tool-card">
+          <article id="studyHistoryCard" class="review-tool-card is-loading">
             <div class="review-tool-icon">&#128340;</div>
             <div class="review-tool-copy">
               <h4>Recent Activity</h4>
@@ -121,6 +160,17 @@
             </div>
           </article>
         </div>
+      </div>
+
+      <div class="card section subject-progress-section">
+        <div class="section-head">
+          <div>
+            <h3>Progress by Subject</h3>
+            <span class="section-note">See how far you are in Hardware and Electrical at a glance.</span>
+          </div>
+          <button class="view-full-btn" onclick="window.location.href='subjects.html'">Open Subjects</button>
+        </div>
+        <div id="subjectProgressGrid" class="subject-progress-grid"></div>
       </div>
 
       <!-- LEADERBOARD PREVIEW -->
@@ -183,8 +233,8 @@
   <!-- CONFETTI -->
   <div id="confettiContainer" class="confetti-container"></div>
 
-  <script type="module" src="scripts/dashboard.js?v=20260414d"></script>
-  <script src="scripts/loading.js?v=20260414d" defer></script>
+  <script type="module" src="scripts/dashboard.js?v=20260418b"></script>
+  <script src="scripts/loading.js?v=20260418b" defer></script>
 </body>
 </html>
 

@@ -1088,6 +1088,114 @@ body.light-mode .view-full-btn{
   opacity:0.75;
 }
 
+.insight-card{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:16px;
+  padding:18px 20px;
+  margin-top:16px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.insight-icon{
+  width:54px;
+  height:54px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,rgba(255,46,151,0.22),rgba(0,229,255,0.18));
+  font-size:24px;
+}
+
+.insight-copy h4{
+  margin:0 0 6px;
+  font-size:20px;
+}
+
+.insight-copy p{
+  margin:0;
+  opacity:0.85;
+  line-height:1.55;
+}
+
+.insight-meta{
+  display:flex;
+  justify-content:flex-end;
+}
+
+.insight-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(0,229,255,0.14);
+  color:#88fbff;
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+}
+
+.missed-topics-list{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px;
+  margin-top:16px;
+}
+
+.missed-topic-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  padding:18px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.missed-topic-copy h4{
+  margin:0 0 8px;
+  font-size:19px;
+  line-height:1.45;
+}
+
+.missed-topic-copy p{
+  margin:0;
+  opacity:0.84;
+  line-height:1.5;
+}
+
+.missed-topic-count{
+  min-width:54px;
+  font-size:24px;
+  color:#7ff7ff;
+  text-align:right;
+}
+
+.compact-empty-state{
+  margin-top:0;
+}
+
+.is-loading{
+  position:relative;
+  overflow:hidden;
+}
+
+.is-loading::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);
+  transform:translateX(-100%);
+  animation:dashboardShimmer 1.2s infinite;
+}
+
 .review-page-section{
   min-height:260px;
 }
@@ -1190,10 +1298,101 @@ body.light-mode .view-full-btn{
   opacity:0.82;
 }
 
+.subject-progress-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:18px;
+}
+
+.subject-progress-card{
+  border-radius:20px;
+  padding:20px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.subject-progress-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+}
+
+.subject-progress-top h4{
+  margin:0 0 6px;
+  font-size:20px;
+}
+
+.subject-progress-top p{
+  margin:0;
+  opacity:0.82;
+  line-height:1.5;
+}
+
+.subject-progress-percent{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:68px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(0,229,255,0.14);
+  color:#88fbff;
+  font-weight:800;
+}
+
+.subject-progress-bar{
+  height:12px;
+  overflow:hidden;
+}
+
+.subject-progress-fill{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#ff2e97,#00e5ff);
+}
+
+.subject-progress-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 18px;
+  justify-content:space-between;
+  align-items:center;
+  opacity:0.94;
+}
+
+.subject-progress-meta strong{
+  color:#7ff7ff;
+}
+
 body.light-mode .review-tool-card,
-body.light-mode .wrong-answer-card{
+body.light-mode .wrong-answer-card,
+body.light-mode .subject-progress-card,
+body.light-mode .insight-card,
+body.light-mode .missed-topic-card{
   background:rgba(255,255,255,0.72);
   border-color:rgba(60, 40, 120, 0.08);
+}
+
+body.light-mode .subject-progress-percent{
+  background:rgba(0,134,176,0.12);
+  color:#007ca6;
+}
+
+body.light-mode .subject-progress-meta strong{
+  color:#0a84ae;
+}
+
+body.light-mode .insight-pill{
+  background:rgba(0,134,176,0.12);
+  color:#007ca6;
+}
+
+body.light-mode .missed-topic-count{
+  color:#0a84ae;
 }
 
 body.light-mode .wrong-answer-chip.secondary{
@@ -1219,5 +1418,32 @@ body.light-mode .review-empty-state{
 
   .review-tool-metric{
     text-align:left;
+  }
+
+  .insight-card{
+    grid-template-columns:1fr;
+  }
+
+  .insight-meta{
+    justify-content:flex-start;
+  }
+
+  .missed-topics-list{
+    grid-template-columns:1fr;
+  }
+
+  .subject-progress-grid{
+    grid-template-columns:1fr;
+  }
+
+  .subject-progress-top{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+
+@keyframes dashboardShimmer{
+  100%{
+    transform:translateX(100%);
   }
 }

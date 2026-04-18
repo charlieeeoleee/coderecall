@@ -227,6 +227,7 @@ function buildBadges(xp, progressObj, isGuest) {
 
   const bothSubjectsCompleted = hardwarePost && electricalPost;
   const moduleCounts = getModuleCompletionCounts(progressObj);
+  const quizLevelCounts = getQuizLevelCompletionCounts(progressObj);
   const totalCoreProgress = countTruthy([
     hardwarePre,
     hardwareModules,
@@ -238,7 +239,9 @@ function buildBadges(xp, progressObj, isGuest) {
     electricalPost
   ]);
   const streak = isGuest ? getGuestStreak() : 0;
-  void streak;
+  const reviewOpened = localStorage.getItem("review_page_opened") === "true";
+  const historyOpened = localStorage.getItem("study_history_opened") === "true";
+  const bothSubjectsModuleStart = moduleCounts.hardware > 0 && moduleCounts.electrical > 0;
 
   return [
     {
@@ -447,12 +450,52 @@ function buildBadges(xp, progressObj, isGuest) {
     {
       name: "Completionist",
       icon: "🏆",
-      description: "Complete both subjects and prove full system dedication.",
-      requirement: "Finish the entire system by completing both subjects",
-      rewardText: "100% system completion",
-      unlocked: bothSubjectsCompleted,
-      progressValue: countCompletedSubjects(hardwarePost, electricalPost),
+      description: "Reach the full XP cap of the entire system and prove complete dedication.",
+      requirement: "Reach 1054 XP",
+      rewardText: "Full-system XP completion",
+      unlocked: xp >= 1054,
+      progressValue: Math.min(xp, 1054),
+      progressMax: 1054
+    },
+    {
+      name: "Review Warrior",
+      icon: "🧠",
+      description: "Use the wrong-answer review tool and turn mistakes into progress.",
+      requirement: "Open Wrong-Answer Review",
+      rewardText: "Review feature badge",
+      unlocked: reviewOpened,
+      progressValue: reviewOpened ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "History Keeper",
+      icon: "🕒",
+      description: "Track your learning journey by opening the study history page.",
+      requirement: "Open Study History",
+      rewardText: "History feature badge",
+      unlocked: historyOpened,
+      progressValue: historyOpened ? 1 : 0,
+      progressMax: 1
+    },
+    {
+      name: "Dual Reader",
+      icon: "📗",
+      description: "Complete at least one module in both Hardware and Electrical.",
+      requirement: "Finish one module in each subject",
+      rewardText: "Balanced module badge",
+      unlocked: bothSubjectsModuleStart,
+      progressValue: countCompletedSubjects(moduleCounts.hardware > 0, moduleCounts.electrical > 0),
       progressMax: 2
+    },
+    {
+      name: "Quiz Climber",
+      icon: "🪜",
+      description: "Build momentum by clearing ten quiz levels across the system.",
+      requirement: "Complete 10 quiz levels",
+      rewardText: "Quiz progression badge",
+      unlocked: quizLevelCounts.total >= 10,
+      progressValue: Math.min(quizLevelCounts.total, 10),
+      progressMax: 10
     }
   ];
 }
@@ -477,6 +520,8 @@ function countTruthy(values) {
 
 function getModuleCompletionCounts(progressObj) {
   let completed = 0;
+  let hardware = 0;
+  let electrical = 0;
   let total = 0;
 
   Object.entries(MODULE_STRUCTURE).forEach(([subjectKey, difficulties]) => {
@@ -485,6 +530,8 @@ function getModuleCompletionCounts(progressObj) {
         total++;
         if (getSavedProgress(progressObj, `${subjectKey}_${difficultyKey}_module_${index}_done`)) {
           completed++;
+          if (subjectKey === "hardware") hardware++;
+          if (subjectKey === "electrical") electrical++;
         }
       }
     });
@@ -492,7 +539,27 @@ function getModuleCompletionCounts(progressObj) {
 
   return {
     total: completed,
-    max: total
+    max: total,
+    hardware,
+    electrical
+  };
+}
+
+function getQuizLevelCompletionCounts(progressObj) {
+  let total = 0;
+
+  ["hardware", "electrical"].forEach((subjectKey) => {
+    ["easy", "medium", "hard"].forEach((difficultyKey) => {
+      for (let index = 1; index <= 25; index++) {
+        if (getSavedProgress(progressObj, `${subjectKey}_${difficultyKey}_quiz_level_${index}_done`)) {
+          total++;
+        }
+      }
+    });
+  });
+
+  return {
+    total
   };
 }
 

@@ -29,6 +29,7 @@ import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { loadWrongAnswerReview } from "./review-store.js";
 import { loadStudyHistory } from "./study-history-store.js";
+import { MODULE_STRUCTURE } from "../data/module-data.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -56,10 +57,17 @@ let leaderboardErrorCode = "";
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
+const QUIZ_LEVELS_PER_DIFFICULTY = 25;
+const TOTAL_SYSTEM_XP = 1054;
 const XP_RULES = {
   pretest: 1,
   posttest: 4
 };
+const SUBJECT_LABELS = {
+  hardware: "Computer Hardware",
+  electrical: "Electrical Wiring and Electronics"
+};
+let latestHistoryActionUrl = "";
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -114,6 +122,7 @@ onAuthStateChanged(auth, async (user) => {
    LOAD REAL USER DASHBOARD
 ========================= */
 async function loadDashboard() {
+  setInsightLoadingState(true);
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
 
@@ -122,9 +131,10 @@ async function loadDashboard() {
   let xpChange = 0;
   let name = "User";
   let photo = "https://i.pravatar.cc/40?img=12";
+  let data = { progress: {}, results: {} };
 
   if (docSnap.exists()) {
-    let data = docSnap.data();
+    data = docSnap.data();
     data = await reconcileLocalProgressToFirestore(userRef, data);
     xp = data.xp || 0;
     xpWeekly = data.xpWeekly || 0;
@@ -164,6 +174,7 @@ async function loadDashboard() {
 
     const refreshedSnap = await getDoc(userRef);
     const refreshedData = await reconcileLocalProgressToFirestore(userRef, refreshedSnap.data() || {});
+    data = refreshedData;
     xp = refreshedData.xp || 0;
     xpWeekly = refreshedData.xpWeekly || 0;
     xpChange = refreshedData.xpChange || 0;
@@ -179,8 +190,9 @@ async function loadDashboard() {
   });
   updateUserUI(name, photo);
   updateStatsUI(xp);
-  await renderWrongAnswerReviewPreview();
-  await renderStudyHistoryPreview();
+  renderSubjectProgressSection(buildSubjectProgressSnapshot(data.progress || {}, data.results || {}));
+  await renderReviewInsights();
+  await renderStudyHistoryInsights();
   renderDashboardAchievements(xp, false);
   await loadLeaderboard();
   renderDashboardLeaderboardPreview();
@@ -308,18 +320,217 @@ async function reconcileLocalProgressToFirestore(userRef, data) {
    LOAD GUEST DASHBOARD
 ========================= */
 function loadGuestDashboard() {
+  setInsightLoadingState(true);
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
+  const guestSnapshot = buildGuestSubjectProgressSnapshot();
 
   currentXP = guestXP;
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   updateStatsUI(guestXP);
-  renderWrongAnswerReviewPreview();
-  renderStudyHistoryPreview();
+  renderSubjectProgressSection(guestSnapshot);
+  renderReviewInsights();
+  renderStudyHistoryInsights();
   renderDashboardAchievements(guestXP, true);
   renderDashboardLeaderboardPreview();
 }
 
-async function renderWrongAnswerReviewPreview() {
+function getTotalModulesForSubject(subject) {
+  return Object.values(MODULE_STRUCTURE?.[subject] || {}).reduce((sum, count) => sum + Number(count || 0), 0);
+}
+
+function getTotalTrackableItemsForSubject(subject) {
+  return getTotalModulesForSubject(subject) + (QUIZ_LEVELS_PER_DIFFICULTY * 3) + 2;
+}
+
+function buildSubjectProgressSnapshot(progress = {}, results = {}) {
+  return ["hardware", "electrical"].map((subject) => {
+    const totalModules = getTotalModulesForSubject(subject);
+    const totalItems = getTotalTrackableItemsForSubject(subject);
+
+    const moduleDoneCount = Object.keys(progress).filter((key) =>
+      new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done$`).test(key) && progress[key] === true
+    ).length;
+
+    const quizLevelDoneCount = Object.keys(progress).filter((key) =>
+      new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_done$`).test(key) && progress[key] === true
+    ).length;
+
+    const pretestDone = progress[`${subject}_pretest`] === true || results[`${subject}_pretest`] != null;
+    const posttestDone = progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
+
+    const quickCheckXP = Object.entries(progress).reduce((sum, [key, value]) => {
+      if (!new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done_quick_check_best_score$`).test(key)) {
+        return sum;
+      }
+      return sum + Number(value || 0);
+    }, 0);
+
+    const moduleXP = Object.entries(progress).reduce((sum, [key, value]) => {
+      if (!new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done_xp_awarded$`).test(key) || value !== true) {
+        return sum;
+      }
+      return sum + MODULE_XP_REWARD;
+    }, 0);
+
+    const quizXP = Object.entries(results).reduce((sum, [key, value]) => {
+      if (!new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_result$`).test(key)) {
+        return sum;
+      }
+      return sum + (Number(value?.score || 0) * QUIZ_LEVEL_XP_PER_CORRECT);
+    }, 0);
+
+    const testXP = (pretestDone ? XP_RULES.pretest : 0) + (posttestDone ? XP_RULES.posttest : 0);
+    const completedItems = moduleDoneCount + quizLevelDoneCount + (pretestDone ? 1 : 0) + (posttestDone ? 1 : 0);
+    const percent = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
+
+    return {
+      subject,
+      label: SUBJECT_LABELS[subject],
+      completedItems,
+      totalItems,
+      percent,
+      xp: moduleXP + quickCheckXP + quizXP + testXP,
+      moduleDoneCount,
+      totalModules,
+      quizLevelDoneCount,
+      totalQuizLevels: QUIZ_LEVELS_PER_DIFFICULTY * 3
+    };
+  });
+}
+
+function buildGuestSubjectProgressSnapshot() {
+  const progress = {};
+  const results = {};
+
+  Object.keys(localStorage).forEach((key) => {
+    const rawValue = localStorage.getItem(key);
+    if (rawValue == null) return;
+
+    if (rawValue === "true") {
+      progress[key] = true;
+    } else if (!Number.isNaN(Number(rawValue)) && rawValue.trim() !== "") {
+      progress[key] = Number(rawValue);
+    }
+
+    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_result$/.test(key) || /^(hardware|electrical)_(pretest|posttest)$/.test(key)) {
+      try {
+        results[key] = JSON.parse(rawValue);
+      } catch {
+        // Ignore malformed local result payloads.
+      }
+    }
+  });
+
+  return buildSubjectProgressSnapshot(progress, results);
+}
+
+function renderSubjectProgressSection(subjects = []) {
+  const grid = document.getElementById("subjectProgressGrid");
+  if (!grid) return;
+
+  grid.innerHTML = subjects.map((item) => `
+    <article class="subject-progress-card">
+      <div class="subject-progress-top">
+        <div>
+          <h4>${escapeHtml(item.label)}</h4>
+          <p>${item.completedItems}/${item.totalItems} tracked activities completed</p>
+        </div>
+        <span class="subject-progress-percent">${item.percent}%</span>
+      </div>
+      <div class="progress-bar subject-progress-bar">
+        <div class="subject-progress-fill" style="width:${item.percent}%"></div>
+      </div>
+      <div class="subject-progress-meta">
+        <span>${item.moduleDoneCount}/${item.totalModules} modules</span>
+        <span>${item.quizLevelDoneCount}/${item.totalQuizLevels} quiz levels</span>
+        <strong>${item.xp} XP</strong>
+      </div>
+    </article>
+  `).join("");
+}
+
+function setInsightLoadingState(isLoading) {
+  [
+    "continueLearningCard",
+    "wrongAnswerReviewCard",
+    "studyHistoryCard",
+    "missedTopicsList"
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle("is-loading", isLoading);
+  });
+}
+
+function prettifySourceLabel(item = {}) {
+  if (item.quizType === "pretest") return "Pre-Test";
+  if (item.quizType === "posttest") return "Post-Test";
+  if (item.source === "quiz-level" || item.quizLevel) {
+    return `${item.difficulty ? `${item.difficulty} ` : ""}Quiz`.trim();
+  }
+  return item.source
+    ? item.source
+        .replace(/[-_]/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+    : "Activity";
+}
+
+function buildMissedTopicSummary(items = []) {
+  const grouped = new Map();
+
+  items.forEach((item) => {
+    const title = String(item.title || item.question || "Untitled topic").trim();
+    const groupKey = `${item.subject || "general"}|${title.toLowerCase()}`;
+    const existing = grouped.get(groupKey) || {
+      title,
+      subject: item.subject || "general",
+      latestSource: prettifySourceLabel(item),
+      wrongCount: 0
+    };
+
+    existing.wrongCount += Math.max(1, Number(item.wrongCount || 1));
+    existing.latestSource = prettifySourceLabel(item);
+    grouped.set(groupKey, existing);
+  });
+
+  return Array.from(grouped.values())
+    .sort((a, b) => b.wrongCount - a.wrongCount)
+    .slice(0, 3);
+}
+
+function renderMissedTopics(items = []) {
+  const list = document.getElementById("missedTopicsList");
+  if (!list) return;
+
+  const topics = buildMissedTopicSummary(items);
+  list.classList.remove("is-loading");
+
+  if (!topics.length) {
+    list.innerHTML = `
+      <article class="review-empty-state compact-empty-state">
+        <h4>No repeat misses yet</h4>
+        <p>Your most-missed topics will appear here once you start building a review list.</p>
+      </article>
+    `;
+    return;
+  }
+
+  list.innerHTML = topics.map((topic) => `
+    <article class="missed-topic-card">
+      <div class="missed-topic-copy">
+        <div class="wrong-answer-meta">
+          <span class="wrong-answer-chip">${escapeHtml(topic.subject || "general")}</span>
+          <span class="wrong-answer-chip secondary">${escapeHtml(topic.latestSource)}</span>
+        </div>
+        <h4>${escapeHtml(topic.title)}</h4>
+        <p>Missed ${topic.wrongCount} time${topic.wrongCount === 1 ? "" : "s"} so far.</p>
+      </div>
+      <strong class="missed-topic-count">${topic.wrongCount}x</strong>
+    </article>
+  `).join("");
+}
+
+async function renderReviewInsights() {
   const countEl = document.getElementById("wrongAnswerReviewCount");
   if (!countEl) return;
 
@@ -329,9 +540,38 @@ async function renderWrongAnswerReviewPreview() {
   });
 
   countEl.textContent = String(items.length);
+  document.getElementById("wrongAnswerReviewCard")?.classList.remove("is-loading");
+  renderMissedTopics(items);
 }
 
-async function renderStudyHistoryPreview() {
+function renderContinueLearning(items = []) {
+  const titleEl = document.getElementById("continueLearningTitle");
+  const detailEl = document.getElementById("continueLearningDetail");
+  const kindEl = document.getElementById("continueLearningKind");
+  const buttonEl = document.getElementById("continueLearningBtn");
+  const cardEl = document.getElementById("continueLearningCard");
+  if (!titleEl || !detailEl || !kindEl || !buttonEl || !cardEl) return;
+
+  cardEl.classList.remove("is-loading");
+
+  if (!items.length) {
+    latestHistoryActionUrl = "";
+    titleEl.textContent = "No recent activity yet";
+    detailEl.textContent = "Start a module, quiz, or test and your latest activity will appear here.";
+    kindEl.textContent = "start here";
+    buttonEl.textContent = "Go to Subjects";
+    return;
+  }
+
+  const latest = items[0];
+  latestHistoryActionUrl = latest.actionUrl || "";
+  titleEl.textContent = latest.title || "Continue Learning";
+  detailEl.textContent = latest.detail || "Resume your latest activity.";
+  kindEl.textContent = prettifySourceLabel(latest);
+  buttonEl.textContent = latest.actionUrl ? "Resume Now" : "Open History";
+}
+
+async function renderStudyHistoryInsights() {
   const countEl = document.getElementById("studyHistoryCount");
   const textEl = document.getElementById("studyHistoryPreviewText");
   if (!countEl || !textEl) return;
@@ -342,13 +582,18 @@ async function renderStudyHistoryPreview() {
   });
 
   countEl.textContent = String(items.length);
+  document.getElementById("studyHistoryCard")?.classList.remove("is-loading");
   if (!items.length) {
     textEl.textContent = "Your recent modules and quizzes will appear here.";
+    renderContinueLearning(items);
+    setInsightLoadingState(false);
     return;
   }
 
   const latest = items[0];
   textEl.textContent = `${latest.title} • ${latest.detail || "Recent activity"}`;
+  renderContinueLearning(items);
+  setInsightLoadingState(false);
 }
 
 /* =========================
@@ -523,7 +768,7 @@ function updateUserUI(name, photo) {
 ========================= */
 function updateStatsUI(xp) {
   const level = Math.floor(xp / 100) + 1;
-  const progress = xp % 100;
+  const progress = Math.min(100, Math.round((Math.max(0, xp) / TOTAL_SYSTEM_XP) * 100));
 
   document.getElementById("xp").textContent = xp;
   document.getElementById("level").textContent = level;
@@ -531,6 +776,16 @@ function updateStatsUI(xp) {
   animateNumber("level", level);
   animateProgress(progress);
 }
+
+window.continueLatestActivity = function() {
+  if (latestHistoryActionUrl) {
+    window.location.href = latestHistoryActionUrl;
+    return;
+  }
+
+  const hasHistory = Number(document.getElementById("studyHistoryCount")?.textContent || 0) > 0;
+  window.location.href = hasHistory ? "history.html" : "subjects.html";
+};
 
 function animateNumber(elementId, targetValue) {
   const el = document.getElementById(elementId);
@@ -831,6 +1086,7 @@ function clearGuestSession() {
     "guest_last_active_date",
     "guest_pending_save",
     "wrong_answer_review_items",
+    "study_history_items",
     "hardware_pretest",
     "hardware_modules",
     "hardware_quiz",

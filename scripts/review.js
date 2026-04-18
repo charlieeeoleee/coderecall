@@ -97,6 +97,10 @@ function renderStats(items) {
   document.getElementById("reviewLatestSource").textContent = items[0]?.title || "-";
 }
 
+function canRevealCorrectAnswer(item) {
+  return item?.quizType === "pretest";
+}
+
 function renderReviewItems(items) {
   const container = document.getElementById("wrongAnswerReviewList");
   if (!container) return;
@@ -119,7 +123,9 @@ function renderReviewItems(items) {
       </div>
       <h4>${escapeHtml(item.question)}</h4>
       <div class="wrong-answer-detail"><strong>Your answer:</strong> ${escapeHtml(item.selectedAnswer || "No answer recorded")}</div>
-      <div class="wrong-answer-detail"><strong>Correct answer:</strong> ${escapeHtml(item.correctAnswer || "Not available")}</div>
+      ${canRevealCorrectAnswer(item)
+        ? `<div class="wrong-answer-detail"><strong>Correct answer:</strong> ${escapeHtml(item.correctAnswer || "Not available")}</div>`
+        : ""}
       <p class="wrong-answer-rationale">${escapeHtml(item.rationale || "Review the lesson and try the source activity again.")}</p>
       <div class="wrong-answer-actions">
         <button class="review-open-btn" data-action-url="${escapeHtml(item.actionUrl || "")}">Open Source</button>
@@ -155,6 +161,7 @@ function renderReviewItems(items) {
 }
 
 async function loadReviewPage() {
+  localStorage.setItem("review_page_opened", "true");
   reviewItems = await loadWrongAnswerReview({
     db,
     user: currentUser
@@ -227,7 +234,10 @@ function clearGuestSession() {
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
-    "wrong_answer_review_items"
+    "wrong_answer_review_items",
+    "study_history_items",
+    "review_page_opened",
+    "study_history_opened"
   ];
 
   keysToRemove.forEach((key) => localStorage.removeItem(key));

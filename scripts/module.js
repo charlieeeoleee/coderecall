@@ -31,6 +31,11 @@ const MODULE_XP_REWARD = 5;
 const QUICK_CHECK_XP_PER_CORRECT = 1;
 const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
 let moduleImageBanksPromise = null;
+let currentModuleGateState = {
+  readBottom: false,
+  quickCheckAttempted: false,
+  completed: false
+};
 
 async function loadModuleImageBanks() {
   if (!moduleImageBanksPromise) {
@@ -1258,6 +1263,14 @@ function getModuleXPKey() {
   return `${getModuleDoneKey()}_xp_awarded`;
 }
 
+function getModuleReadKey() {
+  return `${getModuleDoneKey()}_read_bottom`;
+}
+
+function getQuickCheckAttemptKey() {
+  return `${getModuleDoneKey()}_quick_check_attempted`;
+}
+
 function getQuickCheckBestScoreKey() {
   return `${getModuleDoneKey()}_quick_check_best_score`;
 }
@@ -1292,13 +1305,76 @@ async function isModuleCompleted() {
   return data.progress?.[getModuleDoneKey()] === true || localDone;
 }
 
+async function hasReachedModuleBottom() {
+  const localRead = localStorage.getItem(getModuleReadKey()) === "true";
+  if (localRead) return true;
+  if (!currentUser) return localRead;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  return data.progress?.[getModuleReadKey()] === true || localRead;
+}
+
+async function hasQuickCheckAttempted() {
+  const localAttempted = localStorage.getItem(getQuickCheckAttemptKey()) === "true";
+  if (localAttempted) return true;
+  if (!currentUser) return localAttempted;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  return data.progress?.[getQuickCheckAttemptKey()] === true || localAttempted;
+}
+
+async function markModuleReadBottom() {
+  localStorage.setItem(getModuleReadKey(), "true");
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  const progress = data.progress || {};
+  progress[getModuleReadKey()] = true;
+  await updateDoc(userRef, { progress });
+}
+
+async function markQuickCheckAttempted() {
+  localStorage.setItem(getQuickCheckAttemptKey(), "true");
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  const progress = data.progress || {};
+  progress[getQuickCheckAttemptKey()] = true;
+  await updateDoc(userRef, { progress });
+}
+
+async function getModuleGateState() {
+  const [readBottom, quickCheckAttempted, completed] = await Promise.all([
+    hasReachedModuleBottom(),
+    hasQuickCheckAttempted(),
+    isModuleCompleted()
+  ]);
+
+  return {
+    readBottom,
+    quickCheckAttempted,
+    completed
+  };
+}
+
 async function markModuleCompleted() {
+  const moduleData = await getModuleData();
   localStorage.setItem(getModuleDoneKey(), "true");
   localStorage.setItem(RECENT_MODULE_COMPLETION_KEY, JSON.stringify({
     subject,
     difficulty,
     module: moduleNumber,
-    title: getModuleData()?.title || `Module ${moduleNumber}`,
+    title: moduleData?.title || `Module ${moduleNumber}`,
     xp: MODULE_XP_REWARD,
     completedAt: new Date().toISOString()
   }));
@@ -1441,7 +1517,33 @@ function disconnectAutoCheckpointObserver() {
   }
 }
 
-function updateCheckpointUi(completed, statusLabel = null) {
+function updateModuleActionState(gateState = currentModuleGateState) {
+  const actionBtn = document.getElementById("moduleActionBtn");
+  if (!actionBtn) return;
+
+  if (gateState.completed) {
+    actionBtn.disabled = false;
+    actionBtn.textContent =
+      moduleNumber < totalModulesForDifficulty ? "Next Module" : "Return to Modules";
+    return;
+  }
+
+  actionBtn.disabled = true;
+
+  if (!gateState.readBottom) {
+    actionBtn.textContent = "Scroll to Bottom First";
+    return;
+  }
+
+  if (!gateState.quickCheckAttempted) {
+    actionBtn.textContent = "Complete Quick Check";
+    return;
+  }
+
+  actionBtn.textContent = "Finalizing Module...";
+}
+
+function updateCheckpointUi(completed, statusLabel = null, gateState = currentModuleGateState) {
   const progressState = document.getElementById("moduleProgressState");
   const checkpointBtn = document.getElementById("moduleCheckpointBtn");
   const statusChip = document.getElementById("moduleStatusChip");
@@ -1452,23 +1554,46 @@ function updateCheckpointUi(completed, statusLabel = null) {
 
   if (checkpointBtn) {
     checkpointBtn.textContent = completed
-      ? "Checkpoint cleared automatically"
-      : "Checkpoint clears after reading";
+      ? "Checkpoint cleared"
+      : !gateState.readBottom
+        ? "Scroll to the bottom to unlock the checkpoint"
+        : !gateState.quickCheckAttempted
+          ? "Bottom reached • complete the Quick Check"
+          : "Checkpoint ready to finalize";
     checkpointBtn.disabled = true;
   }
 
-  if (statusChip && statusLabel) {
-    statusChip.textContent = statusLabel;
+  if (statusChip) {
+    if (statusLabel) {
+      statusChip.textContent = statusLabel;
+    } else if (completed) {
+      statusChip.textContent = "Checkpoint cleared";
+    } else if (!gateState.readBottom) {
+      statusChip.textContent = "Read to the bottom first";
+    } else if (!gateState.quickCheckAttempted) {
+      statusChip.textContent = "Quick Check required";
+    } else {
+      statusChip.textContent = "Ready to finalize";
+    }
   }
+
+  updateModuleActionState(gateState);
 }
 
 async function maybeAutoCompleteModule() {
   if (autoCheckpointInFlight) return;
 
-  const alreadyCompleted = await isModuleCompleted();
-  if (alreadyCompleted) {
-    updateCheckpointUi(true, "Checkpoint cleared");
+  const gateState = await getModuleGateState();
+  currentModuleGateState = gateState;
+
+  if (gateState.completed) {
+    updateCheckpointUi(true, "Checkpoint cleared", gateState);
     disconnectAutoCheckpointObserver();
+    return;
+  }
+
+  if (!gateState.readBottom || !gateState.quickCheckAttempted) {
+    updateCheckpointUi(false, null, gateState);
     return;
   }
 
@@ -1477,9 +1602,15 @@ async function maybeAutoCompleteModule() {
   try {
     await markModuleCompleted();
     const earnedXP = await awardModuleXPOnce();
+    currentModuleGateState = {
+      readBottom: true,
+      quickCheckAttempted: true,
+      completed: true
+    };
     updateCheckpointUi(
       true,
-      earnedXP > 0 ? `Checkpoint cleared +${earnedXP} XP` : "Checkpoint cleared"
+      earnedXP > 0 ? `Checkpoint cleared +${earnedXP} XP` : "Checkpoint cleared",
+      currentModuleGateState
     );
     disconnectAutoCheckpointObserver();
   } finally {
@@ -1510,6 +1641,11 @@ function setupAutoCheckpoint(data, completed) {
       }
 
       disconnectAutoCheckpointObserver();
+      await markModuleReadBottom();
+      currentModuleGateState = {
+        ...currentModuleGateState,
+        readBottom: true
+      };
       await maybeAutoCompleteModule();
     },
     {
@@ -2321,9 +2457,16 @@ async function renderModulePage() {
 
   let completed = false;
   let restoredXP = 0;
+  let gateState = {
+    readBottom: false,
+    quickCheckAttempted: false,
+    completed: false
+  };
 
   try {
-    completed = await isModuleCompleted();
+    gateState = await getModuleGateState();
+    currentModuleGateState = gateState;
+    completed = gateState.completed;
 
     if (completed) {
       restoredXP = await awardModuleXPOnce();
@@ -2334,7 +2477,8 @@ async function renderModulePage() {
 
   updateCheckpointUi(
     completed,
-    completed && restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : null
+    completed && restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : null,
+    gateState
   );
   if (completed) {
     document.getElementById("moduleStatusChip").textContent =
