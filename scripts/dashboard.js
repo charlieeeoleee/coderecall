@@ -69,6 +69,25 @@ const SUBJECT_LABELS = {
 };
 let latestHistoryActionUrl = "";
 
+function readLocalResumeActivity() {
+  try {
+    return JSON.parse(localStorage.getItem("resume_activity") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function chooseLatestActivity(...items) {
+  const validItems = items.filter((item) => item && (item.resumeUrl || item.actionUrl || item.updatedAt || item.timestamp));
+  if (!validItems.length) return null;
+
+  return validItems.sort((a, b) => {
+    const left = new Date(a.updatedAt || a.timestamp || 0).getTime();
+    const right = new Date(b.updatedAt || b.timestamp || 0).getTime();
+    return right - left;
+  })[0];
+}
+
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
   const toggle = document.querySelector(".sidebar-toggle");
@@ -192,7 +211,7 @@ async function loadDashboard() {
   updateStatsUI(xp);
   renderSubjectProgressSection(buildSubjectProgressSnapshot(data.progress || {}, data.results || {}));
   await renderReviewInsights();
-  await renderStudyHistoryInsights();
+  await renderStudyHistoryInsights(data);
   renderDashboardAchievements(xp, false);
   await loadLeaderboard();
   renderDashboardLeaderboardPreview();
@@ -329,7 +348,7 @@ function loadGuestDashboard() {
   updateStatsUI(guestXP);
   renderSubjectProgressSection(guestSnapshot);
   renderReviewInsights();
-  renderStudyHistoryInsights();
+  renderStudyHistoryInsights({});
   renderDashboardAchievements(guestXP, true);
   renderDashboardLeaderboardPreview();
 }
@@ -554,7 +573,11 @@ function renderContinueLearning(items = []) {
 
   cardEl.classList.remove("is-loading");
 
-  if (!items.length) {
+  const latestHistory = items[0] || null;
+  const latestResume = chooseLatestActivity(readLocalResumeActivity());
+  const latest = chooseLatestActivity(latestResume, latestHistory);
+
+  if (!latest) {
     latestHistoryActionUrl = "";
     titleEl.textContent = "No recent activity yet";
     detailEl.textContent = "Start a module, quiz, or test and your latest activity will appear here.";
@@ -563,15 +586,14 @@ function renderContinueLearning(items = []) {
     return;
   }
 
-  const latest = items[0];
-  latestHistoryActionUrl = latest.actionUrl || "";
+  latestHistoryActionUrl = latest.resumeUrl || latest.actionUrl || "";
   titleEl.textContent = latest.title || "Continue Learning";
   detailEl.textContent = latest.detail || "Resume your latest activity.";
-  kindEl.textContent = prettifySourceLabel(latest);
-  buttonEl.textContent = latest.actionUrl ? "Resume Now" : "Open History";
+  kindEl.textContent = latest.resumeUrl ? "resume ready" : prettifySourceLabel(latest);
+  buttonEl.textContent = latestHistoryActionUrl ? "Resume Now" : "Open History";
 }
 
-async function renderStudyHistoryInsights() {
+async function renderStudyHistoryInsights(userData = {}) {
   const countEl = document.getElementById("studyHistoryCount");
   const textEl = document.getElementById("studyHistoryPreviewText");
   if (!countEl || !textEl) return;
@@ -580,19 +602,22 @@ async function renderStudyHistoryInsights() {
     db,
     user: currentUser
   });
+  const mergedItems = Array.isArray(userData?.studyHistory) && userData.studyHistory.length
+    ? userData.studyHistory
+    : items;
 
-  countEl.textContent = String(items.length);
+  countEl.textContent = String(mergedItems.length);
   document.getElementById("studyHistoryCard")?.classList.remove("is-loading");
-  if (!items.length) {
+  if (!mergedItems.length) {
     textEl.textContent = "Your recent modules and quizzes will appear here.";
-    renderContinueLearning(items);
+    renderContinueLearning(mergedItems);
     setInsightLoadingState(false);
     return;
   }
 
-  const latest = items[0];
+  const latest = mergedItems[0];
   textEl.textContent = `${latest.title} • ${latest.detail || "Recent activity"}`;
-  renderContinueLearning(items);
+  renderContinueLearning(mergedItems);
   setInsightLoadingState(false);
 }
 

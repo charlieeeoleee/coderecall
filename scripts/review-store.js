@@ -60,6 +60,9 @@ function normalizeEntry(payload = {}) {
     rationale: String(payload.rationale || ""),
     actionUrl: String(payload.actionUrl || ""),
     wrongCount: Math.max(1, Number(payload.wrongCount || 1)),
+    retryAvailableAt: String(payload.retryAvailableAt || ""),
+    retryPolicy: String(payload.retryPolicy || ""),
+    lastAnsweredAt: String(payload.lastAnsweredAt || payload.updatedAt || timestamp),
     updatedAt: payload.updatedAt || timestamp
   };
 }

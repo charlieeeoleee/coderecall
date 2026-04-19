@@ -30,6 +30,7 @@ let autoCheckpointInFlight = false;
 const MODULE_XP_REWARD = 5;
 const QUICK_CHECK_XP_PER_CORRECT = 1;
 const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
+const RESUME_ACTIVITY_KEY = "resume_activity";
 let moduleImageBanksPromise = null;
 let currentModuleGateState = {
   readBottom: false,
@@ -1275,6 +1276,112 @@ function getQuickCheckBestScoreKey() {
   return `${getModuleDoneKey()}_quick_check_best_score`;
 }
 
+function getModuleResumeStateKey() {
+  return `resume_module_state_${subject}_${difficulty}_${moduleKey}`;
+}
+
+function getModuleBaseUrl() {
+  return `module.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&module=${encodeURIComponent(moduleKey)}`;
+}
+
+function getModuleResumeUrl() {
+  return `${getModuleBaseUrl()}&resume=1`;
+}
+
+function readLocalResumeActivity() {
+  try {
+    return JSON.parse(localStorage.getItem(RESUME_ACTIVITY_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalResumeActivity(activity) {
+  if (!activity) {
+    localStorage.removeItem(RESUME_ACTIVITY_KEY);
+    return;
+  }
+
+  localStorage.setItem(RESUME_ACTIVITY_KEY, JSON.stringify(activity));
+}
+
+async function syncResumeActivity(activity) {
+  writeLocalResumeActivity(activity);
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  await updateDoc(userRef, { resumeActivity: activity || null });
+}
+
+function readModuleResumeState() {
+  try {
+    return JSON.parse(localStorage.getItem(getModuleResumeStateKey()) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeModuleResumeState(payload) {
+  if (!payload) {
+    localStorage.removeItem(getModuleResumeStateKey());
+    return;
+  }
+
+  localStorage.setItem(getModuleResumeStateKey(), JSON.stringify(payload));
+}
+
+async function saveModuleResumeState(scrollY = window.scrollY || 0) {
+  const moduleData = await getModuleData();
+  const state = {
+    kind: "module",
+    subject,
+    difficulty,
+    module: moduleKey,
+    actionUrl: getModuleBaseUrl(),
+    resumeUrl: getModuleResumeUrl(),
+    title: moduleData?.title || `Module ${moduleNumber}`,
+    detail: `Module ${moduleNumber} • ${difficultyNames[difficulty] || difficulty} • ${subjectNames[subject] || subject}`,
+    scrollY: Math.max(0, Math.round(Number(scrollY) || 0)),
+    updatedAt: new Date().toISOString()
+  };
+
+  writeModuleResumeState(state);
+  await syncResumeActivity(state);
+}
+
+async function clearModuleResumeState() {
+  const current = readLocalResumeActivity();
+  writeModuleResumeState(null);
+
+  const isSameActivity = current?.kind === "module"
+    && current?.subject === subject
+    && current?.difficulty === difficulty
+    && current?.module === moduleKey;
+
+  if (isSameActivity) {
+    await syncResumeActivity(null);
+  }
+}
+
+function restoreModuleScrollIfNeeded() {
+  const shouldResume = new URLSearchParams(window.location.search).get("resume") === "1";
+  if (!shouldResume) return;
+
+  const state = readModuleResumeState();
+  if (!state || state.subject !== subject || state.difficulty !== difficulty || state.module !== moduleKey) {
+    return;
+  }
+
+  if (!state.scrollY) return;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: Math.max(0, Number(state.scrollY) || 0), behavior: "auto" });
+    });
+  });
+}
+
 async function ensureUserDoc(uid) {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
@@ -1388,6 +1495,7 @@ async function markModuleCompleted() {
   progress[getModuleDoneKey()] = true;
 
   await updateDoc(userRef, { progress });
+  await clearModuleResumeState();
 }
 
 async function hasModuleXPAwarded() {
@@ -1444,6 +1552,7 @@ async function awardModuleXPOnce() {
   const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
   localStorage.setItem("guest_xp", String(guestXP + MODULE_XP_REWARD));
   localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + MODULE_XP_REWARD));
+  await clearModuleResumeState();
   return MODULE_XP_REWARD;
 }
 
@@ -2483,8 +2592,12 @@ async function renderModulePage() {
   if (completed) {
     document.getElementById("moduleStatusChip").textContent =
       restoredXP > 0 ? `Checkpoint cleared +${restoredXP} XP` : "Checkpoint cleared";
+    await clearModuleResumeState();
+  } else {
+    await saveModuleResumeState();
   }
   setupAutoCheckpoint(data, completed);
+  restoreModuleScrollIfNeeded();
 }
 
 function buildGamifiedLesson(data) {
@@ -2595,6 +2708,7 @@ function renderMiniQuiz(container, quizItems) {
 
   checkBtn?.addEventListener("click", async () => {
     let score = 0;
+    let answeredCount = 0;
 
     quizItems.forEach((item, index) => {
       const selected = container.querySelector(`input[name="module-quiz-${index}"]:checked`);
@@ -2608,6 +2722,8 @@ function renderMiniQuiz(container, quizItems) {
         return;
       }
 
+      answeredCount += 1;
+
       if (selected.value === item.answer) {
         score += 1;
         feedback.textContent = `Correct: ${item.answer}`;
@@ -2618,6 +2734,21 @@ function renderMiniQuiz(container, quizItems) {
       }
     });
 
+    if (answeredCount !== quizItems.length) {
+      currentModuleGateState = {
+        ...currentModuleGateState,
+        quickCheckAttempted: false
+      };
+      updateCheckpointUi(false, "Answer every Quick Check item first", currentModuleGateState);
+      return;
+    }
+
+    await markQuickCheckAttempted();
+    currentModuleGateState = {
+      ...currentModuleGateState,
+      quickCheckAttempted: true
+    };
+
     const xpEarned = await awardQuickCheckXP(score * QUICK_CHECK_XP_PER_CORRECT);
 
     if (scoreEl) {
@@ -2627,6 +2758,7 @@ function renderMiniQuiz(container, quizItems) {
         scoreEl.textContent = `Score: ${score} / ${quizItems.length}`;
       }
     }
+    await maybeAutoCompleteModule();
   });
 }
 
@@ -3278,8 +3410,29 @@ window.goBackToLevels = function () {
 
 window.startQuiz = async function () {
   await maybeAutoCompleteModule();
+
+  if (!currentModuleGateState.completed) {
+    const challengeSection = document.querySelector(".module-challenge");
+    challengeSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
   window.location.href = getNextModuleUrl();
 };
+
+let moduleResumeSaveTimer = null;
+
+function queueModuleResumeSave() {
+  if (moduleResumeSaveTimer) {
+    window.clearTimeout(moduleResumeSaveTimer);
+  }
+
+  moduleResumeSaveTimer = window.setTimeout(() => {
+    saveModuleResumeState().catch((error) => {
+      console.warn("Unable to save module resume state.", error);
+    });
+  }, 180);
+}
 
 /* =========================
    THEME SYSTEM
@@ -3328,4 +3481,29 @@ tryStartMusic();
 document.body.addEventListener("click", () => {
   tryStartMusic();
 }, { once: true });
+
+window.addEventListener("scroll", () => {
+  if (currentModuleGateState.completed) return;
+  queueModuleResumeSave();
+}, { passive: true });
+
+window.addEventListener("beforeunload", () => {
+  if (currentModuleGateState.completed) return;
+
+  const state = {
+    kind: "module",
+    subject,
+    difficulty,
+    module: moduleKey,
+    actionUrl: getModuleBaseUrl(),
+    resumeUrl: getModuleResumeUrl(),
+    title: document.getElementById("title")?.textContent || `Module ${moduleNumber}`,
+    detail: `Module ${moduleNumber} • ${difficultyNames[difficulty] || difficulty} • ${subjectNames[subject] || subject}`,
+    scrollY: Math.max(0, Math.round(window.scrollY || 0)),
+    updatedAt: new Date().toISOString()
+  };
+
+  writeModuleResumeState(state);
+  writeLocalResumeActivity(state);
+});
 

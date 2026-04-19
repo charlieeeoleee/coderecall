@@ -33,7 +33,7 @@ const difficulty = (params.get("difficulty") || "easy").toLowerCase();
 const quizLevel = parseInt(params.get("quizLevel") || "1", 10);
 
 const XP_PER_CORRECT = 2;
-const MAX_DAILY_TRIES_PER_QUESTION = 2;
+const MAX_DAILY_TRIES_PER_QUESTION = 1;
 
 const HARDWARE_DOC_IMAGE_BASE = "assets/quizzes/hardware/docx";
 const HARDWARE_QUIZ_LEVEL_FALLBACKS = {
@@ -215,6 +215,7 @@ let currentUser = auth.currentUser || null;
 let rationaleNextAction = "advance";
 let currentTotalXP = 0;
 let questionBankCache = null;
+const RESUME_ACTIVITY_KEY = "resume_activity";
 
 function shuffleArray(array) {
   const cloned = [...array];
@@ -377,6 +378,118 @@ function getOverallQuizKey() {
   return `${subject}_${difficulty}_quiz`;
 }
 
+function getQuizLevelResumeStateKey() {
+  return `resume_quiz_level_state_${subject}_${difficulty}_${quizLevel}`;
+}
+
+function getQuizLevelBaseUrl() {
+  return `quiz-level.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&quizLevel=${encodeURIComponent(quizLevel)}`;
+}
+
+function getQuizLevelResumeUrl() {
+  return `${getQuizLevelBaseUrl()}&resume=1`;
+}
+
+function readLocalResumeActivity() {
+  try {
+    return JSON.parse(localStorage.getItem(RESUME_ACTIVITY_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalResumeActivity(activity) {
+  if (!activity) {
+    localStorage.removeItem(RESUME_ACTIVITY_KEY);
+    return;
+  }
+
+  localStorage.setItem(RESUME_ACTIVITY_KEY, JSON.stringify(activity));
+}
+
+async function syncResumeActivity(activity) {
+  writeLocalResumeActivity(activity);
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  await updateDoc(userRef, { resumeActivity: activity || null });
+}
+
+function readQuizLevelResumeState() {
+  try {
+    return JSON.parse(localStorage.getItem(getQuizLevelResumeStateKey()) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeQuizLevelResumeState(payload) {
+  if (!payload) {
+    localStorage.removeItem(getQuizLevelResumeStateKey());
+    return;
+  }
+
+  localStorage.setItem(getQuizLevelResumeStateKey(), JSON.stringify(payload));
+}
+
+async function saveQuizLevelResumeState() {
+  if (!questions.length || currentIndex >= questions.length) return;
+
+  const state = {
+    kind: "quiz-level",
+    subject,
+    difficulty,
+    quizLevel,
+    actionUrl: getQuizLevelBaseUrl(),
+    resumeUrl: getQuizLevelResumeUrl(),
+    title: `Level ${quizLevel}`,
+    detail: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} • ${difficulty} quiz`,
+    currentIndex,
+    score,
+    selectedChoice,
+    questions,
+    updatedAt: new Date().toISOString()
+  };
+
+  writeQuizLevelResumeState(state);
+  await syncResumeActivity(state);
+}
+
+async function clearQuizLevelResumeState() {
+  const current = readLocalResumeActivity();
+  writeQuizLevelResumeState(null);
+
+  const isSameActivity = current?.kind === "quiz-level"
+    && current?.subject === subject
+    && current?.difficulty === difficulty
+    && Number(current?.quizLevel || 0) === quizLevel;
+
+  if (isSameActivity) {
+    await syncResumeActivity(null);
+  }
+}
+
+function restoreQuizLevelResumeState() {
+  const shouldResume = new URLSearchParams(window.location.search).get("resume") === "1";
+  if (!shouldResume) return false;
+
+  const state = readQuizLevelResumeState();
+  if (!state || state.subject !== subject || state.difficulty !== difficulty || Number(state.quizLevel || 0) !== quizLevel) {
+    return false;
+  }
+
+  if (!Array.isArray(state.questions) || !state.questions.length) {
+    return false;
+  }
+
+  questions = state.questions;
+  currentIndex = Math.max(0, Math.min(Number(state.currentIndex || 0), state.questions.length - 1));
+  score = Math.max(0, Number(state.score || 0));
+  selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
+  return true;
+}
+
 function getWeekKey() {
   const now = new Date();
   const year = now.getFullYear();
@@ -392,6 +505,12 @@ function getTodayKey() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getTomorrowRetryIso() {
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
+  return tomorrow.toISOString();
 }
 
 function getQuestionIdentifier(question) {
@@ -602,6 +721,7 @@ function updateProgress() {
 }
 
 function renderQuestion() {
+  const restoredChoice = selectedChoice;
   selectedChoice = null;
   document.getElementById("nextBtn").disabled = true;
 
@@ -668,9 +788,17 @@ function renderQuestion() {
       button.classList.add("selected");
       selectedChoice = choice;
       document.getElementById("nextBtn").disabled = false;
+      saveQuizLevelResumeState().catch((error) => {
+        console.warn("Unable to save quiz level resume state.", error);
+      });
     });
 
     container.appendChild(button);
+    if (restoredChoice && restoredChoice === choice) {
+      button.classList.add("selected");
+      selectedChoice = choice;
+      document.getElementById("nextBtn").disabled = false;
+    }
   });
 
   document.getElementById("nextBtn").textContent = currentIndex === questions.length - 1 ? "Submit" : "Next →";
@@ -699,7 +827,10 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
     selectedAnswer: String(selectedAnswer || ""),
     correctAnswer: String(question?.answer || ""),
     rationale: buildRationale(question, false),
-    actionUrl: `quiz-level.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&quizLevel=${encodeURIComponent(quizLevel)}`
+    actionUrl: `quiz-level.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&quizLevel=${encodeURIComponent(quizLevel)}`,
+    retryAvailableAt: getTomorrowRetryIso(),
+    retryPolicy: "next_day",
+    lastAnsweredAt: new Date().toISOString()
   };
 }
 
@@ -855,6 +986,7 @@ async function finishLevel() {
   const earnedXP = score * XP_PER_CORRECT;
   await addLevelXP(earnedXP);
   await saveLevelCompletion();
+  await clearQuizLevelResumeState();
 
   document.getElementById("resultMessage").textContent =
     `You completed Level ${quizLevel} with a score of ${score}/${questions.length} and earned ${earnedXP} XP.`;
@@ -883,6 +1015,10 @@ window.handleNext = function () {
     score += 1;
     playSound("correct");
     currentIndex += 1;
+    selectedChoice = null;
+    saveQuizLevelResumeState().catch((error) => {
+      console.warn("Unable to save quiz level resume state.", error);
+    });
     showRationaleWithAction(true, currentQuestion, {
       buttonText: currentIndex < questions.length ? "Continue" : "Finish",
       nextAction: currentIndex < questions.length ? "advance" : "finish"
@@ -896,20 +1032,13 @@ window.handleNext = function () {
     }).catch((error) => {
       console.warn("Unable to save wrong-answer review item.", error);
     });
-    const remainingTries = Math.max(0, MAX_DAILY_TRIES_PER_QUESTION - questionState.attempts);
-
-    if (remainingTries > 0) {
-      showRationaleWithAction(false, currentQuestion, {
-        text: `${buildRationale(currentQuestion, false)} You have ${remainingTries} try left for this question today.`,
-        buttonText: "Try Again",
-        nextAction: "retry"
-      });
-      return;
-    }
-
     currentIndex += 1;
+    selectedChoice = null;
+    saveQuizLevelResumeState().catch((error) => {
+      console.warn("Unable to save quiz level resume state.", error);
+    });
     showRationaleWithAction(false, currentQuestion, {
-      text: `${buildRationale(currentQuestion, false)} You have used both tries for this question today, so we'll move on. You can answer it again tomorrow.`,
+      text: `${buildRationale(currentQuestion, false)} This question is now locked for today and has been added to Wrong-Answer Review. You can answer it again tomorrow.`,
       buttonText: currentIndex < questions.length ? "Continue" : "Finish",
       nextAction: currentIndex < questions.length ? "advance" : "finish"
     });
@@ -952,6 +1081,7 @@ async function initializePage() {
     console.warn("Unable to save study history for quiz level.", error);
   });
   await prepareQuestions();
+  restoreQuizLevelResumeState();
   renderQuestion();
   tryStartMusic();
   syncXpDock().catch((error) => {

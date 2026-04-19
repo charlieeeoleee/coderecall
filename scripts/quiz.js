@@ -52,6 +52,7 @@ let pendingContinue = null;
 let xpAwardedThisAttempt = false;
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
+const RESUME_ACTIVITY_KEY = "resume_activity";
 
 const params = new URLSearchParams(window.location.search);
 const subjectParam = (params.get("subject") || "").toLowerCase();
@@ -71,6 +72,116 @@ const XP_RULES = {
   posttest: 4,
   quizLevel: 6
 };
+
+function getQuizResumeStateKey() {
+  return `resume_quiz_state_${subject}_${type}_${level}`;
+}
+
+function getQuizBaseUrl() {
+  return `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`;
+}
+
+function getQuizResumeUrl() {
+  return `${getQuizBaseUrl()}&resume=1`;
+}
+
+function readLocalResumeActivity() {
+  try {
+    return JSON.parse(localStorage.getItem(RESUME_ACTIVITY_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalResumeActivity(activity) {
+  if (!activity) {
+    localStorage.removeItem(RESUME_ACTIVITY_KEY);
+    return;
+  }
+
+  localStorage.setItem(RESUME_ACTIVITY_KEY, JSON.stringify(activity));
+}
+
+async function syncResumeActivity(activity) {
+  writeLocalResumeActivity(activity);
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  await updateDoc(userRef, { resumeActivity: activity || null });
+}
+
+function readQuizResumeState() {
+  try {
+    return JSON.parse(localStorage.getItem(getQuizResumeStateKey()) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeQuizResumeState(payload) {
+  if (!payload) {
+    localStorage.removeItem(getQuizResumeStateKey());
+    return;
+  }
+
+  localStorage.setItem(getQuizResumeStateKey(), JSON.stringify(payload));
+}
+
+async function saveQuizResumeState() {
+  if (!quizQuestions.length || currentIndex >= quizQuestions.length) return;
+
+  const state = {
+    kind: type,
+    subject,
+    difficulty: level,
+    actionUrl: getQuizBaseUrl(),
+    resumeUrl: getQuizResumeUrl(),
+    title: currentMeta.title,
+    detail: `${currentMeta.tag} • ${level}`,
+    currentIndex,
+    score,
+    selectedChoice,
+    questions: quizQuestions,
+    updatedAt: new Date().toISOString()
+  };
+
+  writeQuizResumeState(state);
+  await syncResumeActivity(state);
+}
+
+async function clearQuizResumeState() {
+  const current = readLocalResumeActivity();
+  writeQuizResumeState(null);
+
+  const isSameActivity = current?.subject === subject
+    && current?.kind === type
+    && current?.difficulty === level;
+
+  if (isSameActivity) {
+    await syncResumeActivity(null);
+  }
+}
+
+function restoreQuizResumeState() {
+  const shouldResume = new URLSearchParams(window.location.search).get("resume") === "1";
+  if (!shouldResume) return false;
+
+  const state = readQuizResumeState();
+  if (!state || state.subject !== subject || state.kind !== type || state.difficulty !== level) {
+    return false;
+  }
+
+  if (!Array.isArray(state.questions) || !state.questions.length) {
+    return false;
+  }
+
+  quizQuestions = state.questions;
+  currentIndex = Math.max(0, Math.min(Number(state.currentIndex || 0), state.questions.length - 1));
+  score = Math.max(0, Number(state.score || 0));
+  selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
+  return true;
+}
 
 const quizMeta = {
   electrical: {
@@ -495,6 +606,8 @@ function prepareQuestions() {
   }));
 }
 
+restoreQuizResumeState();
+
 function updateProgress() {
   const total = quizQuestions.length || 1;
   const percent = Math.floor((currentIndex / total) * 100);
@@ -507,6 +620,7 @@ function updateProgress() {
 
 function renderQuestion() {
   const nextBtn = document.getElementById("nextBtn");
+  const restoredChoice = selectedChoice;
   selectedChoice = null;
   nextBtn.disabled = true;
 
@@ -549,12 +663,23 @@ function renderQuestion() {
       button.classList.add("selected");
       selectedChoice = choice;
       nextBtn.disabled = false;
+      saveQuizResumeState().catch((error) => {
+        console.warn("Unable to save quiz resume state.", error);
+      });
     });
 
     choicesContainer.appendChild(button);
+    if (restoredChoice && restoredChoice === choice) {
+      button.classList.add("selected");
+      selectedChoice = choice;
+      nextBtn.disabled = false;
+    }
   });
 
   nextBtn.textContent = currentIndex === quizQuestions.length - 1 ? "Submit" : "Next";
+  saveQuizResumeState().catch((error) => {
+    console.warn("Unable to save quiz resume state.", error);
+  });
 }
 
 function showRationale(message) {
@@ -607,6 +732,11 @@ function buildReviewRationale(question) {
 }
 
 function buildWrongAnswerReviewPayload(question, selectedAnswer) {
+  const hasNextDayRetry = type !== "pretest";
+  const tomorrow = new Date();
+  tomorrow.setHours(0, 0, 0, 0);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
   return {
     source: "quiz",
     subject,
@@ -619,7 +749,10 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
     selectedAnswer: String(selectedAnswer || ""),
     correctAnswer: getCorrectAnswerText(question),
     rationale: buildReviewRationale(question),
-    actionUrl: `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`
+    actionUrl: `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`,
+    retryAvailableAt: hasNextDayRetry ? tomorrow.toISOString() : "",
+    retryPolicy: hasNextDayRetry ? "next_day" : "locked",
+    lastAnsweredAt: new Date().toISOString()
   };
 }
 
@@ -791,6 +924,7 @@ async function finishAttempt() {
 
   await awardQuizXPOnce();
   await saveQuizResultToStorageAndFirestore();
+  await clearQuizResumeState();
   showResult();
 }
 
@@ -824,6 +958,10 @@ window.handleNext = function () {
     });
     score += 1;
     playSound("correct");
+    selectedChoice = null;
+    saveQuizResumeState().catch((error) => {
+      console.warn("Unable to save quiz resume state.", error);
+    });
     continueToNext();
     return;
   }
@@ -835,6 +973,10 @@ window.handleNext = function () {
     payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
   }).catch((error) => {
     console.warn("Unable to save wrong-answer review item.", error);
+  });
+  selectedChoice = null;
+  saveQuizResumeState().catch((error) => {
+    console.warn("Unable to save quiz resume state.", error);
   });
   pendingContinue = continueToNext;
   showRationale(buildReviewRationale(currentQuestion));

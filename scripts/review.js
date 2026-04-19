@@ -101,6 +101,48 @@ function canRevealCorrectAnswer(item) {
   return item?.quizType === "pretest";
 }
 
+function getRetryState(item) {
+  const retryAt = item?.retryAvailableAt ? new Date(item.retryAvailableAt) : null;
+  const isPretest = item?.quizType === "pretest";
+  const baseRationale = item?.rationale || "Review the lesson and try the source activity again.";
+
+  if (isPretest) {
+    return {
+      canOpen: false,
+      message: `${baseRationale} This pre-test item is view-only and cannot be answered again.`,
+      buttonLabel: "Source Locked"
+    };
+  }
+
+  if (!retryAt || Number.isNaN(retryAt.getTime())) {
+    return {
+      canOpen: true,
+      message: baseRationale,
+      buttonLabel: "Open Source"
+    };
+  }
+
+  const now = new Date();
+  if (now < retryAt) {
+    const retryDateLabel = retryAt.toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric"
+    });
+    return {
+      canOpen: false,
+      message: `${baseRationale} Locked for today. You can answer this item again on ${retryDateLabel}.`,
+      buttonLabel: "Try Tomorrow"
+    };
+  }
+
+  return {
+    canOpen: true,
+    message: `${baseRationale} You can answer this item again now.`,
+    buttonLabel: "Answer Again"
+  };
+}
+
 function renderReviewItems(items) {
   const container = document.getElementById("wrongAnswerReviewList");
   if (!container) return;
@@ -126,9 +168,9 @@ function renderReviewItems(items) {
       ${canRevealCorrectAnswer(item)
         ? `<div class="wrong-answer-detail"><strong>Correct answer:</strong> ${escapeHtml(item.correctAnswer || "Not available")}</div>`
         : ""}
-      <p class="wrong-answer-rationale">${escapeHtml(item.rationale || "Review the lesson and try the source activity again.")}</p>
+      <p class="wrong-answer-rationale">${escapeHtml(getRetryState(item).message)}</p>
       <div class="wrong-answer-actions">
-        <button class="review-open-btn" data-action-url="${escapeHtml(item.actionUrl || "")}">Open Source</button>
+        <button class="review-open-btn" data-action-url="${escapeHtml(item.actionUrl || "")}" ${getRetryState(item).canOpen ? "" : "disabled"}>${escapeHtml(getRetryState(item).buttonLabel)}</button>
         <button class="review-clear-btn" data-review-key="${escapeHtml(item.key)}">Remove</button>
       </div>
     </article>
