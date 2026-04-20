@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wrong - Answer Review - Code Recall</title>
+  <title>Certificates - Code Recall</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260419a">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260420b">
+  <link rel="stylesheet" href="styles/certificates.css?v=20260420a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -19,10 +20,10 @@
         </a>
         <nav class="menu">
           <a href="dashboard.html">&#127968; Dashboard</a>
-          <a href="review.html" class="active-link">&#128221; Review</a>
+          <a href="review.html">&#128221; Review</a>
           <a href="history.html">&#128340; History</a>
           <a href="subjects.html">&#128218; Subjects</a>
-          <a href="certificates.html">&#127891; Certificates</a>
+          <a href="certificates.html" class="active-link">&#127891; Certificates</a>
           <a href="achievements.html">&#127942; Badges</a>
           <a href="leaderboard.html">&#129351; Leaderboard</a>
           <a href="settings.html">&#9881; Settings</a>
@@ -44,8 +45,8 @@
             <span></span>
           </button>
           <div>
-            <h2 class="page-title">Wrong - Answer Review</h2>
-            <p class="page-subtitle">Revisit missed questions and reopen their source activities.</p>
+            <h2 class="page-title">My Certificates</h2>
+            <p class="page-subtitle">View every certificate you’ve earned across the whole system.</p>
           </div>
         </div>
         <div class="user-top">
@@ -55,29 +56,28 @@
       </div>
 
       <div class="stats-grid">
-        <div class="card stat-card">
-          <h3>Review Items</h3>
-          <p id="reviewItemCount">0</p>
+        <div class="card">
+          <h3>Certificates Earned</h3>
+          <p id="certificatesEarnedCount">0</p>
         </div>
-        <div class="card stat-card">
-          <h3>Subjects Covered</h3>
-          <p id="reviewSubjectCount">0</p>
+        <div class="card">
+          <h3>Ready to Claim</h3>
+          <p id="certificatesReadyCount">0</p>
         </div>
-        <div class="card stat-card">
-          <h3>Latest Source</h3>
-          <p id="reviewLatestSource">-</p>
+        <div class="card">
+          <h3>Latest Issued</h3>
+          <p id="latestCertificateDate">-</p>
         </div>
       </div>
 
-      <div class="card section review-page-section">
+      <div class="card section certificates-section">
         <div class="section-head">
           <div>
-            <h3>Missed Questions</h3>
-            <span class="section-note">Items disappear here once you answer them correctly later.</span>
+            <h3>Certificate Vault</h3>
+            <span class="section-note">Open, download, or print the certificates you’ve unlocked.</span>
           </div>
-          <button class="view-full-btn" onclick="clearReviewItems()">Clear Review List</button>
         </div>
-        <div id="wrongAnswerReviewList" class="wrong-answer-review-list"></div>
+        <div id="certificateVaultGrid" class="certificate-vault-grid"></div>
       </div>
     </div>
   </div>
@@ -100,7 +100,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/review.js?v=20260419a"></script>
-  <script src="scripts/loading.js?v=20260419a" defer></script>
+  <script type="module" src="scripts/certificates.js?v=20260420a"></script>
+  <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

@@ -165,6 +165,68 @@ body{
   gap: 24px;
 }
 
+.subject-certificate-panel{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  margin-top:24px;
+  padding:26px 28px;
+  border-radius:22px;
+}
+
+.subject-certificate-copy{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.subject-certificate-copy h2{
+  margin:0;
+  font-size:28px;
+  font-weight:800;
+  color:#eaf7ff;
+}
+
+.subject-certificate-copy p{
+  margin:0;
+  font-size:15px;
+  line-height:1.65;
+  opacity:0.9;
+}
+
+.subject-certificate-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.subject-certificate-btn{
+  min-width:190px;
+  border:none;
+  border-radius:16px;
+  padding:14px 20px;
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+  color:#08111f;
+  background:linear-gradient(135deg,#00e5ff,#32ffc7);
+  box-shadow:0 14px 30px rgba(0,229,255,0.18);
+  transition:transform 0.25s ease, filter 0.25s ease, box-shadow 0.25s ease;
+}
+
+.subject-certificate-btn.primary{
+  color:#fff;
+  background:linear-gradient(135deg,#ff2e97,#00e5ff);
+  box-shadow:0 14px 30px rgba(255,46,151,0.18);
+}
+
+.subject-certificate-btn:hover{
+  transform:translateY(-2px);
+  filter:brightness(1.04);
+}
+
 /* ================= CARDS ================= */
 .subject-card{
   position: relative;
@@ -626,6 +688,18 @@ body.light-mode .subject-modal-btn{
   background: linear-gradient(135deg, #6d5dfc, #00d9ff);
 }
 
+body.light-mode .subject-certificate-panel{
+  background: rgba(255,255,255,0.72);
+}
+
+body.light-mode .subject-certificate-copy h2{
+  color: #111827;
+}
+
+body.light-mode .subject-certificate-copy p{
+  color: rgba(17,24,39,0.76);
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 768px){
   .subject-logo{
@@ -643,6 +717,21 @@ body.light-mode .subject-modal-btn{
 
   .subject-actions{
     grid-template-columns: 1fr;
+  }
+
+  .subject-certificate-panel{
+    flex-direction: column;
+    align-items: stretch;
+    padding: 22px 18px;
+  }
+
+  .subject-certificate-actions{
+    justify-content: stretch;
+  }
+
+  .subject-certificate-btn{
+    width: 100%;
+    min-width: 0;
   }
 
   .subject-header{

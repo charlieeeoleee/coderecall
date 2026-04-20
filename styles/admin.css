@@ -22,6 +22,15 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .user-top img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
 .overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
 .overview-card, .panel-card { background: #3a2575; border-radius: 20px; padding: 22px; box-sizing: border-box; }
+.insights-admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 6px; }
+.insight-admin-card { background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; }
+.insight-admin-card span { display: block; opacity: 0.78; font-size: 13px; }
+.insight-admin-card strong { display: block; font-size: 30px; margin: 8px 0 10px; }
+.insight-admin-card p { margin: 0; font-size: 13px; opacity: 0.82; }
+.insights-admin-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+.insight-list-wrap h4 { margin: 0 0 12px; font-size: 15px; }
+.insight-review-item { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.insight-review-item strong { font-size: 22px; }
 .overview-card h3, .panel-card h3 { margin: 0 0 10px; font-size: 15px; }
 .overview-card p { margin: 0; font-size: 28px; font-weight: 700; }
 .admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
@@ -118,6 +127,7 @@ body.light-mode .panel-card,
 body.light-mode .user-top,
 body.light-mode .bottleneck-card,
 body.light-mode .analytics-card,
+body.light-mode .insight-admin-card,
 body.light-mode .admin-form input,
 body.light-mode .admin-form textarea,
 body.light-mode .admin-form select { color: #1e1547; }
@@ -163,8 +173,9 @@ body.light-mode .inline-select {
   justify-content: center;
   padding: 24px;
   z-index: 120;
+  pointer-events: none;
 }
-.popup.active { display: flex; }
+.popup.active { display: flex; pointer-events: auto; }
 .popup-box {
   width: min(460px, 100%);
   border-radius: 24px;
@@ -173,6 +184,8 @@ body.light-mode .inline-select {
   box-sizing: border-box;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 1;
 }
 .popup-box h3 {
   margin: 0 0 10px;
@@ -196,6 +209,11 @@ body.light-mode .inline-select {
   padding: 12px 16px;
   font: inherit;
   cursor: pointer;
+  pointer-events: auto;
+}
+.popup-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 .secondary-btn {
   background: rgba(255,255,255,0.12);
@@ -216,7 +234,9 @@ body.light-mode .secondary-btn {
   .admin-grid,
   .bottleneck-grid,
   .analytics-grid,
+  .insights-admin-grid,
   .review-grid,
+  .insights-admin-columns,
   .profile-stats,
   .profile-columns { grid-template-columns: 1fr; }
 }

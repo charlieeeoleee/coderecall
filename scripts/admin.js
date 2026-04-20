@@ -98,6 +98,7 @@ async function loadAdminDashboard() {
   learnersCache = users.filter((user) => getRoleFromUserData(user) === "user");
 
   renderOverview(learnersCache);
+  renderLearningInsights(learnersCache);
   renderBottlenecks(learnersCache);
   renderDifficultyAnalytics(learnersCache);
   renderStudentTable(learnersCache);
@@ -125,6 +126,77 @@ function renderOverview(learners) {
   setText("adminNeedsHelp", needsHelp);
   setText("adminAverageXp", `${averageXp} XP`);
   setText("adminModulesCleared", `${modulesCleared} clears`);
+}
+
+function renderLearningInsights(learners) {
+  const reviewBacklog = learners.reduce((sum, learner) => sum + (Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview.length : 0), 0);
+  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  const activeThisWeek = learners.filter((learner) =>
+    Array.isArray(learner.studyHistory) && learner.studyHistory.some((item) => new Date(item?.timestamp || 0).getTime() >= sevenDaysAgo)
+  );
+
+  setText("adminReviewBacklog", reviewBacklog);
+  setText(
+    "adminReviewBacklogDetail",
+    reviewBacklog
+      ? `${reviewBacklog} wrong-answer items are currently waiting across learner review lists.`
+      : "No learners are waiting on wrong-answer review."
+  );
+  setText("adminActiveThisWeek", activeThisWeek.length);
+  setText(
+    "adminActiveThisWeekDetail",
+    activeThisWeek.length
+      ? `${activeThisWeek.length} learner(s) opened at least one module, quiz, or test in the last 7 days.`
+      : "No recent study activity recorded yet."
+  );
+
+  renderInsightList(
+    "adminMostActiveLearners",
+    [...learners]
+      .map((learner) => ({
+        title: learner.name || learner.email || "Learner",
+        metric: Array.isArray(learner.studyHistory) ? learner.studyHistory.length : 0,
+        detail: learner.email || "No email"
+      }))
+      .filter((item) => item.metric > 0)
+      .sort((a, b) => b.metric - a.metric)
+      .slice(0, 5),
+    "No study history activity has been recorded yet."
+  );
+
+  renderInsightList(
+    "adminReviewQueues",
+    [...learners]
+      .map((learner) => ({
+        title: learner.name || learner.email || "Learner",
+        metric: Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview.length : 0,
+        detail: learner.email || "No email"
+      }))
+      .filter((item) => item.metric > 0)
+      .sort((a, b) => b.metric - a.metric)
+      .slice(0, 5),
+    "No learner currently has a review queue."
+  );
+}
+
+function renderInsightList(targetId, items, emptyMessage) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  if (!items.length) {
+    target.innerHTML = `<div class="review-item"><p>${escapeHtml(emptyMessage)}</p></div>`;
+    return;
+  }
+
+  target.innerHTML = items.map((item) => `
+    <article class="review-item insight-review-item">
+      <div>
+        <h5>${escapeHtml(item.title)}</h5>
+        <p>${escapeHtml(item.detail)}</p>
+      </div>
+      <strong>${item.metric}</strong>
+    </article>
+  `).join("");
 }
 
 function renderBottlenecks(learners) {

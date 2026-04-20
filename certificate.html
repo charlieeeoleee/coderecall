@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Certificate - Code Recall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/styles.css">
+  <link rel="stylesheet" href="styles/certificate.css?v=20260420a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <a href="dashboard.html" class="certificate-logo" aria-label="Go to dashboard">
+    <span class="certificate-logo-code">CODE:</span>
+    <span class="certificate-logo-recall">RECALL!</span>
+  </a>
+
+  <button class="theme-toggle certificate-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+    <span id="themeIcon">&#127769;</span>
+  </button>
+
+  <main class="certificate-page">
+    <section class="certificate-toolbar">
+      <button class="certificate-toolbar-btn ghost" type="button" onclick="goBackToSubject()">Back to Subject</button>
+      <div class="certificate-toolbar-actions">
+        <button class="certificate-toolbar-btn" type="button" id="downloadCertificateBtn">Download PNG</button>
+        <button class="certificate-toolbar-btn primary" type="button" id="printCertificateBtn" onclick="printCertificate()">Print / Save PDF</button>
+      </div>
+    </section>
+
+    <section class="certificate-shell">
+      <div class="certificate-status" id="certificateStatus">Preparing your certificate...</div>
+
+      <article class="certificate-card" id="certificateCard">
+        <div class="certificate-border"></div>
+        <div class="certificate-inner">
+          <div class="certificate-topline">Code Recall Learning Achievement</div>
+          <h1>Certificate of Completion</h1>
+          <p class="certificate-intro">This certifies that</p>
+          <h2 id="certificateLearnerName">Learner Name</h2>
+          <p class="certificate-body">
+            has successfully completed the subject
+          </p>
+          <h3 id="certificateSubjectTitle">Computer Hardware</h3>
+          <p class="certificate-body certificate-body-detail">
+            after finishing the full learning path including the pre-test, modules, quizzes, and post-test.
+          </p>
+
+          <div class="certificate-meta-grid">
+            <div class="certificate-meta-box">
+              <span class="certificate-meta-label">Issued On</span>
+              <strong id="certificateIssueDate">April 20, 2026</strong>
+            </div>
+            <div class="certificate-meta-box">
+              <span class="certificate-meta-label">Certificate ID</span>
+              <strong id="certificateId">CR-HW-0001</strong>
+            </div>
+          </div>
+
+          <div class="certificate-signature-row">
+            <div class="certificate-signature">
+              <span class="certificate-sign-line"></span>
+              <strong>Code Recall System</strong>
+              <small>Learning Platform</small>
+            </div>
+            <div class="certificate-seal">
+              <span>Verified</span>
+              <strong>Subject Complete</strong>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script type="module" src="scripts/certificate.js?v=20260420a"></script>
+  <script src="scripts/loading.js?v=20260420a" defer></script>
+</body>
+</html>

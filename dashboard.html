@@ -3,7 +3,7 @@
 <head>
   <title>Code Recall Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260418b">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260420b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -20,6 +20,7 @@
           <a href="review.html">&#128221; Review</a>
           <a href="history.html">&#128340; History</a>
           <a href="subjects.html">&#128218; Subjects</a>
+          <a href="certificates.html">&#127891; Certificates</a>
           <a href="achievements.html">&#127942; Badges</a>
           <a href="leaderboard.html">&#129351; Leaderboard</a>
           <a href="settings.html">&#9881; Settings</a>
@@ -173,6 +174,17 @@
         <div id="subjectProgressGrid" class="subject-progress-grid"></div>
       </div>
 
+      <div class="card section certificates-preview-section">
+        <div class="section-head">
+          <div>
+            <h3>Certificates</h3>
+            <span class="section-note">Keep track of the certificates you already unlocked.</span>
+          </div>
+          <button class="view-full-btn" onclick="window.location.href='certificates.html'">Open Certificates</button>
+        </div>
+        <div id="dashboardCertificatesPreview" class="dashboard-certificates-preview"></div>
+      </div>
+
       <!-- LEADERBOARD PREVIEW -->
       <div class="card section leaderboard-preview-section">
         <div class="section-head">
@@ -233,8 +245,8 @@
   <!-- CONFETTI -->
   <div id="confettiContainer" class="confetti-container"></div>
 
-  <script type="module" src="scripts/dashboard.js?v=20260418b"></script>
-  <script src="scripts/loading.js?v=20260418b" defer></script>
+  <script type="module" src="scripts/dashboard.js?v=20260420b"></script>
+  <script src="scripts/loading.js?v=20260420b" defer></script>
 </body>
 </html>
 

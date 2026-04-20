@@ -47,6 +47,7 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let systemPopupAction = null;
+let systemPopupBusy = false;
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -622,24 +623,70 @@ function openSystemPopup(title, message, confirmAction) {
   const confirmBtn = document.getElementById("systemPopupConfirmBtn");
   if (!popup || !titleEl || !messageEl || !confirmBtn) return;
 
+  systemPopupBusy = false;
   systemPopupAction = confirmAction;
   titleEl.textContent = title;
   messageEl.textContent = message;
-  confirmBtn.onclick = async () => {
-    if (typeof systemPopupAction === "function") {
-      await systemPopupAction();
-    }
-  };
+  confirmBtn.disabled = false;
+  confirmBtn.textContent = "Confirm";
   popup.classList.add("active");
 }
 
 window.closeSystemPopup = function() {
   const popup = document.getElementById("systemPopup");
   const confirmBtn = document.getElementById("systemPopupConfirmBtn");
+  const cancelBtn = document.getElementById("systemPopupCancelBtn");
   systemPopupAction = null;
-  if (confirmBtn) confirmBtn.onclick = null;
+  systemPopupBusy = false;
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = "Confirm";
+  }
+  if (cancelBtn) {
+    cancelBtn.disabled = false;
+  }
   if (popup) popup.classList.remove("active");
 };
+
+function initializeSystemPopup() {
+  const popup = document.getElementById("systemPopup");
+  const popupBox = popup?.querySelector(".popup-box");
+  const confirmBtn = document.getElementById("systemPopupConfirmBtn");
+  const cancelBtn = document.getElementById("systemPopupCancelBtn");
+
+  popup?.addEventListener("click", (event) => {
+    if (event.target === popup && !systemPopupBusy) {
+      closeSystemPopup();
+    }
+  });
+
+  popupBox?.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  confirmBtn?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (systemPopupBusy || typeof systemPopupAction !== "function") return;
+
+    systemPopupBusy = true;
+    confirmBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+    confirmBtn.textContent = "Removing...";
+
+    try {
+      await systemPopupAction();
+    } catch (error) {
+      console.error("System popup action failed:", error);
+      setGrantStatus("Unable to complete the action. Please try again.");
+      systemPopupBusy = false;
+      confirmBtn.disabled = false;
+      if (cancelBtn) cancelBtn.disabled = false;
+      confirmBtn.textContent = "Confirm";
+    }
+  });
+}
 
 window.logout = async function() {
   closeMobileSidebar();
@@ -675,6 +722,7 @@ loadTheme();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();
+initializeSystemPopup();
 
 document.body.addEventListener("click", () => {
   tryStartMusic();

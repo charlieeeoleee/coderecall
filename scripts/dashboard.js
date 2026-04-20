@@ -209,10 +209,18 @@ async function loadDashboard() {
   });
   updateUserUI(name, photo);
   updateStatsUI(xp);
-  renderSubjectProgressSection(buildSubjectProgressSnapshot(data.progress || {}, data.results || {}));
+  const subjectSnapshot = buildSubjectProgressSnapshot(data.progress || {}, data.results || {});
+  renderSubjectProgressSection(subjectSnapshot);
+  renderCertificatesPreview(subjectSnapshot);
   await renderReviewInsights();
   await renderStudyHistoryInsights(data);
-  renderDashboardAchievements(xp, false);
+  renderDashboardAchievementsExpanded({
+    xp,
+    isGuest: false,
+    streak: Number(data.streak || 0),
+    progress: data.progress || {},
+    results: data.results || {}
+  });
   await loadLeaderboard();
   renderDashboardLeaderboardPreview();
 }
@@ -347,9 +355,16 @@ function loadGuestDashboard() {
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   updateStatsUI(guestXP);
   renderSubjectProgressSection(guestSnapshot);
+  renderCertificatesPreview(guestSnapshot);
   renderReviewInsights();
   renderStudyHistoryInsights({});
-  renderDashboardAchievements(guestXP, true);
+  renderDashboardAchievementsExpanded({
+    xp: guestXP,
+    isGuest: true,
+    streak: parseInt(localStorage.getItem("guest_streak")) || 0,
+    progress: {},
+    results: {}
+  });
   renderDashboardLeaderboardPreview();
 }
 
@@ -464,6 +479,51 @@ function renderSubjectProgressSection(subjects = []) {
         <span>${item.quizLevelDoneCount}/${item.totalQuizLevels} quiz levels</span>
         <strong>${item.xp} XP</strong>
       </div>
+    </article>
+  `).join("");
+}
+
+function buildCertificatePreviewItems(subjects = []) {
+  const hardware = subjects.find((item) => item.subject === "hardware");
+  const electrical = subjects.find((item) => item.subject === "electrical");
+  const hardwareUnlocked = Boolean(hardware && hardware.percent === 100);
+  const electricalUnlocked = Boolean(electrical && electrical.percent === 100);
+
+  return [
+    {
+      key: "hardware",
+      title: "Computer Hardware",
+      detail: hardwareUnlocked ? "Subject certificate unlocked" : "Complete the full Hardware path",
+      unlocked: hardwareUnlocked
+    },
+    {
+      key: "electrical",
+      title: "Electrical Wiring",
+      detail: electricalUnlocked ? "Subject certificate unlocked" : "Complete the full Electrical path",
+      unlocked: electricalUnlocked
+    },
+    {
+      key: "dual",
+      title: "Dual Completion",
+      detail: hardwareUnlocked && electricalUnlocked ? "Full system certificate unlocked" : "Complete both subjects to unlock",
+      unlocked: hardwareUnlocked && electricalUnlocked
+    }
+  ];
+}
+
+function renderCertificatesPreview(subjects = []) {
+  const container = document.getElementById("dashboardCertificatesPreview");
+  if (!container) return;
+
+  const items = buildCertificatePreviewItems(subjects);
+  container.innerHTML = items.map((item) => `
+    <article class="dashboard-certificate-card ${item.unlocked ? "unlocked" : "locked"}">
+      <div class="dashboard-certificate-mark">${item.unlocked ? "✓" : "•"}</div>
+      <div class="dashboard-certificate-copy">
+        <h4>${escapeHtml(item.title)}</h4>
+        <p>${escapeHtml(item.detail)}</p>
+      </div>
+      <span class="dashboard-certificate-pill">${item.unlocked ? "Ready" : "Locked"}</span>
     </article>
   `).join("");
 }
@@ -1157,6 +1217,252 @@ function getTodayString() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function renderDashboardAchievementsExpanded({
+  xp = 0,
+  isGuest = false,
+  streak = 0,
+  progress = {},
+  results = {}
+} = {}) {
+  const grid = document.getElementById("achievementsGrid");
+  if (!grid) return;
+
+  if (isGuest) {
+    streak = parseInt(localStorage.getItem("guest_streak")) || 0;
+  }
+
+  const getSaved = (key) =>
+    progress[key] === true ||
+    results[key] != null ||
+    localStorage.getItem(key) === "true" ||
+    localStorage.getItem(`${key}_done`) === "true" ||
+    localStorage.getItem(`${key}_attempt_done`) === "true";
+
+  const quizStarted =
+    getSaved("hardware_quiz") ||
+    getSaved("electrical_quiz") ||
+    getSaved("hardware_pretest") ||
+    getSaved("electrical_pretest");
+
+  const hardwareStarted =
+    getSaved("hardware_pretest") ||
+    getSaved("hardware_modules") ||
+    getSaved("hardware_quiz") ||
+    getSaved("hardware_posttest");
+
+  const electricalStarted =
+    getSaved("electrical_pretest") ||
+    getSaved("electrical_modules") ||
+    getSaved("electrical_quiz") ||
+    getSaved("electrical_posttest");
+
+  const remoteModuleCount = Object.keys(progress).filter((key) =>
+    /^(hardware|electrical)_(easy|medium|hard)_module_\d+_done$/.test(key) && progress[key] === true
+  ).length;
+  const localModuleCount = Object.keys(localStorage).filter((key) =>
+    /^(hardware|electrical)_(easy|medium|hard)_module_\d+_done$/.test(key) && localStorage.getItem(key) === "true"
+  ).length;
+  const moduleDoneCount = Math.max(remoteModuleCount, localModuleCount);
+
+  const remoteQuickCheckPoints = Object.keys(progress).reduce((sum, key) => {
+    if (!/^(hardware|electrical)_(easy|medium|hard)_module_\d+_done_quick_check_best_score$/.test(key)) {
+      return sum;
+    }
+    return sum + Number(progress[key] || 0);
+  }, 0);
+  const localQuickCheckPoints = Object.keys(localStorage).reduce((sum, key) => {
+    if (!/^(hardware|electrical)_(easy|medium|hard)_module_\d+_done_quick_check_best_score$/.test(key)) {
+      return sum;
+    }
+    return sum + Number(localStorage.getItem(key) || 0);
+  }, 0);
+  const quickCheckPoints = Math.max(remoteQuickCheckPoints, localQuickCheckPoints);
+
+  const wrongAnswerItems = (() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem("wrong_answer_review_items") || "[]");
+      return Array.isArray(raw) ? raw.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const studyHistoryItems = (() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem("study_history_items") || "[]");
+      return Array.isArray(raw) ? raw.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
+  const moduleRead = moduleDoneCount >= 1 || getSaved("hardware_modules") || getSaved("electrical_modules");
+  const hardwareCompleted = getSaved("hardware_posttest");
+  const electricalCompleted = getSaved("electrical_posttest");
+  const dualCompleted = hardwareCompleted && electricalCompleted;
+  const reviewOpened = localStorage.getItem("review_page_opened") === "true" || wrongAnswerItems > 0;
+  const historyOpened = localStorage.getItem("study_history_opened") === "true" || studyHistoryItems > 0;
+  const systemExplorer = hardwareStarted && electricalStarted && reviewOpened && historyOpened;
+
+  currentAchievements = [
+    {
+      key: "first_win",
+      icon: "🥇",
+      title: "First Win",
+      unlocked: xp > 0 || quizStarted,
+      description: "Earn your first XP or complete your first quiz activity.",
+      lockedText: "Start learning and earn your first XP to unlock this achievement."
+    },
+    {
+      key: "fast_learner",
+      icon: "⚡",
+      title: "Fast Learner",
+      unlocked: xp >= 50,
+      description: "Reach 50 XP through active participation.",
+      lockedText: "Earn 50 XP to unlock this achievement."
+    },
+    {
+      key: "steady_progress",
+      icon: "📈",
+      title: "Steady Progress",
+      unlocked: xp >= 100,
+      description: "Reach 100 XP and build stronger momentum in the system.",
+      lockedText: "Reach 100 XP to unlock this achievement."
+    },
+    {
+      key: "three_day_streak",
+      icon: "🔥",
+      title: "3-Day Streak",
+      unlocked: streak >= 3,
+      description: "Stay active for 3 consecutive days.",
+      lockedText: "Come back and play for 3 days in a row to unlock this achievement."
+    },
+    {
+      key: "week_warrior",
+      icon: "📅",
+      title: "Week Warrior",
+      unlocked: streak >= 7,
+      description: "Keep your learning streak alive for a full week.",
+      lockedText: "Stay active for 7 straight days to unlock this achievement."
+    },
+    {
+      key: "quiz_starter",
+      icon: "🎯",
+      title: "Quiz Starter",
+      unlocked: quizStarted,
+      description: "Complete your first quiz or test activity.",
+      lockedText: "Start your first quiz or test to unlock this achievement."
+    },
+    {
+      key: "module_reader",
+      icon: "📘",
+      title: "Module Reader",
+      unlocked: moduleRead,
+      description: "Finish reading your first learning module.",
+      lockedText: "Open and complete your first module to unlock this achievement."
+    },
+    {
+      key: "subject_explorer",
+      icon: "🧭",
+      title: "Subject Explorer",
+      unlocked: hardwareStarted && electricalStarted,
+      description: "Try both available subjects in the system.",
+      lockedText: "Explore both subjects to unlock this achievement."
+    },
+    {
+      key: "module_scout",
+      icon: "📚",
+      title: "Module Scout",
+      unlocked: moduleDoneCount >= 3,
+      description: "Clear your first 3 completed modules.",
+      lockedText: "Finish 3 modules to unlock this achievement."
+    },
+    {
+      key: "quick_check_ready",
+      icon: "📝",
+      title: "Quick Check Ready",
+      unlocked: quickCheckPoints >= 3,
+      description: "Earn points from your first module quick check.",
+      lockedText: "Answer a quick check and earn at least 3 points to unlock this achievement."
+    },
+    {
+      key: "review_rebound",
+      icon: "🔁",
+      title: "Review Rebound",
+      unlocked: reviewOpened,
+      description: "Open the wrong-answer review and start learning from missed questions.",
+      lockedText: "Use the wrong-answer review to unlock this achievement."
+    },
+    {
+      key: "history_keeper",
+      icon: "🕒",
+      title: "History Keeper",
+      unlocked: historyOpened,
+      description: "Build a visible study trail through your recent activity.",
+      lockedText: "Open your history or create recent activity to unlock this achievement."
+    },
+    {
+      key: "hardware_finisher",
+      icon: "🖥️",
+      title: "Hardware Finisher",
+      unlocked: hardwareCompleted,
+      description: "Complete the full Computer Hardware subject path.",
+      lockedText: "Finish the full Computer Hardware path to unlock this achievement."
+    },
+    {
+      key: "electrical_finisher",
+      icon: "⚙️",
+      title: "Electrical Finisher",
+      unlocked: electricalCompleted,
+      description: "Complete the full Electrical Wiring subject path.",
+      lockedText: "Finish the full Electrical path to unlock this achievement."
+    },
+    {
+      key: "dual_achiever",
+      icon: "🎓",
+      title: "Dual Achiever",
+      unlocked: dualCompleted,
+      description: "Complete both subjects and prove full-system progress.",
+      lockedText: "Complete both subjects to unlock this achievement."
+    },
+    {
+      key: "system_explorer",
+      icon: "🌍",
+      title: "System Explorer",
+      unlocked: systemExplorer,
+      description: "Use subjects, review, and history like a full platform learner.",
+      lockedText: "Use both subjects, review, and history to unlock this achievement."
+    }
+  ];
+
+  grid.innerHTML = "";
+
+  currentAchievements.forEach((achievement, index) => {
+    const card = document.createElement("button");
+    card.className = `achievement-card ${achievement.unlocked ? "unlocked" : "locked"}`;
+    card.style.animation = `fadeSlideUp 0.55s ease both`;
+    card.style.animationDelay = `${0.05 * (index + 1)}s`;
+
+    card.innerHTML = `
+      <div class="achievement-top">
+        <div class="achievement-icon">${achievement.icon}</div>
+        <div class="achievement-status ${achievement.unlocked ? "unlocked" : "locked"}">
+          ${achievement.unlocked ? "Unlocked" : "Locked"}
+        </div>
+      </div>
+      <div>
+        <div class="achievement-title">${achievement.title}</div>
+        <div class="achievement-subtext">
+          ${achievement.unlocked ? achievement.description : achievement.lockedText}
+        </div>
+      </div>
+    `;
+
+    card.addEventListener("click", () => openAchievementModal(achievement));
+    grid.appendChild(card);
+  });
 }
 
 function getWeekKey() {

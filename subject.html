@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/subject.css?v=20260410b">
+  <link rel="stylesheet" href="styles/subject.css?v=20260420a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -73,6 +73,24 @@
           <p>Final assessment</p>
         </div>
       </button>
+    </section>
+
+    <section class="subject-certificate-panel card" id="subjectCertificatePanel" hidden>
+      <div class="subject-certificate-copy">
+        <span class="subject-badge">COMPLETION REWARD</span>
+        <h2>Subject Certificate Ready</h2>
+        <p id="subjectCertificateText">
+          You completed this subject. Open your certificate to preview it or download a copy.
+        </p>
+      </div>
+      <div class="subject-certificate-actions">
+        <button class="subject-certificate-btn primary" type="button" onclick="openCertificateView()">
+          View Certificate
+        </button>
+        <button class="subject-certificate-btn" type="button" onclick="openCertificateView('download')">
+          Download Certificate
+        </button>
+      </div>
     </section>
   </main>
 
@@ -227,8 +245,8 @@
       };
     })();
   </script>
-  <script type="module" src="scripts/subject.js?v=20260410b"></script>
-  <script src="scripts/loading.js?v=20260410b" defer></script>
+  <script type="module" src="scripts/subject.js?v=20260420a"></script>
+  <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>
 

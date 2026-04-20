@@ -873,9 +873,11 @@ async function saveQuizResultToStorageAndFirestore() {
   localStorage.setItem(`${resultKey}_score`, String(score));
   localStorage.setItem(`${resultKey}_percent`, String(percent));
   localStorage.setItem(`${resultKey}_done`, "true");
+  localStorage.setItem(`${resultKey}_completedAt`, resultPayload.completedAt);
   localStorage.setItem(`${canonicalResultKey}_score`, String(score));
   localStorage.setItem(`${canonicalResultKey}_percent`, String(percent));
   localStorage.setItem(`${canonicalResultKey}_done`, "true");
+  localStorage.setItem(`${canonicalResultKey}_completedAt`, resultPayload.completedAt);
   localStorage.setItem(`${canonicalResultKey}_attempt_done`, "true");
 
   if (!currentUser) return;

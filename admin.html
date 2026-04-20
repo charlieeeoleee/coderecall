@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260414a">
+  <link rel="stylesheet" href="styles/admin.css?v=20260420a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -22,6 +22,7 @@
           <a href="review.html">&#128221; Review</a>
           <a href="history.html">&#128340; History</a>
           <a href="subjects.html">&#128218; Subjects</a>
+          <a href="certificates.html">&#127891; Certificates</a>
           <a href="achievements.html">&#127942; Badges</a>
           <a href="leaderboard.html">&#129351; Leaderboard</a>
           <a href="settings.html">&#9881; Settings</a>
@@ -59,6 +60,37 @@
         <div class="overview-card"><h3>Average XP</h3><p id="adminAverageXp">0</p></div>
         <div class="overview-card"><h3>Modules Cleared</h3><p id="adminModulesCleared">0 / 18</p></div>
       </div>
+
+      <section class="panel-card wide">
+        <div class="panel-header">
+          <div>
+            <h3>Learning Insights</h3>
+            <p>Review backlog and recent learner activity pulled from the live study and review tools.</p>
+          </div>
+        </div>
+        <div class="insights-admin-grid">
+          <article class="insight-admin-card">
+            <span>Review backlog</span>
+            <strong id="adminReviewBacklog">0</strong>
+            <p id="adminReviewBacklogDetail">No learners are waiting on wrong-answer review.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Active this week</span>
+            <strong id="adminActiveThisWeek">0</strong>
+            <p id="adminActiveThisWeekDetail">No recent study activity recorded yet.</p>
+          </article>
+        </div>
+        <div class="insights-admin-columns">
+          <section class="insight-list-wrap">
+            <h4>Most Active Learners</h4>
+            <div id="adminMostActiveLearners" class="review-list"></div>
+          </section>
+          <section class="insight-list-wrap">
+            <h4>Largest Review Queues</h4>
+            <div id="adminReviewQueues" class="review-list"></div>
+          </section>
+        </div>
+      </section>
 
       <div class="admin-grid">
         <section class="panel-card">
@@ -192,8 +224,8 @@
   </div>
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
-  <script type="module" src="scripts/admin.js?v=20260414a"></script>
-  <script src="scripts/loading.js?v=20260414a" defer></script>
+  <script type="module" src="scripts/admin.js?v=20260420a"></script>
+  <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>
 

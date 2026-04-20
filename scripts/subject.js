@@ -146,6 +146,36 @@ function unlockButton(buttonId) {
   if (badge) badge.remove();
 }
 
+function getCertificateUrl(mode = "") {
+  const url = new URL("certificate.html", window.location.href);
+  url.searchParams.set("subject", subject);
+  if (mode) {
+    url.searchParams.set("mode", mode);
+  }
+  return `${url.pathname.split("/").pop()}${url.search}`;
+}
+
+function showCertificatePanel(completionDate = "") {
+  const panel = document.getElementById("subjectCertificatePanel");
+  const text = document.getElementById("subjectCertificateText");
+  if (!panel || !text) return;
+
+  const dateLabel = completionDate
+    ? new Date(completionDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+      })
+    : "today";
+
+  text.textContent = `You completed this subject on ${dateLabel}. Open your certificate to preview it or download a copy.`;
+  panel.hidden = false;
+}
+
+window.openCertificateView = function(mode = "") {
+  window.location.href = getCertificateUrl(mode);
+};
+
 async function ensureUserDoc(uid) {
   const userRef = doc(db, "users", uid);
   const snap = await getDoc(userRef);
@@ -212,6 +242,32 @@ async function getMergedProgress() {
   };
 }
 
+async function getCompletionDetails() {
+  const localPosttestDone = hasLocalCompletion("posttest");
+  const localCompletedAt = localStorage.getItem(`${subject}_posttest_completedAt`) || "";
+
+  if (!currentUser) {
+    return {
+      completed: localPosttestDone,
+      completedAt: localCompletedAt
+    };
+  }
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const snap = await getDoc(userRef);
+  const data = snap.data() || {};
+  const progress = data.progress || {};
+  const results = data.results || {};
+  const resultKey = `${subject}_posttest`;
+  const remoteCompleted = progress[resultKey] === true || results[resultKey] != null;
+  const remoteCompletedAt = results[resultKey]?.completedAt || "";
+
+  return {
+    completed: localPosttestDone || remoteCompleted,
+    completedAt: remoteCompletedAt || localCompletedAt
+  };
+}
+
 async function loadProgress() {
   if (unlockMode === "modules") {
     unlockButton("modulesBtn");
@@ -247,6 +303,11 @@ async function loadProgress() {
 
   if (pretestDone && modulesDone && quizDone) {
     unlockButton("posttestBtn");
+  }
+
+  const completion = await getCompletionDetails();
+  if (pretestDone && modulesDone && quizDone && completion.completed) {
+    showCertificatePanel(completion.completedAt);
   }
 }
 
