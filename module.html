@@ -140,6 +140,46 @@
       </p>
     </section>
 
+    <section class="module-history-reference card" id="moduleHistoryReferenceSection" hidden>
+      <div class="module-content-head">
+        <h2>History Reference Guide</h2>
+        <span class="module-content-chip">Important Dates</span>
+      </div>
+
+      <div class="module-history-reference-grid">
+        <article class="module-history-panel">
+          <div class="module-history-panel-head">
+            <h3>Inventions and Their Years</h3>
+            <span class="module-history-panel-chip" id="moduleHistoryReferenceCount">Reference list</span>
+          </div>
+          <div class="module-history-table-wrap">
+            <table class="module-history-table">
+              <thead>
+                <tr>
+                  <th>Invention / Milestone</th>
+                  <th>Year</th>
+                  <th>Reference Detail</th>
+                </tr>
+              </thead>
+              <tbody id="moduleHistoryReferenceBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="module-history-panel">
+          <div class="module-history-panel-head">
+            <h3>Generations of Computers</h3>
+            <span class="module-history-panel-chip">4 generations</span>
+          </div>
+          <div class="module-history-generations" id="moduleHistoryGenerations"></div>
+        </article>
+      </div>
+
+      <p class="module-gallery-note" id="moduleHistoryReferenceNote">
+        Use this reference guide after reviewing the history figures so the names, inventions, and years connect more clearly.
+      </p>
+    </section>
+
     <section class="module-tip card">
       <h3>Study Tip</h3>
       <p id="studyTip">
@@ -164,6 +204,28 @@
       <button class="module-btn primary-btn" onclick="startQuiz()" id="moduleActionBtn">Continue</button>
     </div>
   </main>
+
+  <div class="module-image-modal" id="moduleImageModal" aria-hidden="true">
+    <div class="module-image-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="moduleImageModalTitle">
+      <div class="module-image-modal-layout">
+        <figure class="module-image-modal-media">
+          <img id="moduleImageModalImg" src="" alt="">
+          <figcaption class="module-image-modal-caption" id="moduleImageModalCaption"></figcaption>
+        </figure>
+        <div class="module-image-modal-copy">
+          <div class="module-image-modal-top">
+            <div>
+              <span class="module-image-modal-kicker" id="moduleImageModalKicker">Image Detail</span>
+              <h2 class="module-image-modal-title" id="moduleImageModalTitle">Module image</h2>
+            </div>
+            <button type="button" class="module-image-modal-close" id="moduleImageModalClose" aria-label="Close image details">&times;</button>
+          </div>
+          <p class="module-image-modal-description" id="moduleImageModalDescription"></p>
+          <div class="module-image-modal-details" id="moduleImageModalDetails" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { MODULE_CATALOG, MODULE_STRUCTURE } from "./data/module-data.js";
@@ -1412,27 +1474,142 @@
         const section = document.createElement("section");
         section.className = "module-gallery-group";
 
-        const cards = group.items.map((image, index) => `
-          <figure class="module-figure">
-            <div class="module-figure-media">
-              <img src="${image.src}" alt="${image.alt || image.caption || `Module image ${index + 1}`}">
-            </div>
-            <figcaption>
-              <span class="module-figure-title">${image.caption || `Reference image ${index + 1}`}</span>
-              <span class="module-figure-info">${image.info || ""}</span>
-            </figcaption>
-          </figure>
-        `).join("");
-
         section.innerHTML = `
           <div class="module-gallery-group-head">
             <h3>${title}</h3>
             <p>${group.description}</p>
           </div>
-          <div class="module-gallery-grid">${cards}</div>
+          <div class="module-gallery-grid"></div>
         `;
 
+        const grid = section.querySelector(".module-gallery-grid");
+        group.items.forEach((image, index) => {
+          grid?.appendChild(createModuleFigure(image, index));
+        });
+
         gallery.appendChild(section);
+      });
+    }
+
+    function createModuleFigure(image, index) {
+      const figure = document.createElement("figure");
+      const title = image.caption || `Reference image ${index + 1}`;
+      const enableExpandedProfile =
+        subject === "hardware" &&
+        difficulty === "hard" &&
+        moduleNumber === 2 &&
+        data?.title === "History";
+
+      figure.className = "module-figure";
+      figure.innerHTML = `
+        <div class="module-figure-media">
+          <img src="${image.src}" alt="${image.alt || title}">
+          ${enableExpandedProfile ? `<span class="module-figure-zoom">View</span>` : ""}
+        </div>
+        <figcaption>
+          <span class="module-figure-title">${title}</span>
+          <span class="module-figure-info">${image.info || ""}</span>
+        </figcaption>
+      `;
+
+      if (!enableExpandedProfile) {
+        return figure;
+      }
+
+      figure.tabIndex = 0;
+      figure.setAttribute("role", "button");
+      figure.setAttribute("aria-label", `Open details for ${title}`);
+
+      figure.addEventListener("click", () => {
+        openModuleImageModal(image, index);
+      });
+
+      figure.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openModuleImageModal(image, index);
+        }
+      });
+
+      return figure;
+    }
+
+    function buildModuleImageDetails(image) {
+      const details = image.personalDetails;
+      if (!details) return [];
+
+      return [
+        { label: "Born", value: details.born },
+        { label: "Died", value: details.died },
+        { label: "From", value: details.origin },
+        { label: "Known For", value: details.knownFor }
+      ].filter((item) => item.value);
+    }
+
+    function openModuleImageModal(image, index) {
+      const modal = document.getElementById("moduleImageModal");
+      const modalImg = document.getElementById("moduleImageModalImg");
+      const modalCaption = document.getElementById("moduleImageModalCaption");
+      const modalKicker = document.getElementById("moduleImageModalKicker");
+      const modalTitle = document.getElementById("moduleImageModalTitle");
+      const modalDescription = document.getElementById("moduleImageModalDescription");
+      const modalDetails = document.getElementById("moduleImageModalDetails");
+
+      if (!modal || !modalImg || !modalCaption || !modalKicker || !modalTitle || !modalDescription || !modalDetails) {
+        return;
+      }
+
+      const title = image.caption || `Reference image ${index + 1}`;
+      const detailRows = buildModuleImageDetails(image);
+
+      modalImg.src = image.src;
+      modalImg.alt = image.alt || title;
+      modalCaption.textContent = image.alt || title;
+      modalKicker.textContent = detailRows.length ? "History Profile" : "Image Detail";
+      modalTitle.textContent = title;
+      modalDescription.textContent = image.info || "This image supports the lesson content.";
+      modalDetails.hidden = detailRows.length === 0;
+      modalDetails.innerHTML = detailRows.map((item) => `
+        <div class="module-image-detail">
+          <span class="module-image-detail-label">${item.label}</span>
+          <span class="module-image-detail-value">${item.value}</span>
+        </div>
+      `).join("");
+
+      modal.classList.add("active");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModuleImageModal() {
+      const modal = document.getElementById("moduleImageModal");
+      if (!modal) return;
+      modal.classList.remove("active");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+
+    function initializeModuleImageModal() {
+      const modal = document.getElementById("moduleImageModal");
+      const dialog = modal?.querySelector(".module-image-modal-dialog");
+      const closeBtn = document.getElementById("moduleImageModalClose");
+
+      closeBtn?.addEventListener("click", closeModuleImageModal);
+
+      modal?.addEventListener("click", (event) => {
+        if (event.target === modal) {
+          closeModuleImageModal();
+        }
+      });
+
+      dialog?.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeModuleImageModal();
+        }
       });
     }
 
@@ -1552,24 +1729,22 @@
       }
 
       galleryChip.textContent = `${galleryImages.length} image${galleryImages.length === 1 ? "" : "s"} ready`;
-      galleryNote.textContent = "These built-in visuals were loaded from the project image data.";
+      const isHistoryModuleTwo =
+        subject === "hardware" &&
+        difficulty === "hard" &&
+        moduleNumber === 2 &&
+        data?.title === "History";
+
+      galleryNote.textContent = isHistoryModuleTwo
+        ? "Click any history figure here to enlarge the image and view personal details."
+        : "These built-in visuals were loaded from the project image data.";
 
       galleryImages.forEach((image, index) => {
-        const figure = document.createElement("figure");
-        figure.className = "module-figure";
-        figure.innerHTML = `
-          <div class="module-figure-media">
-            <img src="${image.src}" alt="${image.alt || image.caption || `Module image ${index + 1}`}">
-          </div>
-          <figcaption>
-            <span class="module-figure-title">${image.caption || `Reference image ${index + 1}`}</span>
-            <span class="module-figure-info">${image.info || ""}</span>
-          </figcaption>
-        `;
-        gallery.appendChild(figure);
+        gallery.appendChild(createModuleFigure(image, index));
       });
     }
 
+    initializeModuleImageModal();
     loadTheme();
 
     updateCheckpointUi(localStorage.getItem(getModuleDoneKey()) === "true");

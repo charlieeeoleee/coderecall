@@ -55,49 +55,97 @@ export const MODULE_SUPPLEMENTAL_IMAGES = {
           src: "assets/modules/hardware/hard/module2/charles-babbage.jpg",
           alt: "Charles Babbage",
           caption: "Charles Babbage",
-          info: "Portrait of Charles Babbage, whose Difference Engine and Analytical Engine designs helped introduce the idea of automatic and programmable computation."
+          info: "Portrait of Charles Babbage, whose Difference Engine and Analytical Engine designs helped introduce the idea of automatic and programmable computation.",
+          personalDetails: {
+            born: "26 December 1791",
+            died: "18 October 1871",
+            origin: "London, England",
+            knownFor: "Difference Engine and Analytical Engine concepts"
+          }
         },
         {
           src: "assets/modules/hardware/hard/module2/ada-lovelace.jpg",
           alt: "Ada Lovelace",
           caption: "Ada Lovelace",
-          info: "Portrait of Ada Lovelace, often recognized as an early programming pioneer because she described how a machine could follow a sequence of operations."
+          info: "Portrait of Ada Lovelace, often recognized as an early programming pioneer because she described how a machine could follow a sequence of operations.",
+          personalDetails: {
+            born: "10 December 1815",
+            died: "27 November 1852",
+            origin: "London, England",
+            knownFor: "Early algorithm design for Babbage's Analytical Engine"
+          }
         },
         {
           src: "https://upload.wikimedia.org/wikipedia/commons/d/da/Konrad_Zuse_%281992%29.jpg",
           alt: "Konrad Zuse",
           caption: "Konrad Zuse",
-          info: "Portrait of Konrad Zuse, the German computer pioneer associated with the Z3 and other early programmable machines."
+          info: "Portrait of Konrad Zuse, the German computer pioneer associated with the Z3 and other early programmable machines.",
+          personalDetails: {
+            born: "22 June 1910",
+            died: "18 December 1995",
+            origin: "Berlin, Germany",
+            knownFor: "Z3 programmable computer"
+          }
         },
         {
           src: "assets/modules/hardware/hard/module2/alan-turing.jpg",
           alt: "Alan Turing",
           caption: "Alan Turing",
-          info: "Portrait of Alan Turing, whose work on machine logic and computation helped shape the theory behind modern computers."
+          info: "Portrait of Alan Turing, whose work on machine logic and computation helped shape the theory behind modern computers.",
+          personalDetails: {
+            born: "23 June 1912",
+            died: "7 June 1954",
+            origin: "London, England",
+            knownFor: "Computing theory and machine logic"
+          }
         },
         {
           src: "https://upload.wikimedia.org/wikipedia/commons/e/ea/John_von_Neumann_in_New_Mexico.jpg",
           alt: "John von Neumann",
           caption: "John von Neumann",
-          info: "Portrait of John von Neumann, whose architecture model strongly shaped how processors, memory, and instructions are organized in modern computers."
+          info: "Portrait of John von Neumann, whose architecture model strongly shaped how processors, memory, and instructions are organized in modern computers.",
+          personalDetails: {
+            born: "28 December 1903",
+            died: "8 February 1957",
+            origin: "Budapest, Hungary",
+            knownFor: "Stored-program computer architecture"
+          }
         },
         {
           src: "https://upload.wikimedia.org/wikipedia/commons/5/55/Grace_Hopper.jpg",
           alt: "Grace Hopper",
           caption: "Grace Hopper",
-          info: "Portrait of Grace Hopper, who strongly influenced programming language development and compiler thinking in modern software."
+          info: "Portrait of Grace Hopper, who strongly influenced programming language development and compiler thinking in modern software.",
+          personalDetails: {
+            born: "9 December 1906",
+            died: "1 January 1992",
+            origin: "New York City, USA",
+            knownFor: "Compiler development and programming languages"
+          }
         },
         {
           src: "assets/modules/hardware/hard/module2/robert-metcalfe.jpg",
           alt: "Robert Metcalfe",
           caption: "Robert Metcalfe",
-          info: "Portrait of Robert Metcalfe, co-inventor of Ethernet, whose work was important to the growth of computer networking."
+          info: "Portrait of Robert Metcalfe, co-inventor of Ethernet, whose work was important to the growth of computer networking.",
+          personalDetails: {
+            born: "7 April 1946",
+            died: "Living",
+            origin: "Brooklyn, New York, USA",
+            knownFor: "Co-inventing Ethernet"
+          }
         },
         {
           src: "assets/modules/hardware/hard/module2/tim-berners-lee.jpg",
           alt: "Tim Berners-Lee",
           caption: "Tim Berners-Lee",
-          info: "Portrait of Tim Berners-Lee, the inventor of the World Wide Web that transformed how people access and share information online."
+          info: "Portrait of Tim Berners-Lee, the inventor of the World Wide Web that transformed how people access and share information online.",
+          personalDetails: {
+            born: "8 June 1955",
+            died: "Living",
+            origin: "London, England",
+            knownFor: "Inventing the World Wide Web"
+          }
         },
         {
           src: "assets/modules/hardware/hard/module2/history-06-timeline-detailed.svg",

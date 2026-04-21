@@ -1,5 +1,5 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1140" viewBox="0 0 1400 1140">
-  <rect width="1400" height="1140" rx="48" fill="#162338"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1185" viewBox="0 0 1400 1185">
+  <rect width="1400" height="1185" rx="48" fill="#162338"/>
   <circle cx="1220" cy="120" r="150" fill="#20d5a5" opacity="0.14"/>
   <rect x="80" y="70" width="190" height="52" rx="26" fill="#20d5a5" opacity="0.2" stroke="#20d5a5"/>
   <text x="175" y="104" text-anchor="middle" fill="#f7fbff" font-family="Montserrat,Arial,sans-serif" font-size="25" font-weight="700">History</text>
@@ -38,14 +38,18 @@
     <text x="1140" y="552" fill="#fff" font-size="16" font-weight="700">Berners-Lee</text>
   </g>
 
-  <rect x="90" y="620" width="1220" height="180" rx="28" fill="#0f1b2d" stroke="#20d5a5" stroke-opacity="0.24"/>
+  <rect x="90" y="620" width="1220" height="220" rx="28" fill="#0f1b2d" stroke="#20d5a5" stroke-opacity="0.24"/>
   <text x="130" y="678" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="800">Key flow</text>
-  <text x="130" y="730" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Mechanical concepts led to programming ideas, then early machines, then computing theory, architecture, software, networking, and finally the web.</text>
-  <text x="130" y="768" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Use this timeline to match each name with the contribution that moved computing forward.</text>
+  <foreignObject x="130" y="710" width="1120" height="122">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Montserrat, Arial, sans-serif; font-size: 22px; line-height: 1.55; color: #dcecff;">
+      <div>Mechanical concepts led to programming ideas, then early machines, then computing theory, architecture, software, networking, and finally the web.</div>
+      <div>Use this timeline to match each name with the contribution that moved computing forward.</div>
+    </div>
+  </foreignObject>
 
-  <rect x="90" y="835" width="1220" height="200" rx="28" fill="#12213a" stroke="#8c5bff" stroke-opacity="0.28"/>
-  <text x="130" y="892" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="800">Contribution guide</text>
-  <text x="130" y="944" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Babbage and Lovelace represent early machine and programming ideas.</text>
-  <text x="130" y="980" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Zuse, Turing, and von Neumann connect to early computer design and theory.</text>
-  <text x="130" y="1016" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Hopper, Metcalfe, and Berners-Lee extend the story into software languages, networking, and the modern web.</text>
+  <rect x="90" y="860" width="1220" height="210" rx="28" fill="#12213a" stroke="#8c5bff" stroke-opacity="0.28"/>
+  <text x="130" y="917" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="30" font-weight="800">Contribution guide</text>
+  <text x="130" y="969" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Babbage and Lovelace represent early machine and programming ideas.</text>
+  <text x="130" y="1005" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Zuse, Turing, and von Neumann connect to early computer design and theory.</text>
+  <text x="130" y="1041" fill="#dcecff" font-family="Montserrat,Arial,sans-serif" font-size="22">Hopper, Metcalfe, and Berners-Lee extend the story into software languages, networking, and the modern web.</text>
 </svg>

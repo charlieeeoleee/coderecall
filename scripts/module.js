@@ -1944,6 +1944,42 @@ function getImageInfo(moduleTitle, caption, index) {
     "CPU cooler": "A CPU cooler removes heat from the processor to help prevent overheating.",
     "Ink tank printer": "A printer is an output device that produces hard copies of digital documents and images.",
     "Computer cooling fan": "A cooling fan keeps air moving inside the system unit to reduce heat buildup.",
+    "Computer mouse": "A mouse is an input device used to move the pointer, select items, and interact with programs on the screen.",
+    "Computer monitor": "A monitor is an output device that displays text, images, video, and the computer's user interface.",
+    "System unit": "The system unit is the main computer case that houses internal components such as the motherboard, CPU, RAM, storage, and power supply.",
+    "PS/2 keyboard and mouse ports": "These PS/2 ports are round connectors used to attach older keyboards and mice to a computer.",
+    "Parallel port": "A parallel port is a legacy connector once used to connect printers and other external devices to a computer.",
+    "Serial port": "A serial port is a legacy connector used to send data one bit at a time to devices such as modems, mice, and industrial equipment.",
+    "Speakers": "Speakers are output devices that convert the computer's audio signals into sound you can hear.",
+    "SATA ports": "SATA ports are motherboard connectors used to attach storage devices such as hard drives and solid-state drives.",
+    "Projector": "A projector is an output device that displays the computer's screen onto a larger wall, board, or projection surface.",
+    "Keyboard": "A keyboard is an input device used to type letters, numbers, symbols, and commands into the computer.",
+    "Barcode scanner": "A barcode scanner is an input device that reads printed barcodes and sends the encoded information to the computer.",
+    "Plotter printer": "A plotter is an output device designed to print large and detailed graphics such as engineering drawings, plans, and posters.",
+    "Headset with microphone": "A headset with microphone combines audio output and voice input in one device for communication, recording, and online meetings.",
+    "Power supply unit": "The power supply unit converts AC power from the outlet into the DC voltages needed by the computer's internal components.",
+    "Webcam": "A webcam is an input device that captures live video and images for video calls, recording, and streaming.",
+    "Hard disk drive circuit board": "This circuit board controls the operation of a hard disk drive by managing power, data transfer, and communication with the computer.",
+    "RAM module": "A RAM module provides temporary working memory that stores data and instructions the CPU is currently using.",
+    "Graphics card": "A graphics card processes visual data and sends image output to a monitor or other display device.",
+    "Expansion slots": "Expansion slots on the motherboard allow extra cards such as graphics, sound, or network cards to be installed.",
+    "Automatic voltage regulator": "An automatic voltage regulator helps protect the computer by maintaining a more stable power supply during voltage fluctuations.",
+    "Optical disc drive": "An optical disc drive reads and sometimes writes data on CDs, DVDs, or other optical storage discs.",
+    "Computer chassis": "The computer chassis is the structural frame or case that supports and protects the internal hardware components.",
+    "Monitor": "A monitor is an output device that displays text, images, video, and the computer's interface to the user.",
+    "BIOS chip and CMOS battery": "The BIOS chip stores startup firmware, while the CMOS battery helps preserve system settings and time when the computer is powered off.",
+    "HDMI port": "An HDMI port is a digital video and audio connector used to link a computer to a monitor, TV, or projector.",
+    "Motherboard back panel and I/O connectors": "The motherboard back panel contains external input and output connectors used for displays, audio, networking, USB devices, and other peripherals.",
+    "Flatbed scanner": "A flatbed scanner is an input device that captures printed documents or images and converts them into digital form.",
+    "CPU": "The CPU, or central processing unit, is the main processor that executes instructions and controls the computer's operations.",
+    "CPU socket": "The CPU socket is the motherboard connector that holds the processor in place and provides its electrical connection.",
+    "VGA port": "A VGA port is an analog display connector used to connect a computer to a monitor or projector.",
+    "Hard disk drive": "A hard disk drive is a storage device used to keep the operating system, programs, and user files even when the computer is turned off.",
+    "IDE and floppy drive connectors": "These legacy motherboard connectors are used to attach older IDE hard drives, optical drives, and floppy disk drives.",
+    "Joystick": "A joystick is an input device used to control movement and actions in games, simulations, and certain specialized applications.",
+    "Motherboard": "The motherboard is the main circuit board that connects and allows communication between the CPU, memory, storage, and expansion devices.",
+    "CMOS battery": "The CMOS battery supplies backup power that helps the system keep BIOS settings and the real-time clock when the computer is off.",
+    "Audio ports": "Audio ports are connectors used to attach speakers, headphones, microphones, and other sound devices to the computer.",
     "Respirator mask and full-face respirator": "These protective devices help block dust, fumes, and airborne particles during servicing work.",
     "Cleaning cloth": "A soft cleaning cloth is used to wipe components and surfaces without causing scratches.",
     "Anti-static wrist strap": "An anti-static wrist strap helps prevent electrostatic discharge that can damage sensitive components.",
@@ -2774,6 +2810,7 @@ async function renderModulePage() {
   }
   renderChallenge(challengeTitle, challengePrompt, challengePoints, lessonDetails?.challenge);
   renderHistoryTimeline(data);
+  renderHistoryReference(data);
   renderSolderingProcess(data);
   renderPassiveCircuits(data);
   renderActiveCircuits(data);
@@ -2883,6 +2920,17 @@ function renderSections(container, items) {
   });
 }
 
+function shuffleChoices(items = []) {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
 function renderMiniQuiz(container, quizItems) {
   container.innerHTML = "";
 
@@ -2890,6 +2938,7 @@ function renderMiniQuiz(container, quizItems) {
   quiz.className = "module-quiz";
 
   quizItems.forEach((item, index) => {
+    const shuffledOptions = shuffleChoices(item.options || []);
     const card = document.createElement("article");
     card.className = "module-quiz-card";
     card.innerHTML = `
@@ -2898,7 +2947,7 @@ function renderMiniQuiz(container, quizItems) {
         <h3 class="module-quiz-question">${item.question}</h3>
       </div>
       <div class="module-quiz-options">
-        ${(item.options || []).map((option) => `
+        ${shuffledOptions.map((option) => `
           <label class="module-quiz-option">
             <input type="radio" name="module-quiz-${index}" value="${option}">
             <span>${option}</span>
@@ -3046,14 +3095,107 @@ function renderChallenge(titleEl, promptEl, pointsEl, challenge = null) {
 
 function getHistoryTimelineItems() {
   return [
-    { year: "1830s", name: "Charles Babbage", text: "Designed the Difference Engine and Analytical Engine as early machine-computing concepts." },
-    { year: "1840s", name: "Ada Lovelace", text: "Described how a machine could follow ordered instructions like a program." },
-    { year: "1941", name: "Konrad Zuse", text: "Built the Z3, one of the earliest programmable computers." },
-    { year: "1940s", name: "Alan Turing", text: "Helped define machine logic and the theoretical foundation of computing." },
-    { year: "1945", name: "John von Neumann", text: "Shaped the stored-program architecture model used in modern computers." },
-    { year: "1950s", name: "Grace Hopper", text: "Advanced compiler ideas and higher-level programming languages." },
-    { year: "1970s", name: "Robert Metcalfe", text: "Co-invented Ethernet and helped shape the growth of computer networking." },
-    { year: "1989+", name: "Tim Berners-Lee", text: "Created the World Wide Web and transformed global information sharing." }
+    {
+      year: "1830s",
+      name: "Charles Babbage",
+      text: "Designed the Difference Engine and Analytical Engine as early machine-computing concepts.",
+      portrait: "assets/modules/hardware/hard/module2/charles-babbage.jpg"
+    },
+    {
+      year: "1840s",
+      name: "Ada Lovelace",
+      text: "Described how a machine could follow ordered instructions like a program.",
+      portrait: "assets/modules/hardware/hard/module2/ada-lovelace.jpg"
+    },
+    {
+      year: "1941",
+      name: "Konrad Zuse",
+      text: "Built the Z3, one of the earliest programmable computers.",
+      portrait: "assets/modules/hardware/hard/module2/konrad-zuse.jpg"
+    },
+    {
+      year: "1940s",
+      name: "Alan Turing",
+      text: "Helped define machine logic and the theoretical foundation of computing.",
+      portrait: "assets/modules/hardware/hard/module2/alan-turing.jpg"
+    },
+    {
+      year: "1945",
+      name: "John von Neumann",
+      text: "Shaped the stored-program architecture model used in modern computers.",
+      portrait: "assets/modules/hardware/hard/module2/john-von-neumann.jpg"
+    },
+    {
+      year: "1950s",
+      name: "Grace Hopper",
+      text: "Advanced compiler ideas and higher-level programming languages.",
+      portrait: "assets/modules/hardware/hard/module2/grace-hopper.jpg"
+    },
+    {
+      year: "1970s",
+      name: "Robert Metcalfe",
+      text: "Co-invented Ethernet and helped shape the growth of computer networking.",
+      portrait: "assets/modules/hardware/hard/module2/robert-metcalfe.jpg"
+    },
+    {
+      year: "1989+",
+      name: "Tim Berners-Lee",
+      text: "Created the World Wide Web and transformed global information sharing.",
+      portrait: "assets/modules/hardware/hard/module2/tim-berners-lee.jpg"
+    }
+  ];
+}
+
+function getHistoryReferenceRows() {
+  return [
+    ["Motorola", "1973", "Invented by Marvin Cooper in 1973."],
+    ["Microphone", "1877", "Invented by Emile Berliner in 1877."],
+    ["Keyboard", "1868", "Invented by Christopher Latham in 1868."],
+    ["Xerox Alto", "1972", "Known as the first computer with a bitmap display."],
+    ["Motherboard", "1981", "The first motherboard was introduced by IBM in 1981."],
+    ["Microprocessor", "1971", "The microprocessor was invented in 1971."],
+    ["Hard Disk Drive (HDD)", "1956", "Developed by IBM under Reynold B. Johnson and known as the IBM 305 RAMAC."],
+    ["Monitor", "1073", "The lesson reference states that the first monitor was invented in the year 1073."],
+    ["IBM PC", "1981", "The IBM PC was introduced in 1981 and used a floppy disk as its primary storage."],
+    ["Abacus", "Around 3000 B.C.", "Known as the first calculating device."],
+    ["Pascaline", "1642", "Invented by Blaise Pascal in 1642."],
+    ["Windows 7", "October 22, 2009", "Launched by Microsoft on October 22, 2009."],
+    ["GPU", "Rise of the first GPU era", "The lesson notes the beginning of the rise of the first GPU era."],
+    ["S3 Graphics / 2D accelerators", "1991", "First introduced in 1991."],
+    ["System Unit", "1945", "The lesson reference states that the system unit was first invented in 1945."],
+    ["UNIVAC", "1951", "UNIVAC I was released in 1951."],
+    ["Differential Engine", "1930", "The lesson reference states that it was first introduced in 1930."],
+    ["Vector display", "1970", "First emerged in 1970."],
+    ["Magnetic drum memory", "1932", "Invented by Gustav Tauschek in 1932."],
+    ["Apple II", "1977", "Invented by Steve Jobs and Steve Wozniak in 1977."],
+    ["IBM MDA", "1981", "Invented in 1981."],
+    ["IBM CGA", "1981", "Known as the four-color video card invented in 1981."],
+    ["Mouse", "1963", "The first mouse was invented in 1963 by Douglas Engelbart."]
+  ];
+}
+
+function getComputerGenerationItems() {
+  return [
+    {
+      kicker: "1st Generation",
+      title: "Vacuum Tubes",
+      text: "At this generation, vacuum tubes were commonly used in computers."
+    },
+    {
+      kicker: "2nd Generation",
+      title: "Transistors",
+      text: "At this generation, computers were already using transistors."
+    },
+    {
+      kicker: "3rd Generation",
+      title: "Integrated Circuits",
+      text: "At this generation, integrated circuits were already developed."
+    },
+    {
+      kicker: "4th Generation",
+      title: "Microprocessor",
+      text: "At this generation, computers were already using or had invented the microprocessor."
+    }
   ];
 }
 
@@ -3080,12 +3222,55 @@ function renderHistoryTimeline(moduleData) {
   visual.innerHTML = `<img src="${timelineImage.src}" alt="${timelineImage.alt || "Computer history timeline"}" loading="lazy" decoding="async">`;
   strip.innerHTML = getHistoryTimelineItems().map((item) => `
     <article class="module-timeline-item">
+      <div class="module-timeline-portrait">
+        <img src="${item.portrait}" alt="${item.name}" loading="lazy" decoding="async">
+      </div>
       <span class="module-timeline-year">${item.year}</span>
       <h3 class="module-timeline-name">${item.name}</h3>
       <p class="module-timeline-text">${item.text}</p>
     </article>
   `).join("");
   note.textContent = "Use the visual timeline first, then review the literal timeline cards below to connect each inventor to the right part of computer history.";
+}
+
+function renderHistoryReference(moduleData) {
+  const section = document.getElementById("moduleHistoryReferenceSection");
+  const body = document.getElementById("moduleHistoryReferenceBody");
+  const count = document.getElementById("moduleHistoryReferenceCount");
+  const generations = document.getElementById("moduleHistoryGenerations");
+  const note = document.getElementById("moduleHistoryReferenceNote");
+
+  if (!section || !body || !count || !generations || !note) return;
+
+  if (moduleData.title !== "History" || subject !== "hardware" || difficulty !== "hard" || moduleKey !== "module2") {
+    section.hidden = true;
+    body.innerHTML = "";
+    generations.innerHTML = "";
+    return;
+  }
+
+  const rows = getHistoryReferenceRows();
+  const generationItems = getComputerGenerationItems();
+
+  section.hidden = false;
+  count.textContent = `${rows.length} dated entries`;
+  body.innerHTML = rows.map(([label, year, detail]) => `
+    <tr>
+      <td><strong>${label}</strong></td>
+      <td>${year}</td>
+      <td>${detail}</td>
+    </tr>
+  `).join("");
+
+  generations.innerHTML = generationItems.map((item) => `
+    <article class="module-history-generation-card">
+      <span class="module-history-generation-kicker">${item.kicker}</span>
+      <h4>${item.title}</h4>
+      <p>${item.text}</p>
+    </article>
+  `).join("");
+
+  note.textContent = "Review these inventions, dates, and computer generations after the history figures so the major milestones are easier to remember.";
 }
 
 function getSolderingProcessSteps(moduleData) {
