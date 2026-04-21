@@ -19,9 +19,30 @@ export function getRoleFromUserData(data = {}) {
   return normalizeRole(data.role || data.progress?.role || "user");
 }
 
+function isPermissionDenied(error) {
+  const code = String(error?.code || "");
+  return code.includes("permission-denied") || code.includes("insufficient-permissions");
+}
+
 export async function resolveUserRole(db, user) {
   if (!user) return "guest";
   const normalizedEmail = (user.email || "").trim().toLowerCase();
+
+  if (SUPER_ADMIN_EMAILS.includes(normalizedEmail)) return "super_admin";
+
+  try {
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    const userData = userSnap.exists() ? userSnap.data() || {} : {};
+    const storedRole = getRoleFromUserData(userData);
+
+    if (storedRole === "super_admin" || storedRole === "admin" || storedRole === "user") {
+      return storedRole;
+    }
+  } catch (error) {
+    if (!isPermissionDenied(error)) {
+      console.warn("Unable to read stored user role.", error);
+    }
+  }
 
   try {
     if (normalizedEmail) {
@@ -34,29 +55,9 @@ export async function resolveUserRole(db, user) {
       }
     }
   } catch (error) {
-    console.warn("Unable to resolve user role from email grants.", error);
-  }
-
-  if (SUPER_ADMIN_EMAILS.includes(normalizedEmail)) return "super_admin";
-
-  try {
-    const userSnap = await getDoc(doc(db, "users", user.uid));
-    const userData = userSnap.exists() ? userSnap.data() || {} : {};
-    const storedRole = getRoleFromUserData(userData);
-
-    if (storedRole === "super_admin" || storedRole === "admin") {
-      return storedRole;
+    if (!isPermissionDenied(error)) {
+      console.warn("Unable to resolve user role from email grants.", error);
     }
-  } catch (error) {
-    console.warn("Unable to read stored user role.", error);
-  }
-
-  try {
-    const snap = await getDoc(doc(db, "users", user.uid));
-    const data = snap.exists() ? snap.data() || {} : {};
-    return getRoleFromUserData(data);
-  } catch (error) {
-    console.warn("Unable to resolve user role from email grants.", error);
   }
 
   return "user";

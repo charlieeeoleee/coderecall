@@ -1,4 +1,6 @@
+html,
 body {
+  max-width: 100%;
   font-family: 'Montserrat', sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
@@ -70,6 +72,7 @@ body {
 
 .module-page {
   width: min(1020px, 94%);
+  max-width: 100%;
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
@@ -78,6 +81,10 @@ body {
   gap: 22px;
   padding: 120px 0 110px;
   animation: moduleFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.module-page > * {
+  min-width: 0;
 }
 
 @keyframes moduleFadeIn {
@@ -146,6 +153,7 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  min-width: 0;
 }
 
 .module-meta-card {
@@ -153,6 +161,7 @@ body {
   flex-direction: column;
   gap: 8px;
   text-align: center;
+  min-width: 0;
 }
 
 .module-meta-label {
@@ -170,6 +179,7 @@ body {
 
 .module-content {
   padding: 24px;
+  min-width: 0;
 }
 
 .module-content-head {
@@ -222,6 +232,7 @@ body {
 .module-document-body {
   display: grid;
   gap: 18px;
+  min-width: 0;
 }
 
 .module-doc-card {
@@ -250,7 +261,10 @@ body {
 }
 
 .module-doc-table-wrap {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .module-doc-table {
@@ -304,6 +318,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  min-width: 0;
 }
 
 .module-pill {
@@ -336,6 +351,7 @@ body {
 .module-section-list {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .module-section-card {
@@ -371,6 +387,7 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  min-width: 0;
 }
 
 .module-gallery-group {
@@ -399,6 +416,7 @@ body {
   display: grid;
   grid-template-columns: 1fr;
   gap: 18px;
+  min-width: 0;
 }
 
 .module-figure {
@@ -546,6 +564,7 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  min-width: 0;
 }
 
 .module-circuit-card {
@@ -587,6 +606,7 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  min-width: 0;
 }
 
 .module-form-factor-card {
@@ -736,6 +756,7 @@ body {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-top: 18px;
+  min-width: 0;
 }
 
 .module-timeline-item {
@@ -784,6 +805,7 @@ body {
 .module-quiz {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 .module-quiz-card {
@@ -1102,22 +1124,61 @@ body.light-mode .module-btn.success-btn:disabled {
     font-size: 12px;
     top: 22px;
     left: 18px;
+    max-width: calc(100vw - 36px);
   }
 
   .module-page {
-    width: 94%;
+    width: calc(100% - 24px);
+    max-width: calc(100% - 24px);
+    margin: 0 12px;
     padding-top: 100px;
     padding-bottom: 100px;
     justify-content: flex-start;
+    gap: 18px;
+  }
+
+  .module-page > section,
+  .module-page > .module-actions {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .module-header,
+  .module-content,
+  .module-document,
+  .module-objectives,
+  .module-sections,
+  .module-form-factors,
+  .module-gallery,
+  .module-process,
+  .module-circuits,
+  .module-timeline,
+  .module-tip,
+  .module-challenge {
+    padding: 20px 16px;
   }
 
   .module-meta-grid {
     grid-template-columns: 1fr;
   }
 
+  .module-meta-value {
+    font-size: 20px;
+    overflow-wrap: anywhere;
+  }
+
   .module-content-head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .module-copy,
+  .module-doc-card,
+  .module-section-card,
+  .module-circuit-card,
+  .module-quiz-card {
+    padding: 16px;
   }
 
   .module-timeline-strip,
@@ -1127,7 +1188,7 @@ body.light-mode .module-btn.success-btn:disabled {
   }
 
   .module-doc-table {
-    min-width: 620px;
+    min-width: 560px;
   }
 
   .module-circuit-grid {
@@ -1150,8 +1211,28 @@ body.light-mode .module-btn.success-btn:disabled {
     grid-template-columns: 1fr;
   }
 
+  .module-doc-table th,
+  .module-doc-table td {
+    padding: 12px 10px;
+    font-size: 12px;
+  }
+
+  .module-content-head h2,
+  .module-tip h3 {
+    font-size: 18px;
+  }
+
+  .module-step-title,
+  .module-form-factor-title {
+    font-size: 20px;
+  }
+
   .module-actions {
     flex-direction: column;
+  }
+
+  .module-actions .module-btn {
+    width: 100%;
   }
 
   .module-theme-toggle {
