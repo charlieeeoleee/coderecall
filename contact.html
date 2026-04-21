@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles/contact.css?v=20260422a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-code">CODE:</span>
+      <span class="logo-recall">RECALL!</span>
+    </div>
+
+    <button class="nav-toggle" onclick="toggleMobileNav()" aria-label="Open navigation" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="subjects-preview.html">Subjects</a>
+      <a href="coming-soon.html?feature=Future%20Feature&state=in%20development&note=This%20navigation%20slot%20is%20reserved%20for%20new%20features%20that%20are%20already%20linked%20but%20not%20finished%20yet.">Future Feature</a>
+      <a href="contact.html" class="active-link">Contact Us</a>
+      <a href="faq.html">FAQ</a>
+      <button class="login-btn" id="navActionBtn" onclick="goToAuth()">Login</button>
+    </nav>
+  </header>
+
+  <main class="contact-page">
+    <section class="hero-card fade-in">
+      <div class="hero-copy">
+        <div class="hero-badge">Feedback and Support</div>
+        <h1>Share your concerns, questions, and ideas about Code Recall.</h1>
+        <p>
+          Use this page to send concerns about your learning flow, report issues, or share thoughts about the system.
+          Admins and super admins can review messages here and reply directly.
+        </p>
+      </div>
+
+      <div class="hero-status-card">
+        <span class="status-label">Contact Channel</span>
+        <strong id="contactRoleBadge">Visitor View</strong>
+        <p id="contactRoleDetail">Login to send feedback and track replies from the team.</p>
+      </div>
+    </section>
+
+    <section id="contactLoginPrompt" class="notice-card fade-in">
+      <h2>Login required to send a message</h2>
+      <p>
+        You can browse the platform as usual, but feedback messages and admin replies are attached to signed-in learner accounts.
+      </p>
+      <div class="notice-actions">
+        <button class="primary-btn" onclick="goToAuth()">Login / Register</button>
+        <button class="secondary-btn" onclick="goHome()">Back to Home</button>
+      </div>
+    </section>
+
+    <section id="contactWorkspace" class="workspace-grid fade-in" hidden>
+      <section class="panel-card">
+        <div class="panel-head">
+          <div>
+            <h2>Send a Message</h2>
+            <p>Tell us what you are experiencing, what feels unclear, or what you think would improve the system.</p>
+          </div>
+        </div>
+
+        <form id="contactForm" class="contact-form">
+          <label>
+            <span>Category</span>
+            <select id="contactCategory" required>
+              <option value="concern">Learning Concern</option>
+              <option value="feedback">System Feedback</option>
+              <option value="comment">General Comment</option>
+              <option value="bug">Bug Report</option>
+              <option value="idea">Feature Idea</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Subject</span>
+            <input id="contactSubject" type="text" maxlength="120" placeholder="Short title for your message" required>
+          </label>
+
+          <label>
+            <span>Your Message</span>
+            <textarea id="contactMessage" rows="7" maxlength="2500" placeholder="Describe your concern, feedback, learning difficulty, or idea." required></textarea>
+          </label>
+
+          <button type="submit" class="primary-btn">Send Message</button>
+          <p id="contactFormStatus" class="form-status"></p>
+        </form>
+      </section>
+
+      <section class="panel-card">
+        <div class="panel-head">
+          <div>
+            <h2>Your Conversation History</h2>
+            <p>Track messages you sent and read replies from admins here.</p>
+          </div>
+        </div>
+
+        <div id="myMessagesList" class="message-list">
+          <article class="message-card empty-card">
+            <h3>No messages yet</h3>
+            <p>Your submitted concerns and feedback will appear here once you send one.</p>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section id="adminInboxSection" class="admin-inbox-section fade-in" hidden>
+      <div class="panel-head">
+        <div>
+          <h2>Admin Inbox</h2>
+          <p>Only admins and super admins can review all contact messages and reply from here.</p>
+        </div>
+      </div>
+
+      <div id="adminInboxList" class="admin-inbox-list">
+        <article class="message-card empty-card">
+          <h3>No contact messages yet</h3>
+          <p>Incoming learner concerns and feedback will appear here.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="tips-grid fade-in">
+      <article class="tip-card">
+        <span class="tip-index">01</span>
+        <h3>Learning concerns</h3>
+        <p>Use this for confusing lessons, unfair quiz items, missing explanations, or areas where progress feels blocked.</p>
+      </article>
+
+      <article class="tip-card">
+        <span class="tip-index">02</span>
+        <h3>System feedback</h3>
+        <p>Share ideas about the dashboard, navigation, rewards, timelines, modules, or overall learning experience.</p>
+      </article>
+
+      <article class="tip-card">
+        <span class="tip-index">03</span>
+        <h3>Admin replies</h3>
+        <p>When an admin responds, the reply shows under your original message so the conversation stays organized.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2026 Code Recall System | Gamified Learning Platform</p>
+    </div>
+  </footer>
+
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">&#127769;</span>
+  </button>
+
+  <script type="module" src="scripts/contact.js?v=20260422a"></script>
+  <script src="scripts/loading.js?v=20260422a" defer></script>
+</body>
+</html>

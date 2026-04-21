@@ -1,78 +1,173 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coming Soon - Code Recall</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature In Progress - Code Recall</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles/coming.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-<link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="stylesheet" href="styles/coming.css?v=20260422a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
-
 <body>
 
-<!-- NAVBAR -->
-<header class="navbar">
-
-  <div class="logo">
-    <span class="logo-code">CODE:</span>
-    <span class="logo-recall">RECALL!</span>
-  </div>
-
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="about.html">About</a>
-    <a href="subjects-preview.html">Subjects</a>
-    <a href="faq.html">FAQ</a>
-  </nav>
-
-</header>
-
-<!-- MAIN -->
-<section class="coming">
-
-  <div class="coming-box">
-
-    <h1>&#128679; Coming Soon</h1>
-
-    <p>
-      We are currently building this part of the system.<br>
-      Stay tuned - the full experience is coming soon!
-    </p>
-
-    <div class="actions">
-
-      <button onclick="goHome()" class="btn-primary">
-        Back to Home
-      </button>
-
-      <button onclick="goDashboard()" class="btn-secondary">
-        Go to Dashboard
-      </button>
-
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-code">CODE:</span>
+      <span class="logo-recall">RECALL!</span>
     </div>
 
-  </div>
+    <button class="nav-toggle" onclick="toggleMobileNav()" aria-label="Open navigation" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
 
-</section>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="subjects-preview.html">Subjects</a>
+      <a href="coming-soon.html?feature=Future%20Feature&state=in%20development&note=This%20navigation%20slot%20is%20reserved%20for%20new%20features%20that%20are%20already%20linked%20but%20not%20finished%20yet.">Future Feature</a>
+      <a href="contact.html">Contact Us</a>
+      <a href="faq.html">FAQ</a>
+      <button class="login-btn" onclick="goToAuth()">Login</button>
+    </nav>
+  </header>
 
-<!-- FOOTER -->
-<footer>
-  <p>&copy; 2026 Code Recall System | Gamified Learning Platform</p>
-</footer>
+  <main class="coming-page">
+    <section class="status-hero fade-in">
+      <div class="status-copy">
+        <div class="status-badge">Feature in Progress</div>
+        <p class="status-kicker" id="featureTagline">New learning tools are still being polished.</p>
+        <h1 id="featureTitle">This feature is still under construction.</h1>
+        <p class="status-description" id="featureDescription">
+          We are actively building this area so newly added tools and unfinished experiences can be released more cleanly. You can head back now and return once this part is ready.
+        </p>
 
-<!-- THEME -->
-<button class="theme-toggle" onclick="toggleTheme()">
-  <span id="themeIcon">&#127769;</span>
-</button>
+        <div class="status-actions">
+          <button class="primary-btn" onclick="goDashboard()">Go to Dashboard</button>
+          <button class="secondary-btn" onclick="goHome()">Back to Home</button>
+          <button class="ghost-btn" onclick="goBack()">Go Back</button>
+        </div>
+      </div>
 
-<script src="scripts/coming.js"></script>
+      <div class="status-panel">
+        <div class="signal-card pulse-card">
+          <div class="signal-head">
+            <span class="signal-dot"></span>
+            <span class="signal-label" id="statusLabel">Active Build</span>
+          </div>
+          <h2 id="statusHeadline">Work is in progress right now.</h2>
+          <p id="statusMessage">
+            This page appears whenever a feature exists in the system but is not ready for full release yet.
+          </p>
+        </div>
 
-  <script src="scripts/loading.js" defer></script>
+        <div class="mini-status-grid">
+          <article class="mini-status-card">
+            <span class="mini-status-title">Release Stage</span>
+            <strong id="releaseStage">In Development</strong>
+            <p>Visible in the system, but not yet ready for full student use.</p>
+          </article>
+
+          <article class="mini-status-card">
+            <span class="mini-status-title">Suggested Action</span>
+            <strong>Return to live pages</strong>
+            <p>Use the navigation below while this feature is being completed.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="info-strip fade-in">
+      <article class="info-card">
+        <span class="info-icon">01</span>
+        <div>
+          <h3>Why you are seeing this</h3>
+          <p>A route, button, or newly added tool points to a feature that is still being built or tested.</p>
+        </div>
+      </article>
+
+      <article class="info-card">
+        <span class="info-icon">02</span>
+        <div>
+          <h3>What happens next</h3>
+          <p>The unfinished page can be completed later without breaking the rest of the platform.</p>
+        </div>
+      </article>
+
+      <article class="info-card">
+        <span class="info-icon">03</span>
+        <div>
+          <h3>What you can use now</h3>
+          <p>The dashboard, subjects, FAQ, and existing study flows remain available while this part is pending.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="progress-board fade-in">
+      <div class="section-heading">
+        <h2>Build Status</h2>
+        <p>This page is designed to support future unfinished features without needing to redesign it every time.</p>
+      </div>
+
+      <div class="progress-grid">
+        <article class="progress-card highlight-card">
+          <span class="progress-chip">Reusable</span>
+          <h3>Ready for New Features</h3>
+          <p>
+            This screen can now show a clearer message whenever a new area is linked before the final experience is finished.
+          </p>
+        </article>
+
+        <article class="progress-card">
+          <span class="progress-chip">Flexible</span>
+          <h3>Feature-Aware Messaging</h3>
+          <p>
+            The page can display a specific feature name from the URL so the message feels intentional instead of generic.
+          </p>
+        </article>
+
+        <article class="progress-card">
+          <span class="progress-chip">Safe Fallback</span>
+          <h3>Cleaner User Flow</h3>
+          <p>
+            Instead of a broken or empty screen, users land on a complete status page with useful next actions.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="cta-shell fade-in">
+      <div class="cta-card">
+        <div>
+          <p class="cta-label">Continue Exploring</p>
+          <h2>Use the live parts of Code Recall while this one is still cooking.</h2>
+        </div>
+
+        <div class="cta-links">
+          <a href="dashboard.html" class="cta-link primary-link">Open Dashboard</a>
+          <a href="subjects-preview.html" class="cta-link secondary-link">Browse Subjects</a>
+          <a href="faq.html" class="cta-link tertiary-link">Read FAQ</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2026 Code Recall System | Gamified Learning Platform</p>
+    </div>
+  </footer>
+
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">&#127769;</span>
+  </button>
+
+  <script src="scripts/coming.js?v=20260422a"></script>
+  <script src="scripts/loading.js?v=20260422a" defer></script>
 </body>
 </html>
-
-
-
