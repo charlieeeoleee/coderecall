@@ -38,8 +38,6 @@ let isHandlingAuthFlow = false;
 async function getLandingPageForUser(user) {
   const role = await resolveUserRole(db, user);
   await syncUserRole(db, user, role);
-  if (role === "super_admin") return "super-admin.html";
-  if (role === "admin") return "admin.html";
   return "dashboard.html";
 }
 

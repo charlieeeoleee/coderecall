@@ -38,6 +38,9 @@ const QUICK_CHECK_XP_PER_CORRECT = 1;
 const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
 const RESUME_ACTIVITY_KEY = "resume_activity";
 let moduleImageBanksPromise = null;
+let cachedUserRef = null;
+let cachedUserData = null;
+let pendingStudyHistorySavePromise = null;
 let currentModuleGateState = {
   readBottom: false,
   quickCheckAttempted: false,
@@ -56,6 +59,53 @@ async function loadModuleImageBanks() {
   }
 
   return moduleImageBanksPromise;
+}
+
+function mergeCachedUserData(partial = {}) {
+  const nextData = {
+    ...(cachedUserData || {}),
+    ...partial
+  };
+
+  if (partial.progress) {
+    nextData.progress = {
+      ...(cachedUserData?.progress || {}),
+      ...partial.progress
+    };
+  }
+
+  if (partial.results) {
+    nextData.results = {
+      ...(cachedUserData?.results || {}),
+      ...partial.results
+    };
+  }
+
+  cachedUserData = nextData;
+  return nextData;
+}
+
+async function getCachedUserRef(uid) {
+  if (cachedUserRef && currentUser?.uid === uid) {
+    return cachedUserRef;
+  }
+
+  cachedUserRef = doc(db, "users", uid);
+  return cachedUserRef;
+}
+
+async function getCachedUserData(uid, { force = false } = {}) {
+  if (!uid) return {};
+  await ensureUserDoc(uid);
+
+  if (!force && cachedUserData) {
+    return cachedUserData;
+  }
+
+  const userRef = await getCachedUserRef(uid);
+  const snap = await getDoc(userRef);
+  cachedUserData = snap.exists() ? (snap.data() || {}) : {};
+  return cachedUserData;
 }
 
 /* =========================
@@ -116,6 +166,45 @@ const LITERAL_IMAGE_CAPTIONS = {
   "assets/modules/hardware/easy/module1/image-06.png": "CPU cooler",
   "assets/modules/hardware/easy/module1/image-07.png": "Ink tank printer",
   "assets/modules/hardware/easy/module1/image-08.png": "Computer cooling fan",
+  "assets/modules/hardware/easy/module1/image-09.png": "Computer mouse",
+  "assets/modules/hardware/easy/module1/image-10.png": "Computer monitor",
+  "assets/modules/hardware/easy/module1/image-11.png": "System unit",
+  "assets/modules/hardware/easy/module1/image-12.png": "PS/2 keyboard and mouse ports",
+  "assets/modules/hardware/easy/module1/image-13.png": "Parallel port",
+  "assets/modules/hardware/easy/module1/image-14.png": "Serial port",
+  "assets/modules/hardware/easy/module1/image-15.png": "Speakers",
+  "assets/modules/hardware/easy/module1/image-16.png": "Network interface card",
+  "assets/modules/hardware/easy/module1/image-17.png": "SATA ports",
+  "assets/modules/hardware/easy/module1/image-18.png": "Projector",
+  "assets/modules/hardware/easy/module1/image-19.png": "Keyboard",
+  "assets/modules/hardware/easy/module1/image-20.png": "Barcode scanner",
+  "assets/modules/hardware/easy/module1/image-21.png": "Plotter printer",
+  "assets/modules/hardware/easy/module1/image-22.png": "Headset with microphone",
+  "assets/modules/hardware/easy/module1/image-23.png": "Power supply unit",
+  "assets/modules/hardware/easy/module1/image-24.png": "Webcam",
+  "assets/modules/hardware/easy/module1/image-25.png": "Keyboard",
+  "assets/modules/hardware/easy/module1/image-26.png": "Hard disk drive circuit board",
+  "assets/modules/hardware/easy/module1/image-27.png": "RAM module",
+  "assets/modules/hardware/easy/module1/image-28.png": "Graphics card",
+  "assets/modules/hardware/easy/module1/image-29.png": "Computer mouse",
+  "assets/modules/hardware/easy/module1/image-30.png": "Expansion slots",
+  "assets/modules/hardware/easy/module1/image-31.png": "Automatic voltage regulator",
+  "assets/modules/hardware/easy/module1/image-32.png": "Optical disc drive",
+  "assets/modules/hardware/easy/module1/image-33.png": "Computer chassis",
+  "assets/modules/hardware/easy/module1/image-34.png": "Monitor",
+  "assets/modules/hardware/easy/module1/image-35.png": "BIOS chip and CMOS battery",
+  "assets/modules/hardware/easy/module1/image-36.png": "HDMI port",
+  "assets/modules/hardware/easy/module1/image-37.png": "Motherboard back panel and I/O connectors",
+  "assets/modules/hardware/easy/module1/image-38.png": "Flatbed scanner",
+  "assets/modules/hardware/easy/module1/image-39.png": "CPU",
+  "assets/modules/hardware/easy/module1/image-40.png": "CPU socket",
+  "assets/modules/hardware/easy/module1/image-41.png": "VGA port",
+  "assets/modules/hardware/easy/module1/image-42.png": "Hard disk drive",
+  "assets/modules/hardware/easy/module1/image-43.png": "IDE and floppy drive connectors",
+  "assets/modules/hardware/easy/module1/image-44.png": "Joystick",
+  "assets/modules/hardware/easy/module1/image-45.png": "Motherboard",
+  "assets/modules/hardware/easy/module1/image-46.png": "CMOS battery",
+  "assets/modules/hardware/easy/module1/image-47.png": "Audio ports",
   "assets/modules/hardware/easy/module2/image-01.png": "Respirator mask and full-face respirator",
   "assets/modules/hardware/easy/module2/image-02.png": "Cleaning cloth",
   "assets/modules/hardware/easy/module2/image-03.png": "Anti-static wrist strap",
@@ -1394,11 +1483,11 @@ function restoreModuleScrollIfNeeded() {
 }
 
 async function ensureUserDoc(uid) {
-  const userRef = doc(db, "users", uid);
+  const userRef = await getCachedUserRef(uid);
   const snap = await getDoc(userRef);
 
   if (!snap.exists()) {
-    await setDoc(userRef, {
+    const initialData = {
       xp: 0,
       xpWeekly: 0,
       xpChange: 0,
@@ -1406,7 +1495,11 @@ async function ensureUserDoc(uid) {
       progress: {},
       results: {},
       createdAt: new Date().toISOString()
-    });
+    };
+    await setDoc(userRef, initialData);
+    cachedUserData = initialData;
+  } else {
+    cachedUserData = snap.data() || {};
   }
 
   return userRef;
@@ -1417,9 +1510,7 @@ async function isModuleCompleted() {
   if (localDone) return true;
   if (!currentUser) return localDone;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   return data.progress?.[getModuleDoneKey()] === true || localDone;
 }
 
@@ -1428,9 +1519,7 @@ async function hasReachedModuleBottom() {
   if (localRead) return true;
   if (!currentUser) return localRead;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   return data.progress?.[getModuleReadKey()] === true || localRead;
 }
 
@@ -1439,9 +1528,7 @@ async function hasQuickCheckAttempted() {
   if (localAttempted) return true;
   if (!currentUser) return localAttempted;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   return data.progress?.[getQuickCheckAttemptKey()] === true || localAttempted;
 }
 
@@ -1452,11 +1539,11 @@ async function markModuleReadBottom() {
   if (!currentUser) return;
 
   const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   const progress = data.progress || {};
   progress[getModuleReadKey()] = true;
   await updateDoc(userRef, { progress });
+  mergeCachedUserData({ progress });
 }
 
 async function markQuickCheckAttempted() {
@@ -1466,11 +1553,11 @@ async function markQuickCheckAttempted() {
   if (!currentUser) return;
 
   const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   const progress = data.progress || {};
   progress[getQuickCheckAttemptKey()] = true;
   await updateDoc(userRef, { progress });
+  mergeCachedUserData({ progress });
 }
 
 async function getModuleGateState() {
@@ -1503,12 +1590,12 @@ async function markModuleCompleted() {
   if (!currentUser) return;
 
   const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   const progress = data.progress || {};
   progress[getModuleDoneKey()] = true;
 
   await updateDoc(userRef, { progress });
+  mergeCachedUserData({ progress });
   await clearModuleResumeState();
 }
 
@@ -1518,9 +1605,7 @@ async function hasModuleXPAwarded() {
   if (localAwarded) return true;
   if (!currentUser) return false;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   return data.progress?.[getModuleXPKey()] === true || localAwarded;
 }
 
@@ -1544,8 +1629,7 @@ async function awardModuleXPOnce() {
 
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
-    const snap = await getDoc(userRef);
-    const data = snap.data() || {};
+    const data = await getCachedUserData(currentUser.uid);
     const currentWeek = getWeekKey();
     const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
     const currentXP = Number(data.xp || 0);
@@ -1555,13 +1639,16 @@ async function awardModuleXPOnce() {
 
     progress[getModuleXPKey()] = true;
 
-      await updateDoc(userRef, {
+      const updatePayload = {
         xp: currentXP + MODULE_XP_REWARD,
         xpWeekly: currentWeeklyXP + MODULE_XP_REWARD,
         xpChange: MODULE_XP_REWARD,
         lastWeeklyReset: currentWeek,
         progress
-      });
+      };
+
+      await updateDoc(userRef, updatePayload);
+      mergeCachedUserData(updatePayload);
 
       traceXPEvent({
         channel: "firestore",
@@ -1608,9 +1695,7 @@ async function getQuickCheckBestScore() {
     return localBest;
   }
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   const remoteBest = Number(data.progress?.[getQuickCheckBestScoreKey()] || 0);
   return Math.max(localBest, remoteBest);
 }
@@ -1640,8 +1725,7 @@ async function awardQuickCheckXP(score) {
 
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
-    const snap = await getDoc(userRef);
-    const data = snap.data() || {};
+    const data = await getCachedUserData(currentUser.uid);
     const currentWeek = getWeekKey();
     const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
     const currentXP = Number(data.xp || 0);
@@ -1651,13 +1735,16 @@ async function awardQuickCheckXP(score) {
 
     progress[getQuickCheckBestScoreKey()] = earnedScore;
 
-      await updateDoc(userRef, {
+      const updatePayload = {
         xp: currentXP + delta,
         xpWeekly: currentWeeklyXP + delta,
-      xpChange: delta,
+        xpChange: delta,
         lastWeeklyReset: currentWeek,
         progress
-      });
+      };
+
+      await updateDoc(userRef, updatePayload);
+      mergeCachedUserData(updatePayload);
 
       traceXPEvent({
         channel: "firestore",
@@ -2528,6 +2615,42 @@ function getNextModuleUrl() {
   return `module.html?subject=${subject}&difficulty=${difficulty}&module=module${moduleNumber + 1}`;
 }
 
+function queueStudyHistorySave(payload) {
+  if (pendingStudyHistorySavePromise) return pendingStudyHistorySavePromise;
+
+  const saveTask = async () => {
+    await authReadyPromise;
+    await saveStudyHistory({
+      db,
+      user: currentUser,
+      payload
+    });
+  };
+
+  pendingStudyHistorySavePromise = (window.requestIdleCallback
+    ? new Promise((resolve) => {
+        window.requestIdleCallback(async () => {
+          try {
+            await saveTask();
+          } catch (error) {
+            console.warn("Unable to save study history for module.", error);
+          } finally {
+            pendingStudyHistorySavePromise = null;
+            resolve();
+          }
+        }, { timeout: 1200 });
+      })
+    : saveTask()
+        .catch((error) => {
+          console.warn("Unable to save study history for module.", error);
+        })
+        .finally(() => {
+          pendingStudyHistorySavePromise = null;
+        }));
+
+  return pendingStudyHistorySavePromise;
+}
+
 async function renderModulePage() {
   await loadPublishedModuleEntries();
   const data = await getModuleData();
@@ -2547,6 +2670,16 @@ async function renderModulePage() {
   const sectionCardsShell = sections?.closest(".module-sections");
 
   if (data) {
+    queueStudyHistorySave({
+      key: `module|${subject}|${difficulty}|${moduleKey}`,
+      kind: "module",
+      title: data.title,
+      subject,
+      difficulty,
+      detail: `Module ${moduleNumber} • ${difficultyName} • ${subjectName}`,
+      actionUrl: `module.html?subject=${encodeURIComponent(subject)}&difficulty=${encodeURIComponent(difficulty)}&module=${encodeURIComponent(moduleKey)}`
+    });
+    /*
     saveStudyHistory({
       db,
       user: currentUser,
@@ -2562,6 +2695,7 @@ async function renderModulePage() {
     }).catch((error) => {
       console.warn("Unable to save study history for module.", error);
     });
+    */
   }
 
   document.getElementById("moduleSubject").textContent = subjectName;

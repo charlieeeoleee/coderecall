@@ -56,6 +56,9 @@ const authReadyPromise = new Promise((resolve) => {
   resolveAuthReady = resolve;
 });
 let authReadyResolved = false;
+let cachedUserRef = null;
+let cachedUserData = null;
+let pendingStudyHistorySavePromise = null;
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
 const RESUME_ACTIVITY_KEY = "resume_activity";
@@ -132,6 +135,97 @@ function writeQuizResumeState(payload) {
   }
 
   localStorage.setItem(getQuizResumeStateKey(), JSON.stringify(payload));
+}
+
+function mergeCachedUserData(partial = {}) {
+  const nextData = {
+    ...(cachedUserData || {}),
+    ...partial
+  };
+
+  if (partial.progress) {
+    nextData.progress = {
+      ...(cachedUserData?.progress || {}),
+      ...partial.progress
+    };
+  }
+
+  if (partial.results) {
+    nextData.results = {
+      ...(cachedUserData?.results || {}),
+      ...partial.results
+    };
+  }
+
+  cachedUserData = nextData;
+  return nextData;
+}
+
+async function getCachedUserRef(uid) {
+  if (cachedUserRef && currentUser?.uid === uid) {
+    return cachedUserRef;
+  }
+
+  cachedUserRef = doc(db, "users", uid);
+  return cachedUserRef;
+}
+
+async function getCachedUserData(uid, { force = false } = {}) {
+  if (!uid) return {};
+  await ensureUserDoc(uid);
+
+  if (!force && cachedUserData) {
+    return cachedUserData;
+  }
+
+  const userRef = await getCachedUserRef(uid);
+  const snap = await getDoc(userRef);
+  cachedUserData = snap.exists() ? (snap.data() || {}) : {};
+  return cachedUserData;
+}
+
+function queueStudyHistorySave() {
+  if (pendingStudyHistorySavePromise) return pendingStudyHistorySavePromise;
+
+  const saveTask = async () => {
+    await authReadyPromise;
+    await saveStudyHistory({
+      db,
+      user: currentUser,
+      payload: {
+        key: `quiz|${subject}|${type}|${level}`,
+        kind: type,
+        title: currentMeta.title,
+        subject,
+        difficulty: level,
+        detail: `${currentMeta.tag} • ${level}`,
+        actionUrl: `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`
+      }
+    });
+  };
+
+  pendingStudyHistorySavePromise = (window.requestIdleCallback
+    ? new Promise((resolve) => {
+        window.requestIdleCallback(async () => {
+          try {
+            await saveTask();
+          } catch (error) {
+            console.warn("Unable to save study history for quiz page.", error);
+          } finally {
+            pendingStudyHistorySavePromise = null;
+            resolve();
+          }
+        }, { timeout: 1200 });
+      })
+    : saveTask()
+        .catch((error) => {
+          console.warn("Unable to save study history for quiz page.", error);
+        })
+        .finally(() => {
+          pendingStudyHistorySavePromise = null;
+        }));
+
+  return pendingStudyHistorySavePromise;
 }
 
 async function saveQuizResumeState() {
@@ -236,6 +330,8 @@ document.getElementById("quizTag").textContent = currentMeta.tag;
 document.getElementById("quizTitle").textContent = currentMeta.title;
 document.getElementById("quizSubtitle").textContent = currentMeta.subtitle;
 
+queueStudyHistorySave();
+/*
 saveStudyHistory({
   db,
   user: currentUser,
@@ -251,6 +347,7 @@ saveStudyHistory({
 }).catch((error) => {
   console.warn("Unable to save study history for quiz page.", error);
 });
+*/
 
 const electricalPretestQuestions = [
   {
@@ -782,11 +879,11 @@ function showResult() {
 }
 
 async function ensureUserDoc(uid) {
-  const userRef = doc(db, "users", uid);
+  const userRef = await getCachedUserRef(uid);
   const snap = await getDoc(userRef);
 
   if (!snap.exists()) {
-    await setDoc(userRef, {
+    const initialData = {
       xp: 0,
       xpWeekly: 0,
       xpChange: 0,
@@ -794,7 +891,11 @@ async function ensureUserDoc(uid) {
       progress: {},
       results: {},
       createdAt: new Date().toISOString()
-    });
+    };
+    await setDoc(userRef, initialData);
+    cachedUserData = initialData;
+  } else {
+    cachedUserData = snap.data() || {};
   }
 
   return userRef;
@@ -821,19 +922,21 @@ async function addXP(amount) {
 
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
-    const snap = await getDoc(userRef);
-    const data = snap.data() || {};
+    const data = await getCachedUserData(currentUser.uid);
     const currentWeek = getWeekKey();
     const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
     const currentXP = Number(data.xp || 0);
     const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
 
-    await updateDoc(userRef, {
+    const updatePayload = {
       xp: currentXP + amount,
       xpWeekly: currentWeeklyXP + amount,
       xpChange: amount,
       lastWeeklyReset: currentWeek
-    });
+    };
+
+    await updateDoc(userRef, updatePayload);
+    mergeCachedUserData(updatePayload);
 
     traceXPEvent({
       channel: "firestore",
@@ -920,8 +1023,7 @@ async function saveQuizResultToStorageAndFirestore() {
   if (!currentUser) return;
 
   const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
+  const data = await getCachedUserData(currentUser.uid);
   const progress = data.progress || {};
   const results = data.results || {};
 
@@ -944,6 +1046,7 @@ async function saveQuizResultToStorageAndFirestore() {
     subject: canonicalSubject
   };
   await updateDoc(userRef, { progress, results });
+  mergeCachedUserData({ progress, results });
 }
 
 async function awardQuizXPOnce() {

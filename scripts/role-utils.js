@@ -8,6 +8,8 @@ const ROLE_ORDER = {
   super_admin: 3
 };
 
+const ROLE_DEBUG_ENABLED = localStorage.getItem("role_debug") === "1";
+
 export function normalizeRole(role) {
   if (role === "super_admin" || role === "admin" || role === "user" || role === "guest") {
     return role;
@@ -22,6 +24,11 @@ export function getRoleFromUserData(data = {}) {
 function isPermissionDenied(error) {
   const code = String(error?.code || "");
   return code.includes("permission-denied") || code.includes("insufficient-permissions");
+}
+
+function logRoleWarning(message, error) {
+  if (!ROLE_DEBUG_ENABLED) return;
+  console.warn(message, error);
 }
 
 export async function resolveUserRole(db, user) {
@@ -40,7 +47,7 @@ export async function resolveUserRole(db, user) {
     }
   } catch (error) {
     if (!isPermissionDenied(error)) {
-      console.warn("Unable to read stored user role.", error);
+      logRoleWarning("Unable to read stored user role.", error);
     }
   }
 
@@ -56,7 +63,7 @@ export async function resolveUserRole(db, user) {
     }
   } catch (error) {
     if (!isPermissionDenied(error)) {
-      console.warn("Unable to resolve user role from email grants.", error);
+      logRoleWarning("Unable to resolve user role from email grants.", error);
     }
   }
 
@@ -89,7 +96,7 @@ export async function syncUserRole(db, user, resolvedRole) {
       }
     }, { merge: true });
   } catch (error) {
-    console.warn("Unable to sync user role.", error);
+    logRoleWarning("Unable to sync user role.", error);
   }
 }
 

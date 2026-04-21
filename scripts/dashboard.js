@@ -167,6 +167,7 @@ onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     currentIsGuest = false;
     applyRoleNavigation(await resolveUserRole(db, user), "dashboard.html");
+
     await updateUserStreak();
     await loadDashboard();
   } else if (isGuest) {
@@ -220,7 +221,7 @@ async function loadDashboard() {
       currentUser.photoURL ||
       "https://i.pravatar.cc/40?img=12";
 
-    await setDoc(userRef, {
+    const initialData = {
       xp: 0,
       xpWeekly: 0,
       xpChange: 0,
@@ -232,10 +233,11 @@ async function loadDashboard() {
       email: currentUser.email || "",
       streak: 1,
       lastActiveDate: getTodayString()
-    });
+    };
 
-    const refreshedSnap = await getDoc(userRef);
-    const refreshedData = await reconcileLocalProgressToFirestore(userRef, refreshedSnap.data() || {});
+    await setDoc(userRef, initialData);
+
+    const refreshedData = await reconcileLocalProgressToFirestore(userRef, initialData);
     data = refreshedData;
     xp = refreshedData.xp || 0;
     xpWeekly = refreshedData.xpWeekly || 0;
@@ -255,8 +257,11 @@ async function loadDashboard() {
   const subjectSnapshot = buildSubjectProgressSnapshot(data.progress || {}, data.results || {});
   renderSubjectProgressSection(subjectSnapshot);
   renderCertificatesPreview(subjectSnapshot);
-  await renderReviewInsights();
-  await renderStudyHistoryInsights(data);
+  await Promise.all([
+    renderReviewInsights(data),
+    renderStudyHistoryInsights(data),
+    loadLeaderboard()
+  ]);
   renderDashboardAchievementsExpanded({
     xp,
     isGuest: false,
@@ -264,7 +269,6 @@ async function loadDashboard() {
     progress: data.progress || {},
     results: data.results || {}
   });
-  await loadLeaderboard();
   renderDashboardLeaderboardPreview();
 }
 
@@ -678,14 +682,16 @@ function renderMissedTopics(items = []) {
   `).join("");
 }
 
-async function renderReviewInsights() {
+async function renderReviewInsights(userData = {}) {
   const countEl = document.getElementById("wrongAnswerReviewCount");
   if (!countEl) return;
 
-  const items = await loadWrongAnswerReview({
-    db,
-    user: currentUser
-  });
+  const items = Array.isArray(userData?.wrongAnswerReview)
+    ? userData.wrongAnswerReview
+    : await loadWrongAnswerReview({
+        db,
+        user: currentUser
+      });
 
   countEl.textContent = String(items.length);
   document.getElementById("wrongAnswerReviewCard")?.classList.remove("is-loading");
@@ -727,13 +733,12 @@ async function renderStudyHistoryInsights(userData = {}) {
   const textEl = document.getElementById("studyHistoryPreviewText");
   if (!countEl || !textEl) return;
 
-  const items = await loadStudyHistory({
-    db,
-    user: currentUser
-  });
-  const mergedItems = Array.isArray(userData?.studyHistory) && userData.studyHistory.length
+  const mergedItems = Array.isArray(userData?.studyHistory)
     ? userData.studyHistory
-    : items;
+    : await loadStudyHistory({
+        db,
+        user: currentUser
+      });
 
   countEl.textContent = String(mergedItems.length);
   document.getElementById("studyHistoryCard")?.classList.remove("is-loading");
