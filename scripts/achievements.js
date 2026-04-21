@@ -447,16 +447,16 @@ function buildBadges(xp, progressObj, isGuest) {
       progressValue: hardwarePost ? 1 : 0,
       progressMax: 1
     },
-    {
-      name: "Completionist",
-      icon: "🏆",
-      description: "Reach the full XP cap of the entire system and prove complete dedication.",
-      requirement: "Reach 1054 XP",
-      rewardText: "Full-system XP completion",
-      unlocked: xp >= 1054,
-      progressValue: Math.min(xp, 1054),
-      progressMax: 1054
-    },
+      {
+        name: "Completionist",
+        icon: "🏆",
+        description: "Reach the full XP cap of the entire system and prove complete dedication.",
+        requirement: "Reach 1164 XP",
+        rewardText: "Full-system XP completion",
+        unlocked: xp >= 1164,
+        progressValue: Math.min(xp, 1164),
+        progressMax: 1164
+      },
     {
       name: "Review Warrior",
       icon: "🧠",

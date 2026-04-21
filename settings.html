@@ -197,11 +197,14 @@
         <div class="card settings-card full-width">
           <h3>&#9881; System Actions</h3>
 
-          <div class="system-actions">
-            <button class="action-btn logout-action" onclick="logout()">Logout</button>
-            <button class="action-btn danger-btn" onclick="resetProgress()">Reset Progress</button>
-            <button class="action-btn warning-btn" onclick="clearLocalData()">Clear Local Data</button>
-          </div>
+        <div class="system-actions">
+          <button class="action-btn logout-action" onclick="logout()">Logout</button>
+          <button class="action-btn warning-btn" onclick="resetHardwareModules()">Reset Hardware Modules</button>
+          <button class="action-btn warning-btn" onclick="resetSubjectProgress('hardware')">Reset Hardware Subject</button>
+          <button class="action-btn warning-btn" onclick="resetSubjectProgress('electrical')">Reset Electrical Subject</button>
+          <button class="action-btn danger-btn" onclick="resetProgress()">Reset Progress</button>
+          <button class="action-btn warning-btn" onclick="clearLocalData()">Clear Local Data</button>
+        </div>
         </div>
       </div>
     </div>
@@ -250,7 +253,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/settings.js?v=20260414a"></script>
+  <script type="module" src="scripts/settings.js?v=20260421a"></script>
   <script src="scripts/loading.js?v=20260414a" defer></script>
 </body>
 </html>

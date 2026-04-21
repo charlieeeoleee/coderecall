@@ -9,6 +9,7 @@ import {
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveStudyHistory } from "./study-history-store.js";
+import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
 
 /* =========================
@@ -25,6 +26,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 let currentUser = null;
+let resolveAuthReady = null;
+const authReadyPromise = new Promise((resolve) => {
+  resolveAuthReady = resolve;
+});
+let authReadyResolved = false;
 let autoCheckpointObserver = null;
 let autoCheckpointInFlight = false;
 const MODULE_XP_REWARD = 5;
@@ -58,6 +64,11 @@ async function loadModuleImageBanks() {
 onAuthStateChanged(auth, (user) => {
   const isGuest = localStorage.getItem("guest") === "true";
   currentUser = user || null;
+
+  if (!authReadyResolved) {
+    authReadyResolved = true;
+    resolveAuthReady?.();
+  }
 
   if (!user && !isGuest) {
     window.location.href = "auth.html";
@@ -1435,6 +1446,7 @@ async function hasQuickCheckAttempted() {
 }
 
 async function markModuleReadBottom() {
+  await authReadyPromise;
   localStorage.setItem(getModuleReadKey(), "true");
 
   if (!currentUser) return;
@@ -1448,6 +1460,7 @@ async function markModuleReadBottom() {
 }
 
 async function markQuickCheckAttempted() {
+  await authReadyPromise;
   localStorage.setItem(getQuickCheckAttemptKey(), "true");
 
   if (!currentUser) return;
@@ -1475,6 +1488,7 @@ async function getModuleGateState() {
 }
 
 async function markModuleCompleted() {
+  await authReadyPromise;
   const moduleData = await getModuleData();
   localStorage.setItem(getModuleDoneKey(), "true");
   localStorage.setItem(RECENT_MODULE_COMPLETION_KEY, JSON.stringify({
@@ -1499,6 +1513,7 @@ async function markModuleCompleted() {
 }
 
 async function hasModuleXPAwarded() {
+  await authReadyPromise;
   const localAwarded = localStorage.getItem(getModuleXPKey()) === "true";
   if (localAwarded) return true;
   if (!currentUser) return false;
@@ -1510,8 +1525,18 @@ async function hasModuleXPAwarded() {
 }
 
 async function awardModuleXPOnce() {
+  await authReadyPromise;
   const alreadyAwarded = await hasModuleXPAwarded();
   if (alreadyAwarded) {
+    traceXPEvent({
+      channel: currentUser ? "firestore" : "guest_local",
+      source: "module_completion_skipped",
+      subject,
+      difficulty,
+      module: moduleNumber,
+      amount: 0,
+      reason: "already_awarded"
+    });
     return 0;
   }
 
@@ -1530,15 +1555,26 @@ async function awardModuleXPOnce() {
 
     progress[getModuleXPKey()] = true;
 
-    await updateDoc(userRef, {
-      xp: currentXP + MODULE_XP_REWARD,
-      xpWeekly: currentWeeklyXP + MODULE_XP_REWARD,
-      xpChange: MODULE_XP_REWARD,
-      lastWeeklyReset: currentWeek,
-      progress
-    });
+      await updateDoc(userRef, {
+        xp: currentXP + MODULE_XP_REWARD,
+        xpWeekly: currentWeeklyXP + MODULE_XP_REWARD,
+        xpChange: MODULE_XP_REWARD,
+        lastWeeklyReset: currentWeek,
+        progress
+      });
 
-    await syncPublicLeaderboardEntry(db, currentUser.uid, {
+      traceXPEvent({
+        channel: "firestore",
+        source: "module_completion",
+        subject,
+        difficulty,
+        module: moduleNumber,
+        amount: MODULE_XP_REWARD,
+        nextXP: currentXP + MODULE_XP_REWARD,
+        uid: currentUser.uid
+      });
+
+      await syncPublicLeaderboardEntry(db, currentUser.uid, {
       name: data.name || currentUser.displayName || currentUser.email || "User",
       photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
       xp: currentXP + MODULE_XP_REWARD,
@@ -1552,11 +1588,21 @@ async function awardModuleXPOnce() {
   const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
   localStorage.setItem("guest_xp", String(guestXP + MODULE_XP_REWARD));
   localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + MODULE_XP_REWARD));
+  traceXPEvent({
+    channel: "guest_local",
+    source: "module_completion",
+    subject,
+    difficulty,
+    module: moduleNumber,
+    amount: MODULE_XP_REWARD,
+    nextXP: guestXP + MODULE_XP_REWARD
+  });
   await clearModuleResumeState();
   return MODULE_XP_REWARD;
 }
 
 async function getQuickCheckBestScore() {
+  await authReadyPromise;
   const localBest = parseInt(localStorage.getItem(getQuickCheckBestScoreKey()) || "0", 10);
   if (!currentUser) {
     return localBest;
@@ -1570,11 +1616,23 @@ async function getQuickCheckBestScore() {
 }
 
 async function awardQuickCheckXP(score) {
+  await authReadyPromise;
   const earnedScore = Math.max(0, Number(score) || 0);
   const bestScore = await getQuickCheckBestScore();
   const delta = Math.max(0, earnedScore - bestScore);
 
   if (delta <= 0) {
+    traceXPEvent({
+      channel: currentUser ? "firestore" : "guest_local",
+      source: "quick_check_skipped",
+      subject,
+      difficulty,
+      module: moduleNumber,
+      amount: 0,
+      score: earnedScore,
+      bestScore,
+      reason: "no_improvement"
+    });
     return 0;
   }
 
@@ -1593,15 +1651,28 @@ async function awardQuickCheckXP(score) {
 
     progress[getQuickCheckBestScoreKey()] = earnedScore;
 
-    await updateDoc(userRef, {
-      xp: currentXP + delta,
-      xpWeekly: currentWeeklyXP + delta,
+      await updateDoc(userRef, {
+        xp: currentXP + delta,
+        xpWeekly: currentWeeklyXP + delta,
       xpChange: delta,
-      lastWeeklyReset: currentWeek,
-      progress
-    });
+        lastWeeklyReset: currentWeek,
+        progress
+      });
 
-    await syncPublicLeaderboardEntry(db, currentUser.uid, {
+      traceXPEvent({
+        channel: "firestore",
+        source: "quick_check",
+        subject,
+        difficulty,
+        module: moduleNumber,
+        amount: delta,
+        score: earnedScore,
+        bestScore,
+        nextXP: currentXP + delta,
+        uid: currentUser.uid
+      });
+
+      await syncPublicLeaderboardEntry(db, currentUser.uid, {
       name: data.name || currentUser.displayName || currentUser.email || "User",
       photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
       xp: currentXP + delta,
@@ -1616,6 +1687,17 @@ async function awardQuickCheckXP(score) {
   const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
   localStorage.setItem("guest_xp", String(guestXP + delta));
   localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + delta));
+  traceXPEvent({
+    channel: "guest_local",
+    source: "quick_check",
+    subject,
+    difficulty,
+    module: moduleNumber,
+    amount: delta,
+    score: earnedScore,
+    bestScore,
+    nextXP: guestXP + delta
+  });
   return delta;
 }
 
@@ -2699,12 +2781,14 @@ function renderMiniQuiz(container, quizItems) {
   actions.innerHTML = `
     <button type="button" class="module-btn primary-btn" id="moduleQuizCheckBtn">Check Answers</button>
     <p class="module-quiz-score" id="moduleQuizScore"></p>
+    <p class="module-quiz-score" id="moduleQuizStatus">Answer all items, then press Check Answers to complete this Quick Check.</p>
   `;
   quiz.appendChild(actions);
   container.appendChild(quiz);
 
   const checkBtn = document.getElementById("moduleQuizCheckBtn");
   const scoreEl = document.getElementById("moduleQuizScore");
+  const statusEl = document.getElementById("moduleQuizStatus");
 
   checkBtn?.addEventListener("click", async () => {
     let score = 0;
@@ -2739,15 +2823,24 @@ function renderMiniQuiz(container, quizItems) {
         ...currentModuleGateState,
         quickCheckAttempted: false
       };
+      if (statusEl) {
+        statusEl.textContent = "Answer every Quick Check item first.";
+      }
       updateCheckpointUi(false, "Answer every Quick Check item first", currentModuleGateState);
       return;
     }
 
+    await markModuleReadBottom();
     await markQuickCheckAttempted();
     currentModuleGateState = {
       ...currentModuleGateState,
+      readBottom: true,
       quickCheckAttempted: true
     };
+
+    if (statusEl) {
+      statusEl.textContent = "Quick Check completed. Module checkpoint is now ready.";
+    }
 
     const xpEarned = await awardQuickCheckXP(score * QUICK_CHECK_XP_PER_CORRECT);
 
@@ -2758,6 +2851,44 @@ function renderMiniQuiz(container, quizItems) {
         scoreEl.textContent = `Score: ${score} / ${quizItems.length}`;
       }
     }
+    await maybeAutoCompleteModule();
+  });
+}
+
+function renderTextQuickCheck(container, challenge) {
+  container.innerHTML = "";
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "module-quiz module-quiz-fallback";
+  wrapper.innerHTML = `
+    <div class="module-quiz-actions">
+      <button type="button" class="module-btn primary-btn" id="moduleQuickCheckDoneBtn">Mark Quick Check Complete</button>
+      <p class="module-quiz-score" id="moduleQuickCheckStatus">Review each checkpoint item, then confirm to continue.</p>
+    </div>
+  `;
+
+  container.appendChild(wrapper);
+  const pointsWrap = document.createElement("div");
+  pointsWrap.className = "module-fallback-points";
+  container.appendChild(pointsWrap);
+  renderPills(pointsWrap, challenge.points || []);
+
+  const doneBtn = document.getElementById("moduleQuickCheckDoneBtn");
+  const statusEl = document.getElementById("moduleQuickCheckStatus");
+
+  doneBtn?.addEventListener("click", async () => {
+    await markModuleReadBottom();
+    await markQuickCheckAttempted();
+    currentModuleGateState = {
+      ...currentModuleGateState,
+      readBottom: true,
+      quickCheckAttempted: true
+    };
+
+    if (statusEl) {
+      statusEl.textContent = "Quick Check completed.";
+    }
+
     await maybeAutoCompleteModule();
   });
 }
@@ -2776,7 +2907,7 @@ function renderChallenge(titleEl, promptEl, pointsEl, challenge = null) {
     return;
   }
 
-  renderPills(pointsEl, fallback.points || []);
+  renderTextQuickCheck(pointsEl, fallback);
 }
 
 function getHistoryTimelineItems() {
@@ -3457,7 +3588,7 @@ window.toggleTheme = function () {
   restartThemeMusic();
 };
 
-function updateIcon() {
+function updateIconLegacy() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
 

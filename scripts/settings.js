@@ -45,6 +45,74 @@ let currentIsGuest = false;
 let pendingProfilePhotoDataUrl = "";
 let currentLoginType = "Unknown";
 let currentVerificationState = "Unknown";
+const MODULE_XP_REWARD = 5;
+const QUIZ_LEVEL_XP_PER_CORRECT = 2;
+
+function getAssessmentXP(type, result = null) {
+  if (type === "pretest" || type === "posttest") {
+    return Math.max(0, Number(result?.score || 0) || 0);
+  }
+  return 0;
+}
+
+function computeSystemXP(progress = {}, results = {}) {
+  const moduleXP = Object.entries(progress).reduce((sum, [key, value]) => {
+    if (!/^(hardware|electrical)_(easy|medium|hard)_module_\d+_done_xp_awarded$/.test(key)) {
+      return sum;
+    }
+    return value ? sum + MODULE_XP_REWARD : sum;
+  }, 0);
+
+  const quickCheckXP = Object.entries(progress).reduce((sum, [key, value]) => {
+    if (!/^(hardware|electrical)_(easy|medium|hard)_module_\d+_done_quick_check_best_score$/.test(key)) {
+      return sum;
+    }
+    return sum + Math.max(0, Number(value || 0));
+  }, 0);
+
+  const assessmentAndQuizXP = Object.entries(results).reduce((sum, [key, value]) => {
+    if (/^(hardware|electrical)_(pretest|posttest)$/.test(key)) {
+      return sum + getAssessmentXP(value?.type, value);
+    }
+
+    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_result$/.test(key)) {
+      return sum + (Math.max(0, Number(value?.score || 0)) * QUIZ_LEVEL_XP_PER_CORRECT);
+    }
+
+    return sum;
+  }, 0);
+
+  return moduleXP + quickCheckXP + assessmentAndQuizXP;
+}
+
+function getHardwareModuleLocalKeys() {
+  return Object.keys(localStorage).filter((key) =>
+    /^hardware_(easy|medium|hard)_module_\d+/.test(key) ||
+    /^resume_module_state_hardware_/.test(key)
+  );
+}
+
+function getSubjectLabel(subject) {
+  return subject === "hardware" ? "Computer Hardware" : "Electrical Wiring and Electronics";
+}
+
+function getSubjectLocalKeys(subject, { modulesOnly = false } = {}) {
+  return Object.keys(localStorage).filter((key) => {
+    if (modulesOnly) {
+      return new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+`).test(key) ||
+        new RegExp(`^resume_module_state_${subject}_`).test(key);
+    }
+
+    return (
+      new RegExp(`^${subject}_(pretest|posttest|quiz)$`).test(key) ||
+      new RegExp(`^${subject}_(pretest|posttest)(_score|_percent|_done|_completedAt|_xp_awarded|_attempt_done)?$`).test(key) ||
+      new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+`).test(key) ||
+      new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+(_score|_percent|_done|_completedAt|_attempt_done|_xp_awarded|_result)?$`).test(key) ||
+      new RegExp(`^resume_module_state_${subject}_`).test(key) ||
+      new RegExp(`^resume_quiz_state_${subject}_`).test(key)
+    );
+  });
+}
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -587,6 +655,187 @@ window.resetProgress = function() {
 
       closeSystemPopup();
       showInfoPopup("Progress Reset", "Progress reset successfully.");
+      window.location.reload();
+    }
+  );
+};
+
+window.resetHardwareModules = function() {
+  openSystemPopup(
+    "Reset Hardware Modules",
+    "Reset only the Computer Hardware module path and its module XP? This keeps your hardware pre-test, hardware quizzes, hardware post-test, and all electrical progress.",
+    async () => {
+      const localKeysToRemove = getHardwareModuleLocalKeys();
+      localKeysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      const recentCompletion = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("recent_module_completion") || "null");
+        } catch {
+          return null;
+        }
+      })();
+
+      if (recentCompletion?.subject === "hardware") {
+        localStorage.removeItem("recent_module_completion");
+      }
+
+      const resumeActivity = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("resume_activity") || "null");
+        } catch {
+          return null;
+        }
+      })();
+
+      if (resumeActivity?.kind === "module" && resumeActivity?.subject === "hardware") {
+        localStorage.removeItem("resume_activity");
+      }
+
+      if (currentUser) {
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data() || {};
+          const nextProgress = Object.fromEntries(
+            Object.entries(data.progress || {}).filter(([key]) =>
+              !/^hardware_(easy|medium|hard)_module_\d+/.test(key)
+            )
+          );
+          const nextResults = { ...(data.results || {}) };
+          const nextXP = computeSystemXP(nextProgress, nextResults);
+          const nextWeeklyXP = Math.min(Number(data.xpWeekly || 0), nextXP);
+
+          await setDoc(userRef, {
+            ...data,
+            xp: nextXP,
+            xpWeekly: nextWeeklyXP,
+            xpChange: 0,
+            progress: nextProgress,
+            results: nextResults,
+            resumeActivity:
+              data.resumeActivity?.kind === "module" && data.resumeActivity?.subject === "hardware"
+                ? null
+                : (data.resumeActivity || null)
+          });
+
+          await syncPublicLeaderboardEntry(db, currentUser.uid, {
+            name: data.name || currentUser.displayName || currentUser.email || "User",
+            photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+            xp: nextXP,
+            xpWeekly: nextWeeklyXP,
+            xpChange: 0
+          });
+        }
+      }
+
+      closeSystemPopup();
+      showInfoPopup("Hardware Modules Reset", "Only the Computer Hardware module path was reset. You can now retake the hardware modules cleanly.");
+      window.location.reload();
+    }
+  );
+};
+
+window.resetSubjectProgress = function(subject) {
+  const label = getSubjectLabel(subject);
+
+  openSystemPopup(
+    `Reset ${label}`,
+    `Reset the full ${label} path? This removes that subject's pre-test, modules, quizzes, post-test, review entries, history entries, and XP tied to that subject while keeping the other subject intact.`,
+    async () => {
+      const localKeysToRemove = getSubjectLocalKeys(subject);
+      localKeysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      const recentCompletion = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("recent_module_completion") || "null");
+        } catch {
+          return null;
+        }
+      })();
+
+      if (recentCompletion?.subject === subject) {
+        localStorage.removeItem("recent_module_completion");
+      }
+
+      const resumeActivity = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("resume_activity") || "null");
+        } catch {
+          return null;
+        }
+      })();
+
+      if (resumeActivity?.subject === subject) {
+        localStorage.removeItem("resume_activity");
+      }
+
+      const filteredReviewItems = (() => {
+        try {
+          const items = JSON.parse(localStorage.getItem("wrong_answer_review_items") || "[]");
+          return Array.isArray(items) ? items.filter((item) => item?.subject !== subject) : [];
+        } catch {
+          return [];
+        }
+      })();
+      localStorage.setItem("wrong_answer_review_items", JSON.stringify(filteredReviewItems));
+
+      const filteredStudyHistory = (() => {
+        try {
+          const items = JSON.parse(localStorage.getItem("study_history_items") || "[]");
+          return Array.isArray(items) ? items.filter((item) => item?.subject !== subject) : [];
+        } catch {
+          return [];
+        }
+      })();
+      localStorage.setItem("study_history_items", JSON.stringify(filteredStudyHistory));
+
+      if (currentUser) {
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data() || {};
+          const nextProgress = Object.fromEntries(
+            Object.entries(data.progress || {}).filter(([key]) => !key.startsWith(`${subject}_`))
+          );
+          const nextResults = Object.fromEntries(
+            Object.entries(data.results || {}).filter(([key]) => !key.startsWith(`${subject}_`))
+          );
+          const nextWrongAnswerReview = Array.isArray(data.wrongAnswerReview)
+            ? data.wrongAnswerReview.filter((item) => item?.subject !== subject)
+            : [];
+          const nextStudyHistory = Array.isArray(data.studyHistory)
+            ? data.studyHistory.filter((item) => item?.subject !== subject)
+            : [];
+          const nextXP = computeSystemXP(nextProgress, nextResults);
+          const nextWeeklyXP = Math.min(Number(data.xpWeekly || 0), nextXP);
+
+          await setDoc(userRef, {
+            ...data,
+            xp: nextXP,
+            xpWeekly: nextWeeklyXP,
+            xpChange: 0,
+            progress: nextProgress,
+            results: nextResults,
+            wrongAnswerReview: nextWrongAnswerReview,
+            studyHistory: nextStudyHistory,
+            resumeActivity: data.resumeActivity?.subject === subject ? null : (data.resumeActivity || null)
+          });
+
+          await syncPublicLeaderboardEntry(db, currentUser.uid, {
+            name: data.name || currentUser.displayName || currentUser.email || "User",
+            photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
+            xp: nextXP,
+            xpWeekly: nextWeeklyXP,
+            xpChange: 0
+          });
+        }
+      }
+
+      closeSystemPopup();
+      showInfoPopup(`${label} Reset`, `${label} was reset successfully. The other subject stays untouched.`);
       window.location.reload();
     }
   );

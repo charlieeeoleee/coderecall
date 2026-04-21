@@ -29,6 +29,7 @@ import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { loadWrongAnswerReview } from "./review-store.js";
 import { loadStudyHistory } from "./study-history-store.js";
+import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
 
 /* =========================
@@ -58,7 +59,7 @@ const SELECTED_SUBJECT_KEY = "selectedSubject";
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 const QUIZ_LEVELS_PER_DIFFICULTY = 25;
-const TOTAL_SYSTEM_XP = 1054;
+const TOTAL_SYSTEM_XP = 1164;
 const XP_RULES = {
   pretest: 1,
   posttest: 4
@@ -86,6 +87,48 @@ function chooseLatestActivity(...items) {
     const right = new Date(b.updatedAt || b.timestamp || 0).getTime();
     return right - left;
   })[0];
+}
+
+function getAssessmentXP(type, result = null) {
+  if (type === "pretest") {
+    return Math.max(0, Number(result?.score || 0) || 0);
+  }
+
+  if (type === "posttest") {
+    return Math.max(0, Number(result?.score || 0) || 0);
+  }
+
+  return 0;
+}
+
+function computeExpectedSystemXP(progress = {}, results = {}) {
+  const moduleXP = Object.entries(progress).reduce((sum, [key, value]) => {
+    if (!/^(hardware|electrical)_(easy|medium|hard)_module_\d+_done_xp_awarded$/.test(key)) {
+      return sum;
+    }
+    return value ? sum + MODULE_XP_REWARD : sum;
+  }, 0);
+
+  const quickCheckXP = Object.entries(progress).reduce((sum, [key, value]) => {
+    if (!/^(hardware|electrical)_(easy|medium|hard)_module_\d+_done_quick_check_best_score$/.test(key)) {
+      return sum;
+    }
+    return sum + Math.max(0, Number(value || 0));
+  }, 0);
+
+  const quizXP = Object.entries(results).reduce((sum, [key, value]) => {
+    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_result$/.test(key)) {
+      return sum + (Math.max(0, Number(value?.score || 0)) * QUIZ_LEVEL_XP_PER_CORRECT);
+    }
+
+    if (/^(hardware|electrical)_(pretest|posttest)$/.test(key)) {
+      return sum + getAssessmentXP(value?.type, value);
+    }
+
+    return sum;
+  }, 0);
+
+  return moduleXP + quickCheckXP + quizXP;
 }
 
 function syncMobileSidebarButton() {
@@ -262,7 +305,16 @@ async function reconcileLocalProgressToFirestore(userRef, data) {
           completedAt: new Date().toISOString()
         };
         resultsChanged = true;
-        xpDelta += XP_RULES[type] || 0;
+      }
+
+      const expectedXP = getAssessmentXP(type, results[baseKey]);
+      const xpProgressKey = `${baseKey}_xp_awarded`;
+      const trackedXP = Number(progress[xpProgressKey] || 0);
+
+      if (expectedXP > trackedXP) {
+        progress[xpProgressKey] = expectedXP;
+        progressChanged = true;
+        xpDelta += expectedXP - trackedXP;
       }
     });
   });
@@ -315,21 +367,36 @@ async function reconcileLocalProgressToFirestore(userRef, data) {
     }
   });
 
-  if (!progressChanged && !resultsChanged && xpDelta <= 0) {
+  const currentXP = Number(data.xp || 0);
+  const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
+  const expectedXP = computeExpectedSystemXP(progress, results);
+  const canonicalDelta = Math.max(0, expectedXP - (currentXP + xpDelta));
+  const finalDelta = xpDelta + canonicalDelta;
+
+  if (!progressChanged && !resultsChanged && finalDelta <= 0) {
     return data;
   }
 
-  const currentXP = Number(data.xp || 0);
-  const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
   const nextData = {
     ...data,
-    xp: currentXP + xpDelta,
-    xpWeekly: currentWeeklyXP + xpDelta,
-    xpChange: xpDelta > 0 ? xpDelta : Number(data.xpChange || 0),
+    xp: currentXP + finalDelta,
+    xpWeekly: currentWeeklyXP + finalDelta,
+    xpChange: finalDelta > 0 ? finalDelta : Number(data.xpChange || 0),
     lastWeeklyReset: currentWeek,
     progress,
     results
   };
+
+  traceXPEvent({
+    channel: "dashboard_reconcile",
+    source: "local_progress_sync",
+    amount: finalDelta,
+    nextXP: nextData.xp,
+    uid: currentUser?.uid || "",
+    progressChanged,
+    resultsChanged,
+    canonicalDelta
+  });
 
   await updateDoc(userRef, {
     xp: nextData.xp,
@@ -391,6 +458,8 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
 
     const pretestDone = progress[`${subject}_pretest`] === true || results[`${subject}_pretest`] != null;
     const posttestDone = progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
+    const pretestXP = getAssessmentXP("pretest", results[`${subject}_pretest`]);
+    const posttestXP = getAssessmentXP("posttest", results[`${subject}_posttest`]);
 
     const quickCheckXP = Object.entries(progress).reduce((sum, [key, value]) => {
       if (!new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done_quick_check_best_score$`).test(key)) {
@@ -399,12 +468,12 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
       return sum + Number(value || 0);
     }, 0);
 
-    const moduleXP = Object.entries(progress).reduce((sum, [key, value]) => {
-      if (!new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done_xp_awarded$`).test(key) || value !== true) {
-        return sum;
-      }
-      return sum + MODULE_XP_REWARD;
-    }, 0);
+      const moduleXP = Object.entries(progress).reduce((sum, [key, value]) => {
+        if (!new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done_xp_awarded$`).test(key) || !value) {
+          return sum;
+        }
+        return sum + MODULE_XP_REWARD;
+      }, 0);
 
     const quizXP = Object.entries(results).reduce((sum, [key, value]) => {
       if (!new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_result$`).test(key)) {
@@ -413,7 +482,7 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
       return sum + (Number(value?.score || 0) * QUIZ_LEVEL_XP_PER_CORRECT);
     }, 0);
 
-    const testXP = (pretestDone ? XP_RULES.pretest : 0) + (posttestDone ? XP_RULES.posttest : 0);
+    const testXP = (pretestDone ? pretestXP : 0) + (posttestDone ? posttestXP : 0);
     const completedItems = moduleDoneCount + quizLevelDoneCount + (pretestDone ? 1 : 0) + (posttestDone ? 1 : 0);
     const percent = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
 

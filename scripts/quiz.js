@@ -23,6 +23,7 @@ import {
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
+import { traceXPEvent } from "./xp-debug.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import { hardwarePosttestQuestions } from "../data/hardware-posttest-data.js";
 import {
@@ -50,6 +51,11 @@ let score = 0;
 let selectedChoice = null;
 let pendingContinue = null;
 let xpAwardedThisAttempt = false;
+let resolveAuthReady = null;
+const authReadyPromise = new Promise((resolve) => {
+  resolveAuthReady = resolve;
+});
+let authReadyResolved = false;
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
 const RESUME_ACTIVITY_KEY = "resume_activity";
@@ -541,9 +547,9 @@ function getResultDocKey() {
   return `${subject}_${type}`;
 }
 
-function getQuizXPReward() {
-  if (type === "pretest") return XP_RULES.pretest;
-  if (type === "posttest") return XP_RULES.posttest;
+function getQuizXPReward(scoreValue = score) {
+  if (type === "pretest") return Math.max(0, Number(scoreValue) || 0);
+  if (type === "posttest") return Math.max(0, Number(scoreValue) || 0);
   return XP_RULES.quizLevel;
 }
 
@@ -806,6 +812,13 @@ function getWeekKey() {
 async function addXP(amount) {
   if (!amount || amount <= 0) return;
 
+  await authReadyPromise;
+
+  const sourceLabel =
+    type === "pretest" ? "pretest" :
+    type === "posttest" ? "posttest" :
+    "quiz";
+
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
     const snap = await getDoc(userRef);
@@ -820,6 +833,16 @@ async function addXP(amount) {
       xpWeekly: currentWeeklyXP + amount,
       xpChange: amount,
       lastWeeklyReset: currentWeek
+    });
+
+    traceXPEvent({
+      channel: "firestore",
+      source: sourceLabel,
+      subject,
+      level,
+      amount,
+      nextXP: currentXP + amount,
+      uid: currentUser.uid
     });
 
     await syncPublicLeaderboardEntry(db, currentUser.uid, {
@@ -837,11 +860,23 @@ async function addXP(amount) {
   const guestWeeklyXP = parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10);
   localStorage.setItem("guest_xp", String(guestXP + amount));
   localStorage.setItem("guest_xpWeekly", String(guestWeeklyXP + amount));
+
+  traceXPEvent({
+    channel: "guest_local",
+    source: sourceLabel,
+    subject,
+    level,
+    amount,
+    nextXP: guestXP + amount
+  });
 }
 
 async function saveQuizResultToStorageAndFirestore() {
+  await authReadyPromise;
+
   const total = quizQuestions.length || 1;
   const percent = Math.round((score / total) * 100);
+  const xpEarned = getQuizXPReward(score);
   const resultKey = getResultDocKey();
   const flags = getProgressFlags();
   const selectedSubject = (sessionStorage.getItem(SELECTED_SUBJECT_KEY) || "").toLowerCase();
@@ -874,10 +909,12 @@ async function saveQuizResultToStorageAndFirestore() {
   localStorage.setItem(`${resultKey}_percent`, String(percent));
   localStorage.setItem(`${resultKey}_done`, "true");
   localStorage.setItem(`${resultKey}_completedAt`, resultPayload.completedAt);
+  localStorage.setItem(`${resultKey}_xp_awarded`, String(xpEarned));
   localStorage.setItem(`${canonicalResultKey}_score`, String(score));
   localStorage.setItem(`${canonicalResultKey}_percent`, String(percent));
   localStorage.setItem(`${canonicalResultKey}_done`, "true");
   localStorage.setItem(`${canonicalResultKey}_completedAt`, resultPayload.completedAt);
+  localStorage.setItem(`${canonicalResultKey}_xp_awarded`, String(xpEarned));
   localStorage.setItem(`${canonicalResultKey}_attempt_done`, "true");
 
   if (!currentUser) return;
@@ -898,6 +935,8 @@ async function saveQuizResultToStorageAndFirestore() {
     progress[flags.quizKey] = true;
     progress[`${canonicalSubject}_quiz`] = true;
   }
+  progress[`${resultKey}_xp_awarded`] = xpEarned;
+  progress[`${canonicalResultKey}_xp_awarded`] = xpEarned;
 
   results[resultKey] = resultPayload;
   results[canonicalResultKey] = {
@@ -916,7 +955,7 @@ async function awardQuizXPOnce() {
     return;
   }
 
-  await addXP(getQuizXPReward());
+  await addXP(getQuizXPReward(score));
   xpAwardedThisAttempt = true;
 }
 
@@ -1046,6 +1085,11 @@ if (isPretestAlreadyTaken()) {
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
   currentIsGuest = !user && localStorage.getItem("guest") === "true";
+
+  if (!authReadyResolved) {
+    authReadyResolved = true;
+    resolveAuthReady?.();
+  }
 });
 
 initSounds();
