@@ -117,6 +117,9 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .danger-action { padding: 8px 12px; background: rgba(255, 89, 94, 0.16); color: #ff9ca0; border: 1px solid rgba(255, 89, 94, 0.26); }
 .compact-action { margin-right: 8px; margin-bottom: 6px; }
 .danger-action:disabled { opacity: 0.45; cursor: not-allowed; }
+.shortcut-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.shortcut-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.inbox-shortcut-card { background: linear-gradient(135deg, rgba(255, 46, 151, 0.14), rgba(34, 211, 238, 0.1)), #3a2575; }
 .light-mode body, body.light-mode { background: linear-gradient(135deg, #f3f0ff, #dff9ff); color: #1e1547; }
 body.light-mode .sidebar { background: #e9e0ff; }
 body.light-mode .sidebar-toggle { background: rgba(108,76,255,0.1); }
@@ -162,6 +165,7 @@ body.light-mode .inline-select {
   background: rgba(255,255,255,0.82);
   color: #1e1547;
 }
+body.light-mode .inbox-shortcut-card { background: rgba(255,255,255,0.82); }
 .form-status { margin: 0; font-size: 13px; min-height: 20px; color: #8df6cb; }
 .theme-toggle { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; background: linear-gradient(90deg, #ff2e97, #22d3ee); color: white; font-size: 22px; box-shadow: 0 0 25px rgba(0, 255, 200, 0.35); }
 .popup {

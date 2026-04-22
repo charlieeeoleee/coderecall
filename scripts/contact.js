@@ -11,6 +11,8 @@ import {
   updateDoc,
   doc,
   getDoc,
+  query,
+  where,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, roleMeetsMinimum } from "./role-utils.js";
@@ -104,6 +106,24 @@ function setStatus(id, message, isError = false) {
   if (!element) return;
   element.textContent = message;
   element.style.color = isError ? "#ffb4b8" : "#8df6cb";
+}
+
+function describeFirestoreError(error, fallbackMessage) {
+  const code = String(error?.code || "");
+
+  if (code.includes("permission-denied") || code.includes("insufficient-permissions")) {
+    return "The database blocked this action. Firestore rules still need to allow this contact feature.";
+  }
+
+  if (code.includes("unauthenticated")) {
+    return "Your session is no longer valid. Please log in again and retry.";
+  }
+
+  if (code.includes("unavailable")) {
+    return "The database is temporarily unavailable. Please try again in a moment.";
+  }
+
+  return fallbackMessage;
 }
 
 function updateNavAction() {
@@ -216,7 +236,11 @@ async function handleContactSubmit(event) {
     await refreshContactLists();
   } catch (error) {
     console.error("Unable to save contact message:", error);
-    setStatus("contactFormStatus", "Unable to send your message right now. Please try again.", true);
+    setStatus(
+      "contactFormStatus",
+      describeFirestoreError(error, "Unable to send your message right now. Please try again."),
+      true
+    );
   }
 }
 
@@ -258,9 +282,42 @@ function renderMyMessages(messages) {
   `).join("");
 }
 
+function renderListLoading(targetId, title, message) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  target.innerHTML = `
+    <article class="message-card empty-card">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(message)}</p>
+    </article>
+  `;
+}
+
+async function fetchContactMessagesForCurrentRole() {
+  if (!currentUser) return [];
+
+  if (roleMeetsMinimum(currentRole, "admin")) {
+    const snapshot = await getDocs(collection(db, "contactMessages"));
+    return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  }
+
+  const ownMessagesQuery = query(
+    collection(db, "contactMessages"),
+    where("createdByUid", "==", currentUser.uid)
+  );
+
+  const snapshot = await getDocs(ownMessagesQuery);
+  return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+}
+
 function bindReplyActions() {
   document.querySelectorAll("[data-reply-message]").forEach((button) => {
     button.addEventListener("click", async () => {
+      if (!currentUser || !roleMeetsMinimum(currentRole, "admin")) {
+        return;
+      }
+
       const messageId = button.getAttribute("data-reply-message");
       const textarea = document.querySelector(`[data-reply-input="${messageId}"]`);
       const status = document.querySelector(`[data-reply-status="${messageId}"]`);
@@ -287,7 +344,9 @@ function bindReplyActions() {
         await refreshContactLists();
       } catch (error) {
         console.error("Unable to save reply:", error);
-        if (status) status.textContent = "Unable to save reply right now.";
+        if (status) {
+          status.textContent = describeFirestoreError(error, "Unable to save reply right now.");
+        }
       }
     });
   });
@@ -346,13 +405,19 @@ function renderAdminInbox(messages) {
 async function refreshContactLists() {
   if (!currentUser) return;
 
+  renderListLoading("myMessagesList", "Loading messages...", "Fetching your contact history.");
+  if (roleMeetsMinimum(currentRole, "admin")) {
+    renderListLoading("adminInboxList", "Loading inbox...", "Fetching learner contact messages.");
+  }
+
   try {
-    const snapshot = await getDocs(collection(db, "contactMessages"));
-    const allMessages = snapshot.docs
-      .map((entry) => ({ id: entry.id, ...entry.data() }))
+    const allMessages = (await fetchContactMessagesForCurrentRole())
       .sort((a, b) => timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt));
 
-    const myMessages = allMessages.filter((item) => item.createdByUid === currentUser.uid);
+    const myMessages = roleMeetsMinimum(currentRole, "admin")
+      ? allMessages.filter((item) => item.createdByUid === currentUser.uid)
+      : allMessages;
+
     renderMyMessages(myMessages);
 
     if (roleMeetsMinimum(currentRole, "admin")) {
@@ -360,9 +425,27 @@ async function refreshContactLists() {
     }
   } catch (error) {
     console.error("Unable to load contact messages:", error);
-    renderMyMessages([]);
+
+    const myMessagesTarget = document.getElementById("myMessagesList");
+    if (myMessagesTarget) {
+      myMessagesTarget.innerHTML = `
+        <article class="message-card empty-card">
+          <h3>Unable to load your messages</h3>
+          <p>Please refresh the page or try again later.</p>
+        </article>
+      `;
+    }
+
     if (roleMeetsMinimum(currentRole, "admin")) {
-      renderAdminInbox([]);
+      const adminInboxTarget = document.getElementById("adminInboxList");
+      if (adminInboxTarget) {
+        adminInboxTarget.innerHTML = `
+          <article class="message-card empty-card">
+            <h3>Unable to load admin inbox</h3>
+            <p>Please refresh the page or check your permissions.</p>
+          </article>
+        `;
+      }
     }
   }
 }

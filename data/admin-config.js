@@ -5,6 +5,5 @@ export const ADMIN_EMAILS = [
 ];
 
 export const SUPER_ADMIN_EMAILS = [
-  "charlesvrobeso@gmail.com",
-  "robesocharles03@gmail.com"
+  "charlesvrobeso@gmail.com"
 ];
