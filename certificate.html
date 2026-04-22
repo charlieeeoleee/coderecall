@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/certificate.css?v=20260420a">
+  <link rel="stylesheet" href="styles/certificate.css?v=20260422b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -26,7 +26,7 @@
       <button class="certificate-toolbar-btn ghost" type="button" onclick="goBackToSubject()">Back to Subject</button>
       <div class="certificate-toolbar-actions">
         <button class="certificate-toolbar-btn" type="button" id="downloadCertificateBtn">Download PNG</button>
-        <button class="certificate-toolbar-btn primary" type="button" id="printCertificateBtn" onclick="printCertificate()">Print / Save PDF</button>
+        <button class="certificate-toolbar-btn primary" type="button" id="printCertificateBtn" onclick="printCertificate()">Download PDF</button>
       </div>
     </section>
 
@@ -76,7 +76,8 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script type="module" src="scripts/certificate.js?v=20260420a"></script>
-  <script src="scripts/loading.js?v=20260420a" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script type="module" src="scripts/certificate.js?v=20260422d"></script>
+  <script src="scripts/loading.js?v=20260422b" defer></script>
 </body>
 </html>

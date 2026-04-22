@@ -78,6 +78,61 @@ function setStatus(message, isError = false) {
   status.classList.toggle("is-error", isError);
 }
 
+function setExportMode(mode = "") {
+  document.body.classList.remove("certificate-export-mode", "certificate-export-print");
+
+  if (mode === "png") {
+    document.body.classList.add("certificate-export-mode");
+  }
+
+  if (mode === "print") {
+    document.body.classList.add("certificate-export-mode", "certificate-export-print");
+  }
+}
+
+function normalizeCertificateText(value) {
+  return String(value || "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function createGradientNameDataUrl(text) {
+  const safeText = String(text || "Learner")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  const width = Math.max(900, safeText.length * 52);
+  const height = 170;
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <defs>
+        <linearGradient id="nameGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ff8a2a" />
+          <stop offset="54%" stop-color="#ff2e88" />
+          <stop offset="100%" stop-color="#00b8ff" />
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="transparent" />
+      <text
+        x="50%"
+        y="58%"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        font-family="Montserrat, Arial, sans-serif"
+        font-size="88"
+        font-weight="800"
+        fill="url(#nameGradient)"
+      >${safeText}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 function formatDate(value) {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) {
@@ -220,11 +275,11 @@ async function getRemoteSubjectCompletionState(user, targetSubject) {
 }
 
 function populateCertificate({ learnerName, completedAt }) {
-  document.getElementById("certificateLearnerName").textContent = learnerName;
+  document.getElementById("certificateLearnerName").textContent = normalizeCertificateText(learnerName);
   document.getElementById("certificateSubjectTitle").textContent =
-    certificateKind === "dual" ? dualMeta.title : currentMeta.title;
+    normalizeCertificateText(certificateKind === "dual" ? dualMeta.title : currentMeta.title);
   document.getElementById("certificateIssueDate").textContent = formatDate(completedAt);
-  document.getElementById("certificateId").textContent = buildCertificateId(learnerName, completedAt);
+  document.getElementById("certificateId").textContent = buildCertificateId(normalizeCertificateText(learnerName), completedAt);
   document.querySelector(".certificate-topline").textContent =
     certificateKind === "dual" ? "Code Recall Master Completion Award" : "Code Recall Learning Achievement";
   document.querySelector(".certificate-body-detail").textContent =
@@ -298,11 +353,8 @@ async function prepareCertificate(user) {
 }
 
 async function downloadCertificateAsImage() {
-  const card = document.getElementById("certificateCard");
-  if (!card) return;
-
   if (typeof window.html2canvas !== "function") {
-    setStatus("PNG download is unavailable right now. Use Print / Save PDF instead.", true);
+    setStatus("PNG download is unavailable right now. Use Download PDF instead.", true);
     return;
   }
 
@@ -314,11 +366,7 @@ async function downloadCertificateAsImage() {
   }
 
   try {
-    const canvas = await window.html2canvas(card, {
-      backgroundColor: null,
-      scale: 2,
-      useCORS: true
-    });
+    const canvas = await renderCertificateCanvas("png");
     const link = document.createElement("a");
     const fileTitle = certificateKind === "dual" ? dualMeta.title : currentMeta.title;
     link.download = `${fileTitle.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-certificate.png`;
@@ -327,7 +375,161 @@ async function downloadCertificateAsImage() {
     setStatus("Certificate downloaded as PNG.");
   } catch (error) {
     console.error("Certificate download failed:", error);
-    setStatus("Unable to download PNG right now. You can still use Print / Save PDF.", true);
+    setStatus("Unable to download PNG right now. You can still use Download PDF.", true);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = previousText;
+    }
+  }
+}
+
+async function renderCertificateCanvas(mode = "png") {
+  const card = document.getElementById("certificateCard");
+  if (!card) {
+    throw new Error("Certificate card not found.");
+  }
+
+  if (typeof window.html2canvas !== "function") {
+    throw new Error("html2canvas is unavailable.");
+  }
+
+  let exportHost = null;
+
+  try {
+    exportHost = document.createElement("div");
+    exportHost.style.position = "fixed";
+    exportHost.style.left = "-100000px";
+    exportHost.style.top = "0";
+    exportHost.style.width = "0";
+    exportHost.style.height = "0";
+    exportHost.style.overflow = "hidden";
+    exportHost.style.pointerEvents = "none";
+    exportHost.setAttribute("aria-hidden", "true");
+
+    const exportCard = card.cloneNode(true);
+    exportCard.removeAttribute("id");
+    exportCard.style.width = "1600px";
+    exportCard.style.maxWidth = "1600px";
+    exportCard.style.minWidth = "1600px";
+    exportCard.style.minHeight = "1120px";
+    exportCard.style.margin = "0";
+    exportCard.style.boxSizing = "border-box";
+
+    const exportInner = exportCard.querySelector(".certificate-inner");
+    if (exportInner) {
+      exportInner.style.minHeight = "1120px";
+      exportInner.style.padding = "98px 100px";
+      exportInner.style.boxSizing = "border-box";
+    }
+
+    const exportName = exportCard.querySelector("#certificateLearnerName");
+    if (exportName) {
+      const normalizedName = normalizeCertificateText(exportName.textContent);
+      const gradientImage = document.createElement("img");
+      gradientImage.src = createGradientNameDataUrl(normalizedName);
+      gradientImage.alt = normalizedName;
+      gradientImage.style.display = "block";
+      gradientImage.style.width = "min(100%, 900px)";
+      gradientImage.style.maxWidth = "900px";
+      gradientImage.style.height = "auto";
+      gradientImage.style.margin = "0 auto";
+
+      exportName.textContent = "";
+      exportName.style.background = "none";
+      exportName.style.webkitTextFillColor = "initial";
+      exportName.style.color = "transparent";
+      exportName.appendChild(gradientImage);
+    }
+
+    const exportSubject = exportCard.querySelector("#certificateSubjectTitle");
+    if (exportSubject) {
+      exportSubject.textContent = normalizeCertificateText(
+        certificateKind === "dual" ? dualMeta.title : currentMeta.title
+      );
+      exportSubject.style.whiteSpace = "normal";
+      exportSubject.style.wordBreak = "normal";
+      exportSubject.style.overflowWrap = "normal";
+    }
+
+    exportHost.appendChild(exportCard);
+    document.body.appendChild(exportHost);
+
+    await new Promise((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(resolve);
+      });
+    });
+
+    const canvas = await window.html2canvas(exportCard, {
+      backgroundColor: "#f7f9ff",
+      scale: Math.max(2, Math.min(window.devicePixelRatio || 2, 3)),
+      useCORS: true,
+      width: 1600,
+      height: 1120,
+      windowWidth: 1600,
+      windowHeight: 1120,
+      scrollX: 0,
+      scrollY: 0
+    });
+
+    return canvas;
+  } finally {
+    exportHost?.remove();
+    setExportMode("");
+  }
+}
+
+async function downloadCertificateAsPdf() {
+  if (!window.jspdf?.jsPDF) {
+    setStatus("PDF download is unavailable right now. Please try again in a moment.", true);
+    return;
+  }
+
+  const button = document.getElementById("printCertificateBtn");
+  const previousText = button?.textContent || "Download PDF";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Preparing...";
+  }
+
+  try {
+    const canvas = await renderCertificateCanvas("print");
+    const imageData = canvas.toDataURL("image/png");
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+      compress: true
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 8;
+    const maxWidth = pageWidth - margin * 2;
+    const maxHeight = pageHeight - margin * 2;
+    const imageRatio = canvas.width / canvas.height;
+
+    let renderWidth = maxWidth;
+    let renderHeight = renderWidth / imageRatio;
+
+    if (renderHeight > maxHeight) {
+      renderHeight = maxHeight;
+      renderWidth = renderHeight * imageRatio;
+    }
+
+    const x = (pageWidth - renderWidth) / 2;
+    const y = (pageHeight - renderHeight) / 2;
+
+    pdf.addImage(imageData, "PNG", x, y, renderWidth, renderHeight, undefined, "FAST");
+
+    const fileTitle = certificateKind === "dual" ? dualMeta.title : currentMeta.title;
+    pdf.save(`${fileTitle.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-certificate.pdf`);
+    setStatus("Certificate downloaded as PDF.");
+  } catch (error) {
+    console.error("Certificate PDF download failed:", error);
+    setStatus("Unable to download PDF right now. Please try again.", true);
   } finally {
     if (button) {
       button.disabled = false;
@@ -337,7 +539,7 @@ async function downloadCertificateAsImage() {
 }
 
 window.printCertificate = function() {
-  window.print();
+  downloadCertificateAsPdf();
 };
 
 window.goBackToSubject = function() {

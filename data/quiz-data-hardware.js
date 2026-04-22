@@ -1919,7 +1919,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "A PC restarts instantly when a graphics-intensive application launches. What should be checked FIRST?",
           choices: [
-            "GPU driver versionB. Power supply wattage ratingC. Hard drive SMART statusD. System language settings"
+            "GPU driver version",
+            "Power supply wattage rating",
+            "Hard drive SMART status",
+            "System language settings"
           ],
           answer: "B"
         },
@@ -1928,7 +1931,10 @@ export const hardwareQuizData = {
           sub: 3,
           question: "A workstation boots only after several power-button presses. Which component is MOST suspect?",
           choices: [
-            "Front panel power switchB. Graphics card firmwareC. Network interface cardD. Monitor refresh rate"
+            "Front panel power switch",
+            "Graphics card firmware",
+            "Network interface card",
+            "Monitor refresh rate"
           ],
           answer: "A"
         }
@@ -1964,7 +1970,9 @@ export const hardwareQuizData = {
           question: "After replacing a motherboard, the system fails to activate the OS. What caused this issue?",
           choices: [
             "Incorrect RAM timing",
-            "Hardware ID mismatchC. GPU driver conflictD. Monitor incompatibility"
+            "Hardware ID mismatch",
+            "GPU driver conflict",
+            "Monitor incompatibility"
           ],
           answer: "B"
         }
@@ -1976,7 +1984,7 @@ export const hardwareQuizData = {
           question: "A computer fails to boot and displays a message like “No bootable device found.” What is the most likely cause of this problem?",
           choices: [
             "The keyboard or mouse is not connected properly.",
-            "The computer’s display monitor is defective.",
+            "The computers display monitor is defective.",
             "The hard drive is disconnected or has failed.",
             "The antivirus software needs an update."
           ],
@@ -1987,8 +1995,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "A hard drive passes SMART tests but produces frequent CRC errors. What is the BEST next step?",
           choices: [
-            "Replace the SATA data cableB. Format the hard drive",
-            "Update the BIOSD. Increase virtual memory"
+            "Replace the SATA data cable",
+            "Format the hard drive",
+            "Update the BIOS",
+            "Increase virtual memory"
           ],
           answer: "A"
         },
@@ -1997,7 +2007,10 @@ export const hardwareQuizData = {
           sub: 3,
           question: "Which symptom BEST indicates a failing voltage regulator on a motherboard?",
           choices: [
-            "Inconsistent system stability under loadB. Blurry display outputC. Delayed keyboard responseD. Printer spooler errors"
+            "Inconsistent system stability under load",
+            "Blurry display output",
+            "Delayed keyboard response",
+            "Printer spooler errors"
           ],
           answer: "A"
         }
@@ -2020,8 +2033,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "A PC boots successfully but shuts down exactly after 30 seconds. What should be checked?",
           choices: [
-            "CPU thermal protection mechanismB. Network firewall rules",
-            "Disk partition styleD. Display color calibration"
+            "CPU thermal protection mechanism",
+            "Network firewall rules",
+            "Disk partition style",
+            "Display color calibration"
           ],
           answer: "A"
         },
@@ -2030,7 +2045,9 @@ export const hardwareQuizData = {
           sub: 3,
           question: "A newly installed PCIe card causes the system not to POST. What should be done FIRST?",
           choices: [
-            "Update the operating systemB. Check PCIe power requirementsC. Replace the motherboard",
+            "Update the operating system",
+            "Check PCIe power requirements",
+            "Replace the motherboard",
             "Disable antivirus software"
           ],
           answer: "B"
@@ -2054,7 +2071,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "Which issue MOST strongly suggests BIOS corruption?",
           choices: [
-            "System fails to detect boot devices intermittentlyB. Mouse scroll wheel not respondingC. Audio crackling during playbackD. Slow file copying speed"
+            "System fails to detect boot devices intermittently",
+            "Mouse scroll wheel not responding",
+            "Audio crackling during playback",
+            "Slow file copying speed"
           ],
           answer: "A"
         },
@@ -2063,7 +2083,10 @@ export const hardwareQuizData = {
           sub: 3,
           question: "A laptop shuts down immediately when unplugged even with a new battery. What is the MOST likely fault?",
           choices: [
-            "Defective DC-in power circuitB. Incorrect screen brightnessC. Corrupt system filesD. BIOS language mismatch"
+            "Defective DC-in power circuit",
+            "Incorrect screen brightness",
+            "Corrupt system files",
+            "BIOS language mismatch"
           ],
           answer: "A"
         }
@@ -2086,7 +2109,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "What tool is MOST appropriate to detect failing RAM cells not caught during POST?",
           choices: [
-            "Disk CleanupB. Memory diagnostic utilityC. Device ManagerD. Task Manager"
+            "Disk Cleanup",
+            "Memory diagnostic utility",
+            "Device Manager",
+            "Task Manager"
           ],
           answer: "B"
         },
@@ -2096,7 +2122,9 @@ export const hardwareQuizData = {
           question: "A system produces different beep codes on every startup attempt. What type of fault does this indicate?",
           choices: [
             "Permanent fault",
-            "Intermittent faultC. Logical faultD. Transient fault"
+            "Intermittent fault",
+            "Logical fault",
+            "Transient fault"
           ],
           answer: "B"
         }
@@ -2119,7 +2147,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "After a firmware update, the system cannot recognize NVMe storage. What should be checked?",
           choices: [
-            "Boot mode (UEFI vs Legacy)B. Antivirus compatibilityC. Monitor firmwareD. Keyboard layout"
+            "Boot mode (UEFI vs Legacy)",
+            "Antivirus compatibility",
+            "Monitor firmware",
+            "Keyboard layout"
           ],
           answer: "A"
         },
@@ -2128,7 +2159,10 @@ export const hardwareQuizData = {
           sub: 3,
           question: "A computer powers on only when the motherboard is outside the case. What is the MOST likely cause?",
           choices: [
-            "Short circuit due to improper groundingB. Corrupt operating systemC. Faulty hard driveD. Incorrect screen resolution"
+            "Short circuit due to improper grounding",
+            "Corrupt operating system",
+            "Faulty hard drive",
+            "Incorrect screen resolution"
           ],
           answer: "A"
         }
@@ -2151,7 +2185,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "What condition MOST likely causes random USB device disconnections under load?",
           choices: [
-            "Insufficient USB power deliveryB. Corrupted printer driverC. Incorrect system dateD. Wallpaper theme conflict"
+            "Insufficient USB power delivery",
+            "Corrupted printer driver",
+            "Incorrect system date",
+            "Wallpaper theme conflict"
           ],
           answer: "A"
         },
@@ -2160,7 +2197,9 @@ export const hardwareQuizData = {
           sub: 3,
           question: "A system experiences severe lag only when disk activity is high. What is the MOST probable cause?",
           choices: [
-            "Drive operating in PIO modeB. Low monitor refresh rateC. Incorrect keyboard polling rate",
+            "Drive operating in PIO mode",
+            "Low monitor refresh rate",
+            "Incorrect keyboard polling rate",
             "DNS misconfiguration"
           ],
           answer: "A"
@@ -2184,7 +2223,10 @@ export const hardwareQuizData = {
           sub: 2,
           question: "Which symptom BEST indicates failing motherboard capacitors?",
           choices: [
-            "Bulging or leaking capacitor topsB. Slow mouse movementC. Incorrect speaker volumeD. Printer offline status"
+            "Bulging or leaking capacitor tops",
+            "Slow mouse movement",
+            "Incorrect speaker volume",
+            "Printer offline status"
           ],
           answer: "A"
         },
@@ -2193,7 +2235,9 @@ export const hardwareQuizData = {
           sub: 3,
           question: "A technician replaces RAM, but the system now enters a boot loop. What should be verified?",
           choices: [
-            "RAM voltage and timing compatibilityB. Screen resolutionC. OS theme settings",
+            "RAM voltage and timing compatibility",
+            "Screen resolution",
+            "OS theme settings",
             "Antivirus license"
           ],
           answer: "A"

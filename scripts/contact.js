@@ -39,6 +39,9 @@ let currentAdminInboxFilter = "all";
 let currentAdminCategoryFilter = "all";
 let currentMyMessagesSearch = "";
 let currentAdminSearchTerm = "";
+let currentMyMessagesSort = "newest";
+let currentAdminSort = "newest";
+let lastRenderedContactMessages = [];
 
 function goHome() {
   window.location.href = "index.html";
@@ -57,6 +60,9 @@ window.goToAuth = goToAuth;
 window.goToDashboard = goToDashboard;
 window.closeReplyPopup = function () {
   document.getElementById("replyPopup")?.classList.remove("active");
+};
+window.closeTicketDetailModal = function () {
+  document.getElementById("ticketDetailModal")?.classList.remove("active");
 };
 
 window.toggleMobileNav = function () {
@@ -177,6 +183,117 @@ function writeSeenReplies(map) {
   }
 }
 
+function getReplyHistory(item) {
+  const history = Array.isArray(item?.replyHistory) ? item.replyHistory.filter(Boolean) : [];
+
+  if (history.length) {
+    return history;
+  }
+
+  if (item?.replyText) {
+    return [{
+      text: item.replyText,
+      byName: item.repliedByName || item.repliedByRole || "Admin",
+      byRole: item.repliedByRole || "admin",
+      at: item.repliedAt || null
+    }];
+  }
+
+  return [];
+}
+
+function getConversationHistory(item) {
+  const conversation = Array.isArray(item?.conversationHistory)
+    ? item.conversationHistory.filter(Boolean)
+    : [];
+
+  if (conversation.length) {
+    return conversation;
+  }
+
+  const fallback = [];
+
+  if (item?.message) {
+    fallback.push({
+      type: "learner",
+      text: item.message,
+      byUid: item.createdByUid || "",
+      byName: item.createdByName || "You",
+      byRole: item.createdByRole || "user",
+      at: item.createdAt || null
+    });
+  }
+
+  getReplyHistory(item).forEach((entry) => {
+    fallback.push({
+      type: "admin",
+      text: entry.text || "",
+      byUid: entry.byUid || "",
+      byName: entry.byName || "Admin",
+      byRole: entry.byRole || "admin",
+      at: entry.at || null
+    });
+  });
+
+  return fallback;
+}
+
+function isAdminConversationEntry(entry) {
+  const role = String(entry?.byRole || "").toLowerCase();
+  return entry?.type === "admin" || role === "admin" || role === "super_admin";
+}
+
+function getLatestAdminConversationEntry(item) {
+  const adminEntries = getConversationHistory(item).filter((entry) => isAdminConversationEntry(entry));
+  return adminEntries[adminEntries.length - 1] || null;
+}
+
+function renderConversationHistory(item, options = {}) {
+  const conversation = getConversationHistory(item);
+  if (!conversation.length) return "";
+
+  const viewerIsAdmin = options.viewerIsAdmin ?? roleMeetsMinimum(currentRole, "admin");
+
+  return `
+    <div class="conversation-thread">
+      ${conversation.map((entry, index) => {
+        const isAdmin = isAdminConversationEntry(entry);
+        const speakerLabel = isAdmin
+          ? "Admin Reply"
+          : (viewerIsAdmin ? "Learner Message" : "Your Message");
+        const roleLabel = entry?.byName || (isAdmin ? "Admin" : "Learner");
+
+        return `
+          <div class="conversation-entry ${isAdmin ? "admin" : "learner"} ${index === conversation.length - 1 ? "latest" : ""}">
+            <div class="conversation-entry-head">
+              <span class="message-reply-title">${escapeHtml(speakerLabel)}</span>
+              <span class="message-small">${escapeHtml(formatDate(entry.at))}</span>
+            </div>
+            <p class="message-reply">${escapeHtml(entry.text || "")}</p>
+            <span class="message-small">Sent by ${escapeHtml(roleLabel)}</span>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderReplyHistory(history) {
+  if (!history.length) return "";
+
+  return `
+    <div class="reply-history-list">
+      ${history.map((entry, index) => `
+        <div class="reply-history-item ${index === history.length - 1 ? "latest" : ""}">
+          <span class="message-reply-title">${index === history.length - 1 ? "Latest Admin Reply" : "Previous Reply"}</span>
+          <p class="message-reply">${escapeHtml(entry.text || "")}</p>
+          <span class="message-small">Replied by ${escapeHtml(entry.byName || entry.byRole || "Admin")} on ${escapeHtml(formatDate(entry.at))}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function showReplyPopup(message) {
   const popup = document.getElementById("replyPopup");
   const title = document.getElementById("replyPopupTitle");
@@ -194,10 +311,14 @@ function getUnseenReplyMessageIds(messages) {
   const seenReplies = readSeenReplies();
   return messages
     .filter((item) => {
-      const replyTimestamp = timestampToMillis(item.repliedAt);
-      return item.replyText && replyTimestamp && seenReplies[item.id] !== replyTimestamp;
+      const latestReply = getLatestAdminConversationEntry(item);
+      const replyTimestamp = timestampToMillis(latestReply?.at || item.repliedAt);
+      return latestReply && replyTimestamp && seenReplies[item.id] !== replyTimestamp;
     })
-    .sort((a, b) => timestampToMillis(b.repliedAt) - timestampToMillis(a.repliedAt))
+    .sort((a, b) => {
+      return timestampToMillis(getLatestAdminConversationEntry(b)?.at || b.repliedAt)
+        - timestampToMillis(getLatestAdminConversationEntry(a)?.at || a.repliedAt);
+    })
     .map((item) => item.id);
 }
 
@@ -222,6 +343,38 @@ function sortContactMessages(messages) {
   );
 }
 
+function getStatusSortWeight(item) {
+  if (item?.status === "resolved") return 2;
+  if (item?.assignedAdminUid) return 1;
+  return 0;
+}
+
+function applyMessageSort(messages, sortMode = "newest") {
+  const list = [...messages];
+
+  if (sortMode === "oldest") {
+    return list.sort((a, b) => timestampToMillis(a.createdAt) - timestampToMillis(b.createdAt));
+  }
+
+  if (sortMode === "recent_reply") {
+    return list.sort((a, b) => {
+      const diff = timestampToMillis(b.repliedAt) - timestampToMillis(a.repliedAt);
+      if (diff !== 0) return diff;
+      return timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt);
+    });
+  }
+
+  if (sortMode === "status") {
+    return list.sort((a, b) => {
+      const weightDiff = getStatusSortWeight(a) - getStatusSortWeight(b);
+      if (weightDiff !== 0) return weightDiff;
+      return timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt);
+    });
+  }
+
+  return list.sort((a, b) => timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt));
+}
+
 function normalizeSearchValue(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -237,6 +390,10 @@ function ticketMatchesSearch(item, searchTerm, options = {}) {
     item.replyText,
     item.category
   ];
+
+  getConversationHistory(item).forEach((entry) => {
+    values.push(entry.text, entry.byName, entry.byRole);
+  });
 
   if (options.includeAdminFields) {
     values.push(
@@ -258,8 +415,9 @@ function markRepliesAsSeen(messages) {
   let hasChanges = false;
 
   messages.forEach((item) => {
-    const replyTimestamp = timestampToMillis(item.repliedAt);
-    if (!item.replyText || !replyTimestamp) return;
+    const latestReply = getLatestAdminConversationEntry(item);
+    const replyTimestamp = timestampToMillis(latestReply?.at || item.repliedAt);
+    if (!latestReply || !replyTimestamp) return;
     if (seenReplies[item.id] === replyTimestamp) return;
 
     seenReplies[item.id] = replyTimestamp;
@@ -276,17 +434,22 @@ function notifyOnNewReplies(messages) {
 
   const seenReplies = readSeenReplies();
   const repliedMessages = messages
-    .filter((item) => item.replyText)
-    .sort((a, b) => timestampToMillis(b.repliedAt) - timestampToMillis(a.repliedAt));
+    .filter((item) => Boolean(getLatestAdminConversationEntry(item)))
+    .sort((a, b) => {
+      return timestampToMillis(getLatestAdminConversationEntry(b)?.at || b.repliedAt)
+        - timestampToMillis(getLatestAdminConversationEntry(a)?.at || a.repliedAt);
+    });
 
   const newestUnseenReply = repliedMessages.find((item) => {
-    const replyTimestamp = timestampToMillis(item.repliedAt);
+    const latestReply = getLatestAdminConversationEntry(item);
+    const replyTimestamp = timestampToMillis(latestReply?.at || item.repliedAt);
     return replyTimestamp && seenReplies[item.id] !== replyTimestamp;
   });
 
   if (!newestUnseenReply) return;
 
-  const replyTimestamp = timestampToMillis(newestUnseenReply.repliedAt);
+  const latestReply = getLatestAdminConversationEntry(newestUnseenReply);
+  const replyTimestamp = timestampToMillis(latestReply?.at || newestUnseenReply.repliedAt);
   seenReplies[newestUnseenReply.id] = replyTimestamp;
   writeSeenReplies(seenReplies);
 
@@ -428,6 +591,15 @@ async function handleContactSubmit(event) {
       assignedAdminName: "",
       assignedAdminRole: "",
       replyText: "",
+      replyHistory: [],
+      conversationHistory: [{
+        type: "learner",
+        text: message,
+        byUid: profile.uid,
+        byName: profile.name,
+        byRole: profile.role,
+        at: new Date().toISOString()
+      }],
       repliedAt: null,
       repliedByUid: "",
       repliedByName: "",
@@ -456,7 +628,10 @@ function renderMyMessages(messages, highlightedIds = []) {
   const target = document.getElementById("myMessagesList");
   if (!target) return;
 
-  const filteredMessages = messages.filter((item) => ticketMatchesSearch(item, currentMyMessagesSearch));
+  const filteredMessages = applyMessageSort(
+    messages.filter((item) => ticketMatchesSearch(item, currentMyMessagesSearch)),
+    currentMyMessagesSort
+  );
 
   if (!messages.length) {
     target.innerHTML = `
@@ -498,15 +673,30 @@ function renderMyMessages(messages, highlightedIds = []) {
         ${escapeHtml(getLearnerStatusInfo(item).helper)}
       </p>
       <p class="message-body">${escapeHtml(item.message || "")}</p>
-      ${item.replyText ? `
+      ${getConversationHistory(item).length ? `
         <div class="message-reply-box">
-          <span class="message-reply-title">Admin Reply</span>
-          <p class="message-reply">${escapeHtml(item.replyText)}</p>
-          <span class="message-small">Replied by ${escapeHtml(item.repliedByName || item.repliedByRole || "Admin")} on ${escapeHtml(formatDate(item.repliedAt))}</span>
+          <span class="message-reply-title">Private Conversation</span>
+          ${renderConversationHistory(item, { viewerIsAdmin: false })}
         </div>
       ` : ""}
+      ${item.status !== "resolved" ? `
+        <div class="reply-form learner-reply-form">
+          <span class="reply-label">Send a follow-up reply</span>
+          <textarea rows="4" data-learner-reply-input="${escapeHtml(item.id)}" placeholder="Add more detail so the assigned admin can continue helping."></textarea>
+          <div class="reply-actions">
+            <button type="button" class="reply-btn" data-learner-reply-message="${escapeHtml(item.id)}">Send Follow-up</button>
+          </div>
+          <p class="form-status" data-learner-reply-status="${escapeHtml(item.id)}"></p>
+        </div>
+      ` : ""}
+      <div class="ticket-action-row">
+        <button type="button" class="ticket-action-btn detail" data-ticket-detail="${escapeHtml(item.id)}">View Detail</button>
+      </div>
     </article>
   `).join("");
+
+  bindTicketDetailActions();
+  bindLearnerReplyActions();
 }
 
 function renderListLoading(targetId, title, message) {
@@ -597,7 +787,7 @@ function getFilteredAdminMessages(messages) {
     filtered = filtered.filter((item) => ticketMatchesSearch(item, currentAdminSearchTerm, { includeAdminFields: true }));
   }
 
-  return filtered;
+  return applyMessageSort(filtered, currentAdminSort);
 }
 
 function canManageTicket(item) {
@@ -617,6 +807,78 @@ function getTicketOwnerLabel(item) {
   }
 
   return "Unassigned ticket";
+}
+
+function openTicketDetailModal(messageId) {
+  const item = lastRenderedContactMessages.find((entry) => entry.id === messageId);
+  const modal = document.getElementById("ticketDetailModal");
+  const title = document.getElementById("ticketDetailTitle");
+  const content = document.getElementById("ticketDetailContent");
+
+  if (!item || !modal || !title || !content) return;
+
+  const learnerStatus = getLearnerStatusInfo(item);
+  const showAdminView = roleMeetsMinimum(currentRole, "admin");
+  const conversation = getConversationHistory(item);
+
+  title.textContent = item.subject || item.ticketId || "Ticket";
+  content.innerHTML = `
+    <div class="ticket-detail-grid">
+      <div class="ticket-detail-stat">
+        <span class="ticket-detail-stat-label">Ticket ID</span>
+        <div class="ticket-detail-stat-value">${escapeHtml(item.ticketId || item.id || "TCK-PENDING")}</div>
+      </div>
+      <div class="ticket-detail-stat">
+        <span class="ticket-detail-stat-label">Category</span>
+        <div class="ticket-detail-stat-value">${escapeHtml(item.category || "feedback")}</div>
+      </div>
+      <div class="ticket-detail-stat">
+        <span class="ticket-detail-stat-label">${showAdminView ? "Status" : "Learner Status"}</span>
+        <div class="ticket-detail-stat-value">${escapeHtml(showAdminView ? (item.status || "open") : learnerStatus.label)}</div>
+      </div>
+      <div class="ticket-detail-stat">
+        <span class="ticket-detail-stat-label">Created</span>
+        <div class="ticket-detail-stat-value">${escapeHtml(formatDate(item.createdAt))}</div>
+      </div>
+      ${showAdminView ? `
+        <div class="ticket-detail-stat">
+          <span class="ticket-detail-stat-label">From</span>
+          <div class="ticket-detail-stat-value">${escapeHtml(item.createdByName || "User")}${item.createdByEmail ? `<br>${escapeHtml(item.createdByEmail)}` : ""}</div>
+        </div>
+        <div class="ticket-detail-stat">
+          <span class="ticket-detail-stat-label">Assignment</span>
+          <div class="ticket-detail-stat-value">${item.assignedAdminUid ? escapeHtml(item.assignedAdminName || "Assigned admin") : "Unassigned"}</div>
+        </div>
+      ` : `
+        <div class="ticket-detail-stat">
+          <span class="ticket-detail-stat-label">Support Update</span>
+          <div class="ticket-detail-stat-value">${escapeHtml(learnerStatus.helper)}</div>
+        </div>
+        <div class="ticket-detail-stat">
+          <span class="ticket-detail-stat-label">Last Update</span>
+          <div class="ticket-detail-stat-value">${escapeHtml(formatDate(item.updatedAt || item.createdAt))}</div>
+        </div>
+      `}
+    </div>
+    <section class="ticket-detail-section">
+      <h4>Your Message</h4>
+      <p class="ticket-detail-text">${escapeHtml(item.message || "")}</p>
+    </section>
+    ${conversation.length ? `
+      <section class="ticket-detail-section">
+        <h4>Conversation History</h4>
+        ${renderConversationHistory(item, { viewerIsAdmin: showAdminView })}
+      </section>
+    ` : ""}
+    ${showAdminView ? `
+      <section class="ticket-detail-section">
+        <h4>Admin Summary</h4>
+        <p class="ticket-detail-text">${escapeHtml(getTicketOwnerLabel(item).replace(/<[^>]+>/g, ""))}</p>
+      </section>
+    ` : ""}
+  `;
+
+  modal.classList.add("active");
 }
 
 async function updateTicket(messageId, updates, successText, statusElement) {
@@ -788,6 +1050,15 @@ function bindAdminFilters() {
       refreshContactLists();
     });
   }
+
+  const adminSort = document.getElementById("adminSortFilter");
+  if (adminSort && adminSort.dataset.bound !== "true") {
+    adminSort.dataset.bound = "true";
+    adminSort.addEventListener("change", () => {
+      currentAdminSort = adminSort.value || "newest";
+      refreshContactLists();
+    });
+  }
 }
 
 function bindLearnerSearch() {
@@ -799,6 +1070,15 @@ function bindLearnerSearch() {
     currentMyMessagesSearch = learnerSearch.value || "";
     refreshContactLists();
   });
+
+  const learnerSort = document.getElementById("myMessagesSort");
+  if (learnerSort && learnerSort.dataset.bound !== "true") {
+    learnerSort.dataset.bound = "true";
+    learnerSort.addEventListener("change", () => {
+      currentMyMessagesSort = learnerSort.value || "newest";
+      refreshContactLists();
+    });
+  }
 }
 
 function bindReplyActions() {
@@ -820,6 +1100,17 @@ function bindReplyActions() {
 
       try {
         const profile = await buildCurrentUserProfile(currentUser);
+        const ticket = lastRenderedContactMessages.find((entry) => entry.id === messageId);
+        const conversationHistory = getConversationHistory(ticket);
+        const replyHistory = getReplyHistory(ticket);
+        const newReplyEntry = {
+          text: replyText,
+          byUid: profile.uid,
+          byName: profile.name,
+          byRole: profile.role,
+          at: new Date().toISOString()
+        };
+
         await updateDoc(doc(db, "contactMessages", messageId), {
           assignedAdminUid: profile.uid,
           assignedAdminName: profile.name,
@@ -830,9 +1121,12 @@ function bindReplyActions() {
           repliedByUid: profile.uid,
           repliedByName: profile.name,
           repliedByRole: profile.role,
+          replyHistory: [...replyHistory, newReplyEntry],
+          conversationHistory: [...conversationHistory, { ...newReplyEntry, type: "admin" }],
           updatedAt: serverTimestamp()
         });
 
+        if (textarea) textarea.value = "";
         if (status) status.textContent = "Reply saved.";
         await refreshContactLists();
       } catch (error) {
@@ -841,6 +1135,75 @@ function bindReplyActions() {
           status.textContent = describeFirestoreError(error, "Unable to save reply right now.");
         }
       }
+    });
+  });
+}
+
+function bindLearnerReplyActions() {
+  document.querySelectorAll("[data-learner-reply-message]").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+
+    button.addEventListener("click", async () => {
+      if (!currentUser || roleMeetsMinimum(currentRole, "admin")) return;
+
+      const messageId = button.getAttribute("data-learner-reply-message");
+      const textarea = document.querySelector(`[data-learner-reply-input="${messageId}"]`);
+      const status = document.querySelector(`[data-learner-reply-status="${messageId}"]`);
+      const replyText = textarea?.value.trim() || "";
+      const ticket = lastRenderedContactMessages.find((entry) => entry.id === messageId);
+
+      if (!messageId || !ticket) return;
+
+      if (ticket.status === "resolved") {
+        if (status) status.textContent = "This ticket is already resolved.";
+        return;
+      }
+
+      if (!replyText) {
+        if (status) status.textContent = "Write your follow-up reply first.";
+        return;
+      }
+
+      try {
+        const profile = await buildCurrentUserProfile(currentUser);
+        const conversationHistory = getConversationHistory(ticket);
+        const newEntry = {
+          type: "learner",
+          text: replyText,
+          byUid: profile.uid,
+          byName: profile.name,
+          byRole: profile.role,
+          at: new Date().toISOString()
+        };
+
+        await updateDoc(doc(db, "contactMessages", messageId), {
+          conversationHistory: [...conversationHistory, newEntry],
+          updatedAt: serverTimestamp()
+        });
+
+        if (textarea) textarea.value = "";
+        if (status) status.textContent = "Follow-up sent.";
+        await refreshContactLists();
+      } catch (error) {
+        console.error("Unable to send learner follow-up:", error);
+        if (status) {
+          status.textContent = describeFirestoreError(error, "Unable to send your follow-up right now.");
+        }
+      }
+    });
+  });
+}
+
+function bindTicketDetailActions() {
+  document.querySelectorAll("[data-ticket-detail]").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+
+    button.addEventListener("click", () => {
+      const messageId = button.getAttribute("data-ticket-detail");
+      if (!messageId) return;
+      openTicketDetailModal(messageId);
     });
   });
 }
@@ -899,17 +1262,17 @@ function renderAdminInbox(messages) {
       <div class="message-small">From: ${escapeHtml(item.createdByName || "User")} ${item.createdByEmail ? `(${escapeHtml(item.createdByEmail)})` : ""}</div>
       <p class="ticket-owner-note">${getTicketOwnerLabel(item)}</p>
       <p class="message-body">${escapeHtml(item.message || "")}</p>
-      ${item.replyText ? `
+      ${getConversationHistory(item).length ? `
         <div class="message-reply-box">
-          <span class="message-reply-title">Current Reply</span>
-          <p class="message-reply">${escapeHtml(item.replyText)}</p>
-          <span class="message-small">Saved by ${escapeHtml(item.repliedByName || item.repliedByRole || "Admin")} on ${escapeHtml(formatDate(item.repliedAt))}</span>
+          <span class="message-reply-title">Private Conversation</span>
+          ${renderConversationHistory(item, { viewerIsAdmin: true })}
         </div>
       ` : ""}
       <div class="reply-form">
         <span class="reply-label">Reply to this message</span>
-        <textarea rows="4" data-reply-input="${escapeHtml(item.id)}" placeholder="Write a reply for this learner." ${canReply ? "" : "disabled"}>${escapeHtml(item.replyText || "")}</textarea>
+        <textarea rows="4" data-reply-input="${escapeHtml(item.id)}" placeholder="Write a reply for this learner." ${canReply ? "" : "disabled"}></textarea>
         <div class="ticket-action-row">
+          <button type="button" class="ticket-action-btn detail" data-ticket-detail="${escapeHtml(item.id)}">View Detail</button>
           ${!item.assignedAdminUid && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn success" data-claim-ticket="${escapeHtml(item.id)}">Claim Ticket</button>` : ""}
           ${currentRole === "super_admin" && isClaimedByOther && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn warning" data-takeover-ticket="${escapeHtml(item.id)}">Take Over</button>` : ""}
           ${item.assignedAdminUid && canManage && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn secondary" data-release-ticket="${escapeHtml(item.id)}">Release Ticket</button>` : ""}
@@ -925,12 +1288,14 @@ function renderAdminInbox(messages) {
   `;
   }).join("");
 
+  bindTicketDetailActions();
   bindTicketActions();
   bindReplyActions();
 }
 
 function renderContactListsFromMessages(rawMessages) {
   const allMessages = sortContactMessages(rawMessages);
+  lastRenderedContactMessages = allMessages;
   const myMessages = getCurrentUserPrivateMessages(allMessages);
 
   const unseenReplyIds = getUnseenReplyMessageIds(myMessages);
@@ -942,6 +1307,8 @@ function renderContactListsFromMessages(rawMessages) {
   if (roleMeetsMinimum(currentRole, "admin")) {
     renderAdminInbox(allMessages);
   }
+
+  updateContactPageBadges(myMessages, allMessages);
 }
 
 function renderContactLoadError() {
@@ -965,6 +1332,38 @@ function renderContactLoadError() {
         </article>
       `;
     }
+  }
+}
+
+function updateContactPageBadges(myMessages, allMessages) {
+  const unreadBadge = document.getElementById("myMessagesUnreadBadge");
+  const adminOpenBadge = document.getElementById("adminInboxOpenBadge");
+
+  const unseenReplyIds = getUnseenReplyMessageIds(myMessages);
+  const unseenCount = unseenReplyIds.length;
+
+  if (unreadBadge) {
+    unreadBadge.hidden = unseenCount === 0;
+    unreadBadge.textContent = `${unseenCount} New`;
+  }
+
+  if (adminOpenBadge) {
+    const openCount = roleMeetsMinimum(currentRole, "admin")
+      ? allMessages.filter((item) => item.status !== "resolved").length
+      : 0;
+    adminOpenBadge.hidden = openCount === 0;
+    adminOpenBadge.textContent = `${openCount} Open`;
+  }
+
+  if (!roleMeetsMinimum(currentRole, "admin")) {
+    document.title = unseenCount > 0
+      ? `(${unseenCount}) Contact Us - Code Recall`
+      : "Contact Us - Code Recall";
+  } else {
+    const openCount = allMessages.filter((item) => item.status !== "resolved").length;
+    document.title = openCount > 0
+      ? `(${openCount}) Contact Inbox - Code Recall`
+      : "Contact Us - Code Recall";
   }
 }
 
@@ -1049,6 +1448,19 @@ function wireContactForm() {
   form?.addEventListener("submit", handleContactSubmit);
   bindLearnerSearch();
   bindAdminFilters();
+
+  const ticketDetailModal = document.getElementById("ticketDetailModal");
+  ticketDetailModal?.addEventListener("click", (event) => {
+    if (event.target === ticketDetailModal) {
+      window.closeTicketDetailModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      window.closeTicketDetailModal();
+    }
+  });
 }
 
 onAuthStateChanged(auth, async (user) => {

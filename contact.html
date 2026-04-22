@@ -104,7 +104,7 @@
       <section class="panel-card">
         <div class="panel-head">
           <div>
-            <h2>Your Private Conversation History</h2>
+            <h2>Your Private Conversation History <span id="myMessagesUnreadBadge" class="status-label" hidden>0 New</span></h2>
             <p>Only you can track the messages you sent here and read replies from admins.</p>
           </div>
         </div>
@@ -112,6 +112,16 @@
         <label class="search-field">
           <span>Search Your Tickets</span>
           <input id="myMessagesSearch" type="search" placeholder="Search by ticket ID, subject, message, or reply">
+        </label>
+
+        <label class="ticket-filter-select-wrap">
+          <span>Sort By</span>
+          <select id="myMessagesSort" class="ticket-filter-select">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="recent_reply">Recently Replied</option>
+            <option value="status">Status</option>
+          </select>
         </label>
 
         <div id="myMessagesList" class="message-list">
@@ -126,7 +136,7 @@
     <section id="adminInboxSection" class="admin-inbox-section fade-in" hidden>
       <div class="panel-head">
         <div>
-          <h2>Admin Inbox</h2>
+          <h2>Admin Inbox <span id="adminInboxOpenBadge" class="status-label" hidden>0 Open</span></h2>
           <p>Only admins and super admins can review support tickets here. Admins can claim tickets, and super admins can oversee all of them.</p>
         </div>
       </div>
@@ -153,6 +163,16 @@
             <option value="comment">General Comment</option>
             <option value="bug">Bug Report</option>
             <option value="idea">Feature Idea</option>
+          </select>
+        </label>
+
+        <label class="ticket-filter-select-wrap">
+          <span>Sort By</span>
+          <select id="adminSortFilter" class="ticket-filter-select">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="recent_reply">Recently Replied</option>
+            <option value="status">Status</option>
           </select>
         </label>
       </div>
@@ -202,11 +222,27 @@
     </div>
   </div>
 
+  <div id="ticketDetailModal" class="popup ticket-detail-popup">
+    <div class="popup-box ticket-detail-box">
+      <div class="ticket-detail-head">
+        <div>
+          <span class="status-label">Ticket Detail</span>
+          <h3 id="ticketDetailTitle">Ticket</h3>
+        </div>
+        <button type="button" class="ticket-detail-close" onclick="closeTicketDetailModal()" aria-label="Close detail view">&times;</button>
+      </div>
+      <div id="ticketDetailContent" class="ticket-detail-content"></div>
+      <div class="popup-actions">
+        <button type="button" class="secondary-btn" onclick="closeTicketDetailModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">&#127769;</span>
   </button>
 
-  <script type="module" src="scripts/contact.js?v=20260422a"></script>
-  <script src="scripts/loading.js?v=20260422a" defer></script>
+  <script type="module" src="scripts/contact.js?v=20260422b"></script>
+  <script src="scripts/loading.js?v=20260422b" defer></script>
 </body>
 </html>
