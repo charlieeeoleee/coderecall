@@ -23,6 +23,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+applyRoleNavigation("guest", "history.html");
+
 let currentUser = null;
 let currentIsGuest = false;
 let historyItems = [];

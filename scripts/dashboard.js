@@ -16,6 +16,8 @@ import {
   collection,
   getDocs,
   query,
+  onSnapshot,
+  where,
   orderBy,
   limit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -55,6 +57,7 @@ let currentAchievements = [];
 let leaderboardData = [];
 let leaderboardState = "idle";
 let leaderboardErrorCode = "";
+const CONTACT_REPLY_SEEN_KEY_PREFIX = "contact_reply_seen";
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
@@ -69,6 +72,118 @@ const SUBJECT_LABELS = {
   electrical: "Electrical Wiring and Electronics"
 };
 let latestHistoryActionUrl = "";
+let contactReplyBadgeUnsubscribe = null;
+
+applyRoleNavigation("guest", "dashboard.html");
+
+function timestampToMillis(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.seconds === "number") return value.seconds * 1000;
+
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getReplySeenStorageKeyForUser(uid) {
+  return uid ? `${CONTACT_REPLY_SEEN_KEY_PREFIX}:${uid}` : "";
+}
+
+function readSeenRepliesForUser(uid) {
+  const key = getReplySeenStorageKeyForUser(uid);
+  if (!key) return {};
+
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch {
+    return {};
+  }
+}
+
+function updateContactReplyBadge(count = 0) {
+  const badge = document.getElementById("contactReplyBadge");
+  const link = document.getElementById("dashboardContactLink");
+  if (!badge || !link) return;
+
+  const safeCount = Math.max(0, Number(count) || 0);
+  badge.hidden = safeCount <= 0;
+  badge.textContent = safeCount > 99 ? "99+" : String(safeCount);
+  link.classList.toggle("has-unread-replies", safeCount > 0);
+}
+
+async function refreshContactReplyBadge() {
+  if (!currentUser || currentIsGuest) {
+    updateContactReplyBadge(0);
+    return;
+  }
+
+  try {
+    const snapshot = await getDocs(query(
+      collection(db, "contactMessages"),
+      where("createdByUid", "==", currentUser.uid)
+    ));
+
+    const seenReplies = readSeenRepliesForUser(currentUser.uid);
+    const unreadCount = snapshot.docs.reduce((count, entry) => {
+      const data = entry.data() || {};
+      const replyTimestamp = timestampToMillis(data.repliedAt);
+      if (!data.replyText || !replyTimestamp) {
+        return count;
+      }
+
+      return seenReplies[entry.id] === replyTimestamp ? count : count + 1;
+    }, 0);
+
+    updateContactReplyBadge(unreadCount);
+  } catch (error) {
+    console.error("Unable to load contact reply badge:", error);
+    updateContactReplyBadge(0);
+  }
+}
+
+function stopContactReplyBadgeSubscription() {
+  if (typeof contactReplyBadgeUnsubscribe === "function") {
+    contactReplyBadgeUnsubscribe();
+  }
+  contactReplyBadgeUnsubscribe = null;
+}
+
+function startContactReplyBadgeSubscription() {
+  stopContactReplyBadgeSubscription();
+
+  if (!currentUser || currentIsGuest) {
+    updateContactReplyBadge(0);
+    return;
+  }
+
+  const source = query(
+    collection(db, "contactMessages"),
+    where("createdByUid", "==", currentUser.uid)
+  );
+
+  contactReplyBadgeUnsubscribe = onSnapshot(
+    source,
+    (snapshot) => {
+      const seenReplies = readSeenRepliesForUser(currentUser.uid);
+      const unreadCount = snapshot.docs.reduce((count, entry) => {
+        const data = entry.data() || {};
+        const replyTimestamp = timestampToMillis(data.repliedAt);
+        if (!data.replyText || !replyTimestamp) {
+          return count;
+        }
+
+        return seenReplies[entry.id] === replyTimestamp ? count : count + 1;
+      }, 0);
+
+      updateContactReplyBadge(unreadCount);
+    },
+    (error) => {
+      console.error("Unable to subscribe to contact reply badge:", error);
+      updateContactReplyBadge(0);
+    }
+  );
+}
 
 function readLocalResumeActivity() {
   try {
@@ -161,6 +276,7 @@ function closeMobileSidebar() {
    AUTH STATE
 ========================= */
 onAuthStateChanged(auth, async (user) => {
+  stopContactReplyBadgeSubscription();
   const isGuest = localStorage.getItem("guest") === "true";
 
   if (user) {
@@ -170,12 +286,14 @@ onAuthStateChanged(auth, async (user) => {
 
     await updateUserStreak();
     await loadDashboard();
+    startContactReplyBadgeSubscription();
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
     applyRoleNavigation("guest", "dashboard.html");
     updateGuestStreak();
     loadGuestDashboard();
+    updateContactReplyBadge(0);
   } else {
     window.location.href = "auth.html";
   }
@@ -186,6 +304,7 @@ onAuthStateChanged(auth, async (user) => {
 ========================= */
 async function loadDashboard() {
   setInsightLoadingState(true);
+  updateContactReplyBadge(0);
   const userRef = doc(db, "users", currentUser.uid);
   const docSnap = await getDoc(userRef);
 
@@ -270,6 +389,7 @@ async function loadDashboard() {
     results: data.results || {}
   });
   renderDashboardLeaderboardPreview();
+  await refreshContactReplyBadge();
 }
 
 async function reconcileLocalProgressToFirestore(userRef, data) {
@@ -419,6 +539,7 @@ async function reconcileLocalProgressToFirestore(userRef, data) {
 ========================= */
 function loadGuestDashboard() {
   setInsightLoadingState(true);
+  updateContactReplyBadge(0);
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
   const guestSnapshot = buildGuestSubjectProgressSnapshot();
 
@@ -1264,6 +1385,7 @@ function clearGuestSession() {
 ========================= */
 window.logout = async function() {
   closeMobileSidebar();
+  stopContactReplyBadgeSubscription();
 
   if (currentIsGuest) {
     if (hasGuestProgress()) {
@@ -1613,6 +1735,19 @@ window.addEventListener("resize", () => {
   if (window.innerWidth > 900) {
     closeMobileSidebar();
   }
+});
+
+window.addEventListener("focus", () => {
+  if (currentUser && !currentIsGuest) {
+    refreshContactReplyBadge();
+  }
+});
+
+window.addEventListener("storage", (event) => {
+  if (!currentUser || currentIsGuest) return;
+  if (!event.key || !event.key.startsWith(CONTACT_REPLY_SEEN_KEY_PREFIX)) return;
+
+  refreshContactReplyBadge();
 });
 
 document.body.addEventListener("click", () => {

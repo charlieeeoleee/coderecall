@@ -32,6 +32,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+applyRoleNavigation("guest", "subjects.html");
+
 let currentUser = null;
 let currentIsGuest = false;
 const SELECTED_SUBJECT_KEY = "selectedSubject";

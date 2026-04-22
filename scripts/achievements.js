@@ -38,6 +38,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+applyRoleNavigation("guest", "achievements.html");
+
 let currentIsGuest = false;
 let currentUser = null;
 let isCelebrating = false;

@@ -10,6 +10,7 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .menu { display: flex; flex-direction: column; gap: 30px; padding-top: 14px; }
 .menu a { color: white; text-decoration: none; opacity: 0.82; font-size: 14px; display: flex; align-items: center; gap: 10px; line-height: 1.2; padding: 2px 0; }
 .menu a:hover, .menu a.active-link { opacity: 1; transform: translateX(5px); }
+.nav-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: linear-gradient(135deg, #ff2e97, #ff8c00); color: #fff; font-size: 11px; font-weight: 800; line-height: 1; box-shadow: 0 8px 18px rgba(255,46,151,0.25); }
 .bottom-section { padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
 .logout-btn, .primary-action, .danger-action, .theme-toggle { border: none; border-radius: 14px; cursor: pointer; font-family: inherit; }
 .logout-btn { width: 100%; padding: 12px; background: #ff2e97; color: white; font-weight: 600; }
@@ -37,6 +38,7 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .panel-card.wide { grid-column: 1 / -1; }
 .panel-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
 .panel-header p { margin: 6px 0 0; opacity: 0.78; font-size: 13px; }
+.panel-count-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 4px 12px; margin-left: 10px; border-radius: 999px; background: rgba(34, 211, 238, 0.14); color: #7feaff; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: middle; }
 .bottleneck-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .bottleneck-card { background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; }
 .bottleneck-card strong { display: block; font-size: 18px; margin-top: 8px; }
@@ -125,6 +127,7 @@ body.light-mode .sidebar { background: #e9e0ff; }
 body.light-mode .sidebar-toggle { background: rgba(108,76,255,0.1); }
 body.light-mode .sidebar-toggle span { background: #1a1140; }
 body.light-mode .menu a { color: #1e1547; }
+body.light-mode .nav-count-badge { color: #fff; }
 body.light-mode .overview-card,
 body.light-mode .panel-card,
 body.light-mode .user-top,
@@ -166,6 +169,7 @@ body.light-mode .inline-select {
   color: #1e1547;
 }
 body.light-mode .inbox-shortcut-card { background: rgba(255,255,255,0.82); }
+body.light-mode .panel-count-badge { background: rgba(15, 118, 110, 0.12); color: #0f766e; }
 .form-status { margin: 0; font-size: 13px; min-height: 20px; color: #8df6cb; }
 .theme-toggle { position: fixed; right: 18px; bottom: 18px; width: 56px; height: 56px; background: linear-gradient(90deg, #ff2e97, #22d3ee); color: white; font-size: 22px; box-shadow: 0 0 25px rgba(0, 255, 200, 0.35); }
 .popup {

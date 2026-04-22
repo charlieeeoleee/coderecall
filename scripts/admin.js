@@ -9,6 +9,9 @@ import {
   collection,
   getDocs,
   addDoc,
+  query,
+  where,
+  onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -42,6 +45,9 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let learnersCache = [];
+let contactInboxUnsubscribe = null;
+
+applyRoleNavigation("guest", "admin.html");
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -67,6 +73,7 @@ function closeMobileSidebar() {
 }
 
 onAuthStateChanged(auth, async (user) => {
+  stopContactInboxSubscription();
   if (!user) {
     window.location.href = "auth.html";
     return;
@@ -84,19 +91,22 @@ onAuthStateChanged(auth, async (user) => {
 
   updateUserUI(user);
   await loadAdminDashboard();
+  startContactInboxSubscription();
 });
 
 async function loadAdminDashboard() {
-  const [usersSnap, moduleDrafts, quizDrafts] = await Promise.all([
+  const [usersSnap, moduleDrafts, quizDrafts, contactMessages] = await Promise.all([
     getDocs(collection(db, "users")),
     safeSupabaseRead("module drafts", fetchModuleDrafts),
-    safeSupabaseRead("quiz drafts", fetchQuizDrafts)
+    safeSupabaseRead("quiz drafts", fetchQuizDrafts),
+    fetchAccessibleContactMessages()
   ]);
 
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
   learnersCache = users.filter((user) => getRoleFromUserData(user) === "user");
 
+  renderContactInboxCounts(contactMessages);
   renderOverview(learnersCache);
   renderLearningInsights(learnersCache);
   renderBottlenecks(learnersCache);
@@ -104,6 +114,97 @@ async function loadAdminDashboard() {
   renderStudentTable(learnersCache);
   renderDraftReviews(moduleDrafts, quizDrafts);
   wireBuilderForms();
+}
+
+async function fetchAccessibleContactMessages() {
+  if (!currentUser) return [];
+
+  const sources = [
+    query(collection(db, "contactMessages"), where("assignedAdminUid", "==", "")),
+    query(collection(db, "contactMessages"), where("assignedAdminUid", "==", currentUser.uid)),
+    query(collection(db, "contactMessages"), where("createdByUid", "==", currentUser.uid))
+  ];
+
+  const snapshots = await Promise.all(sources.map((source) => getDocs(source)));
+  const messageMap = new Map();
+
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((entry) => {
+      messageMap.set(entry.id, { id: entry.id, ...entry.data() });
+    });
+  });
+
+  return Array.from(messageMap.values());
+}
+
+function renderContactInboxCounts(messages) {
+  const openCount = messages.filter((message) => (message.status || "open") !== "resolved").length;
+  updateInboxBadge("adminContactInboxBadge", openCount);
+  updateInboxPanelBadge("adminInboxPanelBadge", openCount);
+}
+
+function stopContactInboxSubscription() {
+  if (typeof contactInboxUnsubscribe === "function") {
+    contactInboxUnsubscribe();
+  }
+  contactInboxUnsubscribe = null;
+}
+
+function startContactInboxSubscription() {
+  stopContactInboxSubscription();
+  if (!currentUser) return;
+
+  const sources = [
+    query(collection(db, "contactMessages"), where("assignedAdminUid", "==", "")),
+    query(collection(db, "contactMessages"), where("assignedAdminUid", "==", currentUser.uid)),
+    query(collection(db, "contactMessages"), where("createdByUid", "==", currentUser.uid))
+  ];
+
+  const sourceCaches = sources.map(() => new Map());
+  const rebuildCounts = () => {
+    const merged = new Map();
+    sourceCaches.forEach((cache) => {
+      cache.forEach((value, key) => merged.set(key, value));
+    });
+    renderContactInboxCounts(Array.from(merged.values()));
+  };
+
+  const unsubscribers = sources.map((source, index) => onSnapshot(
+    source,
+    (snapshot) => {
+      const nextCache = new Map();
+      snapshot.docs.forEach((snap) => {
+        nextCache.set(snap.id, { id: snap.id, ...snap.data() });
+      });
+      sourceCaches[index] = nextCache;
+      rebuildCounts();
+    },
+    (error) => {
+      console.error("Unable to subscribe to admin contact inbox counts:", error);
+    }
+  ));
+
+  contactInboxUnsubscribe = () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  };
+}
+
+function updateInboxBadge(id, count) {
+  const badge = document.getElementById(id);
+  if (!badge) return;
+
+  const safeCount = Math.max(0, Number(count) || 0);
+  badge.hidden = safeCount <= 0;
+  badge.textContent = safeCount > 99 ? "99+" : String(safeCount);
+}
+
+function updateInboxPanelBadge(id, count) {
+  const badge = document.getElementById(id);
+  if (!badge) return;
+
+  const safeCount = Math.max(0, Number(count) || 0);
+  badge.hidden = safeCount <= 0;
+  badge.textContent = `${safeCount > 99 ? "99+" : safeCount} open`;
 }
 
 async function safeSupabaseRead(label, reader) {
@@ -701,6 +802,7 @@ function escapeHtml(text) {
 
 window.logout = async function() {
   closeMobileSidebar();
+  stopContactInboxSubscription();
   if (auth.currentUser) {
     await signOut(auth);
   }

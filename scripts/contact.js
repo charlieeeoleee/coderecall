@@ -13,6 +13,7 @@ import {
   getDoc,
   query,
   where,
+  onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, roleMeetsMinimum } from "./role-utils.js";
@@ -32,6 +33,12 @@ const db = getFirestore(app);
 
 let currentUser = null;
 let currentRole = "guest";
+const replySeenKeyPrefix = "contact_reply_seen";
+let contactMessagesUnsubscribe = null;
+let currentAdminInboxFilter = "all";
+let currentAdminCategoryFilter = "all";
+let currentMyMessagesSearch = "";
+let currentAdminSearchTerm = "";
 
 function goHome() {
   window.location.href = "index.html";
@@ -48,6 +55,9 @@ function goToDashboard() {
 window.goHome = goHome;
 window.goToAuth = goToAuth;
 window.goToDashboard = goToDashboard;
+window.closeReplyPopup = function () {
+  document.getElementById("replyPopup")?.classList.remove("active");
+};
 
 window.toggleMobileNav = function () {
   const navbar = document.querySelector(".navbar");
@@ -108,6 +118,183 @@ function setStatus(id, message, isError = false) {
   element.style.color = isError ? "#ffb4b8" : "#8df6cb";
 }
 
+function buildTicketId() {
+  const timePart = Date.now().toString().slice(-6);
+  const randomPart = Math.floor(Math.random() * 900 + 100);
+  return `TCK-${timePart}${randomPart}`;
+}
+
+function getLearnerStatusInfo(item) {
+  const status = String(item?.status || "open");
+
+  if (status === "resolved") {
+    return {
+      label: "Resolved",
+      className: "resolved",
+      helper: `Your concern was marked resolved by ${item.resolvedByName || item.assignedAdminName || "support"}.`
+    };
+  }
+
+  if (item?.assignedAdminUid) {
+    return {
+      label: "Claimed by Admin",
+      className: "claimed",
+      helper: `Your ticket is currently being handled by ${item.assignedAdminName || "an admin"}.`
+    };
+  }
+
+  return {
+    label: "Waiting for Support",
+    className: "waiting",
+    helper: "Your ticket is in the support queue and waiting for an admin to claim it."
+  };
+}
+
+function getReplySeenStorageKey() {
+  return currentUser ? `${replySeenKeyPrefix}:${currentUser.uid}` : "";
+}
+
+function readSeenReplies() {
+  const key = getReplySeenStorageKey();
+  if (!key) return {};
+
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSeenReplies(map) {
+  const key = getReplySeenStorageKey();
+  if (!key) return;
+
+  try {
+    localStorage.setItem(key, JSON.stringify(map));
+  } catch {
+    // Ignore local storage write issues.
+  }
+}
+
+function showReplyPopup(message) {
+  const popup = document.getElementById("replyPopup");
+  const title = document.getElementById("replyPopupTitle");
+  const body = document.getElementById("replyPopupMessage");
+  if (!popup || !title || !body) return;
+
+  title.textContent = "New Admin Reply";
+  body.textContent = message;
+  popup.classList.add("active");
+}
+
+function getUnseenReplyMessageIds(messages) {
+  if (!currentUser || roleMeetsMinimum(currentRole, "admin")) return [];
+
+  const seenReplies = readSeenReplies();
+  return messages
+    .filter((item) => {
+      const replyTimestamp = timestampToMillis(item.repliedAt);
+      return item.replyText && replyTimestamp && seenReplies[item.id] !== replyTimestamp;
+    })
+    .sort((a, b) => timestampToMillis(b.repliedAt) - timestampToMillis(a.repliedAt))
+    .map((item) => item.id);
+}
+
+function highlightNewestReply(messageIds) {
+  if (!Array.isArray(messageIds) || !messageIds.length) return;
+
+  const newestId = messageIds[0];
+  const target = document.querySelector(`[data-message-id="${newestId}"]`);
+  if (!target) return;
+
+  target.classList.add("reply-highlight-live");
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  window.setTimeout(() => {
+    target.classList.remove("reply-highlight-live");
+  }, 3600);
+}
+
+function sortContactMessages(messages) {
+  return [...messages].sort(
+    (a, b) => timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt)
+  );
+}
+
+function normalizeSearchValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function ticketMatchesSearch(item, searchTerm, options = {}) {
+  const normalizedTerm = normalizeSearchValue(searchTerm);
+  if (!normalizedTerm) return true;
+
+  const values = [
+    item.ticketId,
+    item.subject,
+    item.message,
+    item.replyText,
+    item.category
+  ];
+
+  if (options.includeAdminFields) {
+    values.push(
+      item.createdByName,
+      item.createdByEmail,
+      item.createdByRole,
+      item.assignedAdminName,
+      item.repliedByName
+    );
+  }
+
+  return values.some((value) => normalizeSearchValue(value).includes(normalizedTerm));
+}
+
+function markRepliesAsSeen(messages) {
+  if (!currentUser || roleMeetsMinimum(currentRole, "admin")) return;
+
+  const seenReplies = readSeenReplies();
+  let hasChanges = false;
+
+  messages.forEach((item) => {
+    const replyTimestamp = timestampToMillis(item.repliedAt);
+    if (!item.replyText || !replyTimestamp) return;
+    if (seenReplies[item.id] === replyTimestamp) return;
+
+    seenReplies[item.id] = replyTimestamp;
+    hasChanges = true;
+  });
+
+  if (hasChanges) {
+    writeSeenReplies(seenReplies);
+  }
+}
+
+function notifyOnNewReplies(messages) {
+  if (!currentUser || roleMeetsMinimum(currentRole, "admin")) return;
+
+  const seenReplies = readSeenReplies();
+  const repliedMessages = messages
+    .filter((item) => item.replyText)
+    .sort((a, b) => timestampToMillis(b.repliedAt) - timestampToMillis(a.repliedAt));
+
+  const newestUnseenReply = repliedMessages.find((item) => {
+    const replyTimestamp = timestampToMillis(item.repliedAt);
+    return replyTimestamp && seenReplies[item.id] !== replyTimestamp;
+  });
+
+  if (!newestUnseenReply) return;
+
+  const replyTimestamp = timestampToMillis(newestUnseenReply.repliedAt);
+  seenReplies[newestUnseenReply.id] = replyTimestamp;
+  writeSeenReplies(seenReplies);
+
+  showReplyPopup(
+    `An admin replied to "${newestUnseenReply.subject || "your message"}". Open your conversation history to read it.`
+  );
+}
+
 function describeFirestoreError(error, fallbackMessage) {
   const code = String(error?.code || "");
 
@@ -153,18 +340,19 @@ function updateRoleBanner() {
 
   if (roleMeetsMinimum(currentRole, "admin")) {
     badge.textContent = currentRole === "super_admin" ? "Super Admin Inbox" : "Admin Inbox";
-    detail.textContent = "You can send your own notes here and also review or reply to all learner messages below.";
+    detail.textContent = "You can review support tickets here, claim tickets, reply, and resolve them based on your role.";
     return;
   }
 
-  badge.textContent = "Learner Contact";
-  detail.textContent = "Send concerns or ideas, then check back here for replies from admins.";
+  badge.textContent = "Private Ticket View";
+  detail.textContent = "Send concerns or ideas as private support tickets, then check back here for replies from admins.";
 }
 
 function updatePageVisibility() {
   const loginPrompt = document.getElementById("contactLoginPrompt");
   const workspace = document.getElementById("contactWorkspace");
   const adminInbox = document.getElementById("adminInboxSection");
+  const isAdmin = roleMeetsMinimum(currentRole, "admin");
 
   if (loginPrompt) {
     loginPrompt.hidden = Boolean(currentUser);
@@ -175,7 +363,19 @@ function updatePageVisibility() {
   }
 
   if (adminInbox) {
-    adminInbox.hidden = !roleMeetsMinimum(currentRole, "admin");
+    adminInbox.hidden = !isAdmin;
+  }
+
+  if (!isAdmin) {
+    const adminInboxList = document.getElementById("adminInboxList");
+    if (adminInboxList) {
+      adminInboxList.innerHTML = `
+        <article class="message-card empty-card">
+          <h3>Admin inbox hidden</h3>
+          <p>This inbox is only available to admin and super admin accounts.</p>
+        </article>
+      `;
+    }
   }
 }
 
@@ -213,6 +413,7 @@ async function handleContactSubmit(event) {
 
   try {
     await addDoc(collection(db, "contactMessages"), {
+      ticketId: buildTicketId(),
       category,
       subject,
       message,
@@ -223,11 +424,18 @@ async function handleContactSubmit(event) {
       createdByRole: profile.role,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      assignedAdminUid: "",
+      assignedAdminName: "",
+      assignedAdminRole: "",
       replyText: "",
       repliedAt: null,
       repliedByUid: "",
       repliedByName: "",
-      repliedByRole: ""
+      repliedByRole: "",
+      resolvedAt: null,
+      resolvedByUid: "",
+      resolvedByName: "",
+      resolvedByRole: ""
     });
 
     const form = document.getElementById("contactForm");
@@ -244,9 +452,11 @@ async function handleContactSubmit(event) {
   }
 }
 
-function renderMyMessages(messages) {
+function renderMyMessages(messages, highlightedIds = []) {
   const target = document.getElementById("myMessagesList");
   if (!target) return;
+
+  const filteredMessages = messages.filter((item) => ticketMatchesSearch(item, currentMyMessagesSearch));
 
   if (!messages.length) {
     target.innerHTML = `
@@ -258,18 +468,35 @@ function renderMyMessages(messages) {
     return;
   }
 
-  target.innerHTML = messages.map((item) => `
-    <article class="message-card">
+  if (!filteredMessages.length) {
+    target.innerHTML = `
+      <article class="message-card empty-card">
+        <h3>No private tickets match your search</h3>
+        <p>Try a different keyword like the ticket ID, subject, or a word from your message.</p>
+      </article>
+    `;
+    return;
+  }
+
+  const highlightedSet = new Set(highlightedIds);
+
+  target.innerHTML = filteredMessages.map((item) => `
+    <article class="message-card ${highlightedSet.has(item.id) ? "reply-highlight-card" : ""}" data-message-id="${escapeHtml(item.id)}">
       <div class="message-top">
         <div>
+          <span class="ticket-id">${escapeHtml(item.ticketId || item.id || "TCK-PENDING")}</span>
           <h3>${escapeHtml(item.subject || "Untitled message")}</h3>
           <div class="message-meta-wrap">
             <span class="message-meta">${escapeHtml(item.category || "feedback")}</span>
-            <span class="message-meta">${escapeHtml(item.status || "open")}</span>
+            <span class="message-meta learner-status-chip ${escapeHtml(getLearnerStatusInfo(item).className)}">${escapeHtml(getLearnerStatusInfo(item).label)}</span>
+            ${highlightedSet.has(item.id) ? `<span class="message-meta reply-alert-pill">New Reply</span>` : ""}
           </div>
         </div>
         <span class="message-small">${escapeHtml(formatDate(item.createdAt))}</span>
       </div>
+      <p class="ticket-owner-note">
+        ${escapeHtml(getLearnerStatusInfo(item).helper)}
+      </p>
       <p class="message-body">${escapeHtml(item.message || "")}</p>
       ${item.replyText ? `
         <div class="message-reply-box">
@@ -297,9 +524,23 @@ function renderListLoading(targetId, title, message) {
 async function fetchContactMessagesForCurrentRole() {
   if (!currentUser) return [];
 
-  if (roleMeetsMinimum(currentRole, "admin")) {
+  if (currentRole === "super_admin") {
     const snapshot = await getDocs(collection(db, "contactMessages"));
     return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+  }
+
+  if (currentRole === "admin") {
+    const sources = getContactMessagesSource();
+    const snapshots = await Promise.all(sources.map((source) => getDocs(source)));
+    const messageMap = new Map();
+
+    snapshots.forEach((snapshot) => {
+      snapshot.docs.forEach((entry) => {
+        messageMap.set(entry.id, { id: entry.id, ...entry.data() });
+      });
+    });
+
+    return Array.from(messageMap.values());
   }
 
   const ownMessagesQuery = query(
@@ -309,6 +550,255 @@ async function fetchContactMessagesForCurrentRole() {
 
   const snapshot = await getDocs(ownMessagesQuery);
   return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+}
+
+function getContactMessagesSource() {
+  if (!currentUser) return null;
+
+  if (currentRole === "super_admin") {
+    return collection(db, "contactMessages");
+  }
+
+  if (currentRole === "admin") {
+    return [
+      query(collection(db, "contactMessages"), where("assignedAdminUid", "==", "")),
+      query(collection(db, "contactMessages"), where("assignedAdminUid", "==", currentUser.uid)),
+      query(collection(db, "contactMessages"), where("createdByUid", "==", currentUser.uid))
+    ];
+  }
+
+  return query(
+    collection(db, "contactMessages"),
+    where("createdByUid", "==", currentUser.uid)
+  );
+}
+
+function getCurrentUserPrivateMessages(messages) {
+  if (!currentUser) return [];
+  return messages.filter((item) => item.createdByUid === currentUser.uid);
+}
+
+function getFilteredAdminMessages(messages) {
+  let filtered = [...messages];
+
+  if (currentAdminInboxFilter === "unassigned") {
+    filtered = filtered.filter((item) => !item.assignedAdminUid && item.status !== "resolved");
+  } else if (currentAdminInboxFilter === "mine") {
+    filtered = filtered.filter((item) => item.assignedAdminUid === currentUser?.uid && item.status !== "resolved");
+  } else if (currentAdminInboxFilter === "resolved") {
+    filtered = filtered.filter((item) => item.status === "resolved");
+  }
+
+  if (currentAdminCategoryFilter !== "all") {
+    filtered = filtered.filter((item) => item.category === currentAdminCategoryFilter);
+  }
+
+  if (currentAdminSearchTerm) {
+    filtered = filtered.filter((item) => ticketMatchesSearch(item, currentAdminSearchTerm, { includeAdminFields: true }));
+  }
+
+  return filtered;
+}
+
+function canManageTicket(item) {
+  if (!currentUser) return false;
+  if (currentRole === "super_admin") return true;
+  if (currentRole !== "admin") return false;
+  return !item.assignedAdminUid || item.assignedAdminUid === currentUser.uid;
+}
+
+function getTicketOwnerLabel(item) {
+  if (item.status === "resolved") {
+    return `Resolved by ${escapeHtml(item.resolvedByName || item.assignedAdminName || "Admin")}`;
+  }
+
+  if (item.assignedAdminUid) {
+    return `Assigned to ${escapeHtml(item.assignedAdminName || "Admin")}`;
+  }
+
+  return "Unassigned ticket";
+}
+
+async function updateTicket(messageId, updates, successText, statusElement) {
+  try {
+    await updateDoc(doc(db, "contactMessages", messageId), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+
+    if (statusElement && successText) {
+      statusElement.textContent = successText;
+    }
+  } catch (error) {
+    console.error("Unable to update ticket:", error);
+    if (statusElement) {
+      statusElement.textContent = describeFirestoreError(error, "Unable to update this ticket right now.");
+    }
+  }
+}
+
+function bindTicketActions() {
+  document.querySelectorAll("[data-claim-ticket]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!currentUser || !roleMeetsMinimum(currentRole, "admin")) return;
+
+      const messageId = button.getAttribute("data-claim-ticket");
+      const statusElement = document.querySelector(`[data-ticket-status="${messageId}"]`);
+      const profile = await buildCurrentUserProfile(currentUser);
+
+      await updateTicket(
+        messageId,
+        {
+          assignedAdminUid: profile.uid,
+          assignedAdminName: profile.name,
+          assignedAdminRole: profile.role,
+          status: "claimed"
+        },
+        "Ticket claimed.",
+        statusElement
+      );
+    });
+  });
+
+  document.querySelectorAll("[data-release-ticket]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!currentUser || !roleMeetsMinimum(currentRole, "admin")) return;
+
+      const messageId = button.getAttribute("data-release-ticket");
+      const statusElement = document.querySelector(`[data-ticket-status="${messageId}"]`);
+
+      await updateTicket(
+        messageId,
+        {
+          assignedAdminUid: "",
+          assignedAdminName: "",
+          assignedAdminRole: "",
+          status: "open"
+        },
+        "Ticket released back to the inbox.",
+        statusElement
+      );
+    });
+  });
+
+  document.querySelectorAll("[data-resolve-ticket]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!currentUser || !roleMeetsMinimum(currentRole, "admin")) return;
+
+      const messageId = button.getAttribute("data-resolve-ticket");
+      const statusElement = document.querySelector(`[data-ticket-status="${messageId}"]`);
+      const profile = await buildCurrentUserProfile(currentUser);
+
+      await updateTicket(
+        messageId,
+        {
+          status: "resolved",
+          assignedAdminUid: profile.uid,
+          assignedAdminName: profile.name,
+          assignedAdminRole: profile.role,
+          resolvedAt: serverTimestamp(),
+          resolvedByUid: profile.uid,
+          resolvedByName: profile.name,
+          resolvedByRole: profile.role
+        },
+        "Ticket resolved.",
+        statusElement
+      );
+    });
+  });
+
+  document.querySelectorAll("[data-reopen-ticket]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!currentUser || !roleMeetsMinimum(currentRole, "admin")) return;
+
+      const messageId = button.getAttribute("data-reopen-ticket");
+      const statusElement = document.querySelector(`[data-ticket-status="${messageId}"]`);
+      const profile = await buildCurrentUserProfile(currentUser);
+
+      await updateTicket(
+        messageId,
+        {
+          status: "claimed",
+          assignedAdminUid: profile.uid,
+          assignedAdminName: profile.name,
+          assignedAdminRole: profile.role,
+          resolvedAt: null,
+          resolvedByUid: "",
+          resolvedByName: "",
+          resolvedByRole: ""
+        },
+        "Ticket reopened.",
+        statusElement
+      );
+    });
+  });
+
+  document.querySelectorAll("[data-takeover-ticket]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!currentUser || currentRole !== "super_admin") return;
+
+      const messageId = button.getAttribute("data-takeover-ticket");
+      const statusElement = document.querySelector(`[data-ticket-status="${messageId}"]`);
+      const profile = await buildCurrentUserProfile(currentUser);
+
+      await updateTicket(
+        messageId,
+        {
+          assignedAdminUid: profile.uid,
+          assignedAdminName: profile.name,
+          assignedAdminRole: profile.role,
+          status: "claimed"
+        },
+        "Ticket reassigned to you.",
+        statusElement
+      );
+    });
+  });
+}
+
+function bindAdminFilters() {
+  document.querySelectorAll("[data-ticket-filter]").forEach((button) => {
+    if (button.dataset.bound === "true") return;
+    button.dataset.bound = "true";
+
+    button.addEventListener("click", () => {
+      currentAdminInboxFilter = button.getAttribute("data-ticket-filter") || "all";
+      document.querySelectorAll("[data-ticket-filter]").forEach((entry) => {
+        entry.classList.toggle("active", entry === button);
+      });
+
+      refreshContactLists();
+    });
+  });
+
+  const categorySelect = document.getElementById("adminCategoryFilter");
+  if (categorySelect && categorySelect.dataset.bound !== "true") {
+    categorySelect.dataset.bound = "true";
+    categorySelect.addEventListener("change", () => {
+      currentAdminCategoryFilter = categorySelect.value || "all";
+      refreshContactLists();
+    });
+  }
+
+  const adminSearch = document.getElementById("adminInboxSearch");
+  if (adminSearch && adminSearch.dataset.bound !== "true") {
+    adminSearch.dataset.bound = "true";
+    adminSearch.addEventListener("input", () => {
+      currentAdminSearchTerm = adminSearch.value || "";
+      refreshContactLists();
+    });
+  }
+}
+
+function bindLearnerSearch() {
+  const learnerSearch = document.getElementById("myMessagesSearch");
+  if (!learnerSearch || learnerSearch.dataset.bound === "true") return;
+
+  learnerSearch.dataset.bound = "true";
+  learnerSearch.addEventListener("input", () => {
+    currentMyMessagesSearch = learnerSearch.value || "";
+    refreshContactLists();
+  });
 }
 
 function bindReplyActions() {
@@ -331,8 +821,11 @@ function bindReplyActions() {
       try {
         const profile = await buildCurrentUserProfile(currentUser);
         await updateDoc(doc(db, "contactMessages", messageId), {
+          assignedAdminUid: profile.uid,
+          assignedAdminName: profile.name,
+          assignedAdminRole: profile.role,
           replyText,
-          status: "replied",
+          status: "claimed",
           repliedAt: serverTimestamp(),
           repliedByUid: profile.uid,
           repliedByName: profile.name,
@@ -356,6 +849,8 @@ function renderAdminInbox(messages) {
   const target = document.getElementById("adminInboxList");
   if (!target) return;
 
+  bindAdminFilters();
+
   if (!messages.length) {
     target.innerHTML = `
       <article class="message-card empty-card">
@@ -366,10 +861,32 @@ function renderAdminInbox(messages) {
     return;
   }
 
-  target.innerHTML = messages.map((item) => `
+  const visibleMessages = currentRole === "super_admin"
+    ? messages
+    : messages.filter((item) => !item.assignedAdminUid || item.assignedAdminUid === currentUser?.uid);
+
+  const filteredMessages = getFilteredAdminMessages(visibleMessages);
+
+  if (!filteredMessages.length) {
+    target.innerHTML = `
+      <article class="message-card empty-card">
+        <h3>No tickets match the current filters</h3>
+        <p>Try changing the ticket status, category, or search term to view other tickets.</p>
+      </article>
+    `;
+    return;
+  }
+
+  target.innerHTML = filteredMessages.map((item) => {
+    const canManage = canManageTicket(item);
+    const isClaimedByOther = item.assignedAdminUid && item.assignedAdminUid !== currentUser?.uid;
+    const canReply = canManage && item.status !== "resolved";
+
+    return `
     <article class="message-card">
       <div class="message-top">
         <div>
+          <span class="ticket-id">${escapeHtml(item.ticketId || item.id || "TCK-PENDING")}</span>
           <h3>${escapeHtml(item.subject || "Untitled message")}</h3>
           <div class="message-meta-wrap">
             <span class="message-meta">${escapeHtml(item.category || "feedback")}</span>
@@ -380,6 +897,7 @@ function renderAdminInbox(messages) {
         <span class="message-small">${escapeHtml(formatDate(item.createdAt))}</span>
       </div>
       <div class="message-small">From: ${escapeHtml(item.createdByName || "User")} ${item.createdByEmail ? `(${escapeHtml(item.createdByEmail)})` : ""}</div>
+      <p class="ticket-owner-note">${getTicketOwnerLabel(item)}</p>
       <p class="message-body">${escapeHtml(item.message || "")}</p>
       ${item.replyText ? `
         <div class="message-reply-box">
@@ -390,72 +908,151 @@ function renderAdminInbox(messages) {
       ` : ""}
       <div class="reply-form">
         <span class="reply-label">Reply to this message</span>
-        <textarea rows="4" data-reply-input="${escapeHtml(item.id)}" placeholder="Write a reply for this learner.">${escapeHtml(item.replyText || "")}</textarea>
-        <div class="reply-actions">
-          <button type="button" class="reply-btn" data-reply-message="${escapeHtml(item.id)}">Save Reply</button>
+        <textarea rows="4" data-reply-input="${escapeHtml(item.id)}" placeholder="Write a reply for this learner." ${canReply ? "" : "disabled"}>${escapeHtml(item.replyText || "")}</textarea>
+        <div class="ticket-action-row">
+          ${!item.assignedAdminUid && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn success" data-claim-ticket="${escapeHtml(item.id)}">Claim Ticket</button>` : ""}
+          ${currentRole === "super_admin" && isClaimedByOther && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn warning" data-takeover-ticket="${escapeHtml(item.id)}">Take Over</button>` : ""}
+          ${item.assignedAdminUid && canManage && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn secondary" data-release-ticket="${escapeHtml(item.id)}">Release Ticket</button>` : ""}
+          ${canManage && item.status !== "resolved" ? `<button type="button" class="ticket-action-btn warning" data-resolve-ticket="${escapeHtml(item.id)}">Resolve Ticket</button>` : ""}
+          ${canManage && item.status === "resolved" ? `<button type="button" class="ticket-action-btn secondary" data-reopen-ticket="${escapeHtml(item.id)}">Reopen Ticket</button>` : ""}
         </div>
-        <p class="form-status" data-reply-status="${escapeHtml(item.id)}"></p>
+        <div class="reply-actions">
+          <button type="button" class="reply-btn" data-reply-message="${escapeHtml(item.id)}" ${canReply ? "" : "disabled"}>Save Reply</button>
+        </div>
+        <p class="form-status" data-reply-status="${escapeHtml(item.id)}" data-ticket-status="${escapeHtml(item.id)}">${!canManage && isClaimedByOther ? "This ticket is currently assigned to another admin." : ""}</p>
       </div>
     </article>
-  `).join("");
+  `;
+  }).join("");
 
+  bindTicketActions();
   bindReplyActions();
 }
 
-async function refreshContactLists() {
+function renderContactListsFromMessages(rawMessages) {
+  const allMessages = sortContactMessages(rawMessages);
+  const myMessages = getCurrentUserPrivateMessages(allMessages);
+
+  const unseenReplyIds = getUnseenReplyMessageIds(myMessages);
+  renderMyMessages(myMessages, unseenReplyIds);
+  notifyOnNewReplies(myMessages);
+  highlightNewestReply(unseenReplyIds);
+  markRepliesAsSeen(myMessages);
+
+  if (roleMeetsMinimum(currentRole, "admin")) {
+    renderAdminInbox(allMessages);
+  }
+}
+
+function renderContactLoadError() {
+  const myMessagesTarget = document.getElementById("myMessagesList");
+  if (myMessagesTarget) {
+    myMessagesTarget.innerHTML = `
+      <article class="message-card empty-card">
+        <h3>Unable to load your messages</h3>
+        <p>Please refresh the page or try again later.</p>
+      </article>
+    `;
+  }
+
+  if (roleMeetsMinimum(currentRole, "admin")) {
+    const adminInboxTarget = document.getElementById("adminInboxList");
+    if (adminInboxTarget) {
+      adminInboxTarget.innerHTML = `
+        <article class="message-card empty-card">
+          <h3>Unable to load admin inbox</h3>
+          <p>Please refresh the page or check your permissions.</p>
+        </article>
+      `;
+    }
+  }
+}
+
+function stopContactMessagesSubscription() {
+  if (typeof contactMessagesUnsubscribe === "function") {
+    contactMessagesUnsubscribe();
+  }
+  contactMessagesUnsubscribe = null;
+}
+
+function startContactMessagesSubscription() {
+  stopContactMessagesSubscription();
   if (!currentUser) return;
+
+  const source = getContactMessagesSource();
+  if (!source) return;
 
   renderListLoading("myMessagesList", "Loading messages...", "Fetching your contact history.");
   if (roleMeetsMinimum(currentRole, "admin")) {
     renderListLoading("adminInboxList", "Loading inbox...", "Fetching learner contact messages.");
   }
 
-  try {
-    const allMessages = (await fetchContactMessagesForCurrentRole())
-      .sort((a, b) => timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt));
+  if (Array.isArray(source)) {
+    const sourceCaches = source.map(() => new Map());
+    const rebuildMessages = () => {
+      const merged = new Map();
+      sourceCaches.forEach((cache) => {
+        cache.forEach((value, key) => merged.set(key, value));
+      });
+      renderContactListsFromMessages(Array.from(merged.values()));
+    };
 
-    const myMessages = roleMeetsMinimum(currentRole, "admin")
-      ? allMessages.filter((item) => item.createdByUid === currentUser.uid)
-      : allMessages;
-
-    renderMyMessages(myMessages);
-
-    if (roleMeetsMinimum(currentRole, "admin")) {
-      renderAdminInbox(allMessages);
-    }
-  } catch (error) {
-    console.error("Unable to load contact messages:", error);
-
-    const myMessagesTarget = document.getElementById("myMessagesList");
-    if (myMessagesTarget) {
-      myMessagesTarget.innerHTML = `
-        <article class="message-card empty-card">
-          <h3>Unable to load your messages</h3>
-          <p>Please refresh the page or try again later.</p>
-        </article>
-      `;
-    }
-
-    if (roleMeetsMinimum(currentRole, "admin")) {
-      const adminInboxTarget = document.getElementById("adminInboxList");
-      if (adminInboxTarget) {
-        adminInboxTarget.innerHTML = `
-          <article class="message-card empty-card">
-            <h3>Unable to load admin inbox</h3>
-            <p>Please refresh the page or check your permissions.</p>
-          </article>
-        `;
+    const unsubscribers = source.map((entrySource, index) => onSnapshot(
+      entrySource,
+      (snapshot) => {
+        const nextCache = new Map();
+        snapshot.docs.forEach((entry) => {
+          nextCache.set(entry.id, { id: entry.id, ...entry.data() });
+        });
+        sourceCaches[index] = nextCache;
+        rebuildMessages();
+      },
+      (error) => {
+        console.error("Unable to load contact messages:", error);
+        renderContactLoadError();
       }
+    ));
+
+    contactMessagesUnsubscribe = () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
+    return;
+  }
+
+  contactMessagesUnsubscribe = onSnapshot(
+    source,
+    (snapshot) => {
+      const messages = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+      renderContactListsFromMessages(messages);
+    },
+    (error) => {
+      console.error("Unable to load contact messages:", error);
+      renderContactLoadError();
     }
+  );
+}
+
+async function refreshContactLists() {
+  if (!currentUser) return;
+
+  try {
+    const messages = await fetchContactMessagesForCurrentRole();
+    renderContactListsFromMessages(messages);
+  } catch (error) {
+    console.error("Unable to refresh contact messages:", error);
+    renderContactLoadError();
   }
 }
 
 function wireContactForm() {
   const form = document.getElementById("contactForm");
   form?.addEventListener("submit", handleContactSubmit);
+  bindLearnerSearch();
+  bindAdminFilters();
 }
 
 onAuthStateChanged(auth, async (user) => {
+  stopContactMessagesSubscription();
   currentUser = user || null;
   currentRole = user ? await resolveUserRole(db, user) : "guest";
   updateNavAction();
@@ -463,7 +1060,9 @@ onAuthStateChanged(auth, async (user) => {
   updatePageVisibility();
 
   if (currentUser) {
-    await refreshContactLists();
+    startContactMessagesSubscription();
+  } else {
+    renderMyMessages([]);
   }
 });
 

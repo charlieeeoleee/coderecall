@@ -41,6 +41,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+applyRoleNavigation("guest", "leaderboard.html");
+
 let currentUser = null;
 let currentIsGuest = false;
 let currentXP = 0;

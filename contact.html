@@ -70,7 +70,7 @@
         <div class="panel-head">
           <div>
             <h2>Send a Message</h2>
-            <p>Tell us what you are experiencing, what feels unclear, or what you think would improve the system.</p>
+            <p>Tell us what you are experiencing, what feels unclear, or what you think would improve the system. Your message becomes a private support ticket.</p>
           </div>
         </div>
 
@@ -104,10 +104,15 @@
       <section class="panel-card">
         <div class="panel-head">
           <div>
-            <h2>Your Conversation History</h2>
-            <p>Track messages you sent and read replies from admins here.</p>
+            <h2>Your Private Conversation History</h2>
+            <p>Only you can track the messages you sent here and read replies from admins.</p>
           </div>
         </div>
+
+        <label class="search-field">
+          <span>Search Your Tickets</span>
+          <input id="myMessagesSearch" type="search" placeholder="Search by ticket ID, subject, message, or reply">
+        </label>
 
         <div id="myMessagesList" class="message-list">
           <article class="message-card empty-card">
@@ -122,8 +127,34 @@
       <div class="panel-head">
         <div>
           <h2>Admin Inbox</h2>
-          <p>Only admins and super admins can review all contact messages and reply from here.</p>
+          <p>Only admins and super admins can review support tickets here. Admins can claim tickets, and super admins can oversee all of them.</p>
         </div>
+      </div>
+
+      <div class="admin-filter-bar">
+        <div class="ticket-filter-group">
+          <button type="button" class="ticket-filter-btn active" data-ticket-filter="all">All Visible</button>
+          <button type="button" class="ticket-filter-btn" data-ticket-filter="unassigned">Unassigned</button>
+          <button type="button" class="ticket-filter-btn" data-ticket-filter="mine">Claimed by Me</button>
+          <button type="button" class="ticket-filter-btn" data-ticket-filter="resolved">Resolved</button>
+        </div>
+
+        <label class="search-field admin-search-field">
+          <span>Search Tickets</span>
+          <input id="adminInboxSearch" type="search" placeholder="Search by ticket ID, learner, subject, message, or reply">
+        </label>
+
+        <label class="ticket-filter-select-wrap">
+          <span>Category</span>
+          <select id="adminCategoryFilter" class="ticket-filter-select">
+            <option value="all">All Categories</option>
+            <option value="concern">Learning Concern</option>
+            <option value="feedback">System Feedback</option>
+            <option value="comment">General Comment</option>
+            <option value="bug">Bug Report</option>
+            <option value="idea">Feature Idea</option>
+          </select>
+        </label>
       </div>
 
       <div id="adminInboxList" class="admin-inbox-list">
@@ -160,6 +191,16 @@
       <p>&copy; 2026 Code Recall System | Gamified Learning Platform</p>
     </div>
   </footer>
+
+  <div id="replyPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="replyPopupTitle">New Admin Reply</h3>
+      <p id="replyPopupMessage">An admin replied to one of your contact messages.</p>
+      <div class="popup-actions">
+        <button type="button" class="secondary-btn" onclick="closeReplyPopup()">Close</button>
+      </div>
+    </div>
+  </div>
 
   <button class="theme-toggle" onclick="toggleTheme()">
     <span id="themeIcon">&#127769;</span>

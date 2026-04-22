@@ -17,6 +17,7 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -48,6 +49,9 @@ const db = getFirestore(app);
 let currentUser = null;
 let systemPopupAction = null;
 let systemPopupBusy = false;
+let contactInboxUnsubscribe = null;
+
+applyRoleNavigation("guest", "super-admin.html");
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -73,6 +77,7 @@ function closeMobileSidebar() {
 }
 
 onAuthStateChanged(auth, async (user) => {
+  stopContactInboxSubscription();
   if (!user) {
     window.location.href = "auth.html";
     return;
@@ -90,6 +95,7 @@ onAuthStateChanged(auth, async (user) => {
 
   updateUserUI(user);
   await loadSuperAdminDashboard();
+  startContactInboxSubscription();
 });
 
 async function loadSuperAdminDashboard() {
@@ -100,7 +106,8 @@ async function loadSuperAdminDashboard() {
     moduleDrafts,
     quizDrafts,
     notesSnap,
-    auditSnap
+    auditSnap,
+    contactMessagesSnap
   ] = await Promise.all([
     safeGetDocs("users", collection(db, "users")),
     safeGetDocs("accessRoles", collection(db, "accessRoles")),
@@ -108,7 +115,8 @@ async function loadSuperAdminDashboard() {
     safeSupabaseRead("module drafts", fetchModuleDrafts),
     safeSupabaseRead("quiz drafts", fetchQuizDrafts),
     safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
-    safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12)))
+    safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12))),
+    safeGetDocs("contactMessages", collection(db, "contactMessages"))
   ]);
 
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
@@ -116,7 +124,9 @@ async function loadSuperAdminDashboard() {
   const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  const contactMessages = contactMessagesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
+  renderContactInboxCounts(contactMessages);
   renderOverview(users);
   renderAccessGrantList(grants);
   renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
@@ -126,6 +136,52 @@ async function loadSuperAdminDashboard() {
   renderAuditLog(audits);
   wireAccessGrantForm();
   wireIntakeForm();
+}
+
+function renderContactInboxCounts(messages) {
+  const openCount = messages.filter((message) => (message.status || "open") !== "resolved").length;
+  updateInboxBadge("superAdminContactInboxBadge", openCount);
+  updateInboxPanelBadge("superAdminInboxPanelBadge", openCount);
+}
+
+function stopContactInboxSubscription() {
+  if (typeof contactInboxUnsubscribe === "function") {
+    contactInboxUnsubscribe();
+  }
+  contactInboxUnsubscribe = null;
+}
+
+function startContactInboxSubscription() {
+  stopContactInboxSubscription();
+
+  contactInboxUnsubscribe = onSnapshot(
+    collection(db, "contactMessages"),
+    (snapshot) => {
+      const messages = snapshot.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+      renderContactInboxCounts(messages);
+    },
+    (error) => {
+      console.error("Unable to subscribe to super admin contact inbox counts:", error);
+    }
+  );
+}
+
+function updateInboxBadge(id, count) {
+  const badge = document.getElementById(id);
+  if (!badge) return;
+
+  const safeCount = Math.max(0, Number(count) || 0);
+  badge.hidden = safeCount <= 0;
+  badge.textContent = safeCount > 99 ? "99+" : String(safeCount);
+}
+
+function updateInboxPanelBadge(id, count) {
+  const badge = document.getElementById(id);
+  if (!badge) return;
+
+  const safeCount = Math.max(0, Number(count) || 0);
+  badge.hidden = safeCount <= 0;
+  badge.textContent = `${safeCount > 99 ? "99+" : safeCount} open`;
 }
 
 async function syncGrantedRoleToExistingUsers(email, role) {
@@ -690,6 +746,7 @@ function initializeSystemPopup() {
 
 window.logout = async function() {
   closeMobileSidebar();
+  stopContactInboxSubscription();
   if (auth.currentUser) {
     await signOut(auth);
   }

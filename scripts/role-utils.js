@@ -110,16 +110,20 @@ export function applyRoleNavigation(role, currentPath = "") {
   const superAdminLinks = document.querySelectorAll('[data-role-link="super_admin"]');
 
   adminLinks.forEach((link) => {
-    link.hidden = !roleMeetsMinimum(normalized, "admin");
-    if (!link.hidden && currentPath && link.getAttribute("href") === currentPath) {
-      link.classList.add("active-link");
-    }
+    const isVisible = roleMeetsMinimum(normalized, "admin");
+    link.hidden = !isVisible;
+    link.setAttribute("aria-hidden", String(!isVisible));
+    link.tabIndex = isVisible ? 0 : -1;
+    link.style.display = isVisible ? "" : "none";
+    link.classList.toggle("active-link", isVisible && currentPath && link.getAttribute("href") === currentPath);
   });
 
   superAdminLinks.forEach((link) => {
-    link.hidden = !roleMeetsMinimum(normalized, "super_admin");
-    if (!link.hidden && currentPath && link.getAttribute("href") === currentPath) {
-      link.classList.add("active-link");
-    }
+    const isVisible = roleMeetsMinimum(normalized, "super_admin");
+    link.hidden = !isVisible;
+    link.setAttribute("aria-hidden", String(!isVisible));
+    link.tabIndex = isVisible ? 0 : -1;
+    link.style.display = isVisible ? "" : "none";
+    link.classList.toggle("active-link", isVisible && currentPath && link.getAttribute("href") === currentPath);
   });
 }
