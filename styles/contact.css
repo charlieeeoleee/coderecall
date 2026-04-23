@@ -338,6 +338,35 @@ body {
   background: linear-gradient(135deg, #00e5ff, #32ffc7);
 }
 
+.admin-ticket-card.needs-reply {
+  border-color: rgba(255, 77, 166, 0.24);
+  box-shadow: 0 0 0 1px rgba(255, 77, 166, 0.08), 0 16px 34px rgba(255, 77, 166, 0.08);
+}
+
+.admin-ticket-card.waiting-learner {
+  border-color: rgba(50, 255, 199, 0.18);
+}
+
+.admin-ticket-state.needs-reply {
+  color: #081124;
+  background: linear-gradient(135deg, #ff4da6, #ff9f43);
+}
+
+.admin-ticket-state.waiting-learner {
+  color: #081124;
+  background: linear-gradient(135deg, #00e5ff, #32ffc7);
+}
+
+.admin-ticket-state.resolved {
+  color: #081124;
+  background: linear-gradient(135deg, #34d399, #10b981);
+}
+
+.admin-ticket-helper {
+  margin-top: -4px;
+  color: #7ceadb;
+}
+
 .learner-status-chip.waiting {
   color: #081124;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
@@ -909,6 +938,21 @@ body.light-mode .reply-highlight-card {
 body.light-mode .reply-alert-pill {
   color: #ffffff;
   background: linear-gradient(135deg, #0f766e, #22c55e);
+}
+
+body.light-mode .admin-ticket-card.needs-reply {
+  border-color: rgba(190, 24, 93, 0.2);
+  box-shadow: 0 0 0 1px rgba(190, 24, 93, 0.06), 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+body.light-mode .admin-ticket-state.needs-reply,
+body.light-mode .admin-ticket-state.waiting-learner,
+body.light-mode .admin-ticket-state.resolved {
+  color: #ffffff;
+}
+
+body.light-mode .admin-ticket-helper {
+  color: #0f766e;
 }
 
 body.light-mode .learner-status-chip.waiting,

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/dashboard.css?v=20260420b">
-  <link rel="stylesheet" href="styles/certificates.css?v=20260420a">
+  <link rel="stylesheet" href="styles/certificates.css?v=20260423a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -79,6 +79,20 @@
             <span class="section-note">Open, download, or print the certificates you’ve unlocked.</span>
           </div>
         </div>
+        <div class="certificate-vault-toolbar">
+          <label class="certificate-vault-search">
+            <span>Search Certificates</span>
+            <input id="certificateSearch" type="search" placeholder="Search by subject, status, or certificate ID">
+          </label>
+          <label class="certificate-vault-filter">
+            <span>Show</span>
+            <select id="certificateStatusFilter">
+              <option value="all">All Certificates</option>
+              <option value="unlocked">Unlocked Only</option>
+              <option value="locked">Locked Only</option>
+            </select>
+          </label>
+        </div>
         <div id="certificateVaultGrid" class="certificate-vault-grid"></div>
       </div>
     </div>
@@ -102,7 +116,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/certificates.js?v=20260420a"></script>
+  <script type="module" src="scripts/certificates.js?v=20260423a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

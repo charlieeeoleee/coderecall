@@ -1795,6 +1795,90 @@ function disconnectAutoCheckpointObserver() {
   }
 }
 
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getReadingProgressPercent() {
+  const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  return Math.round(clampNumber((window.scrollY / scrollable) * 100, 0, 100));
+}
+
+function getCheckpointStatusText(completed, statusLabel = null, gateState = currentModuleGateState) {
+  if (statusLabel) return statusLabel;
+  if (completed || gateState.completed) return "Checkpoint cleared";
+
+  if (!gateState.readBottom) {
+    const progress = getReadingProgressPercent();
+    if (progress >= 80) return "Almost there - reach the challenge";
+    if (progress >= 45) return "Good progress - keep reading";
+    return "Start reading the module";
+  }
+
+  if (!gateState.quickCheckAttempted) {
+    return "Challenge reached - complete the Quick Check";
+  }
+
+  return "Checkpoint ready to finalize";
+}
+
+function getCheckpointButtonText(completed, gateState = currentModuleGateState) {
+  if (completed || gateState.completed) return "Checkpoint cleared";
+  if (!gateState.readBottom) return `Keep reading - ${getReadingProgressPercent()}%`;
+  if (!gateState.quickCheckAttempted) return "Quick Check required";
+  return "Checkpoint ready";
+}
+
+function getVisibleRailSteps() {
+  return Array.from(document.querySelectorAll(".module-rail-step")).filter((button) => {
+    const target = document.getElementById(button.dataset.moduleRailTarget);
+    return target && !target.hidden;
+  });
+}
+
+function updateModuleProgressRail(gateState = currentModuleGateState) {
+  const railSteps = Array.from(document.querySelectorAll(".module-rail-step"));
+  if (!railSteps.length) return;
+
+  const visibleSteps = getVisibleRailSteps();
+  let activeStep = visibleSteps[0] || null;
+  const anchorY = window.scrollY + Math.round(window.innerHeight * 0.32);
+
+  visibleSteps.forEach((button) => {
+    const target = document.getElementById(button.dataset.moduleRailTarget);
+    if (target && target.offsetTop <= anchorY) {
+      activeStep = button;
+    }
+  });
+
+  railSteps.forEach((button) => {
+    const target = document.getElementById(button.dataset.moduleRailTarget);
+    const key = button.dataset.moduleRailKey;
+    const isVisible = target && !target.hidden;
+    const isActive = button === activeStep;
+    const isPast = isVisible && target.offsetTop + Math.min(target.offsetHeight, window.innerHeight * 0.55) < anchorY;
+    const isCheckpointDone =
+      key === "challenge" && (gateState.readBottom || gateState.quickCheckAttempted || gateState.completed);
+    const isContinueDone = key === "continue" && gateState.completed;
+
+    button.disabled = !isVisible;
+    button.classList.toggle("locked", !isVisible);
+    button.classList.toggle("active", isActive);
+    button.classList.toggle("done", gateState.completed || isPast || isCheckpointDone || isContinueDone);
+    button.setAttribute("aria-current", isActive ? "step" : "false");
+  });
+}
+
+function bindModuleProgressRail() {
+  document.querySelectorAll(".module-rail-step").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = document.getElementById(button.dataset.moduleRailTarget);
+      if (!target || target.hidden) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+}
+
 function updateModuleActionState(gateState = currentModuleGateState) {
   const actionBtn = document.getElementById("moduleActionBtn");
   if (!actionBtn) return;
@@ -1809,7 +1893,7 @@ function updateModuleActionState(gateState = currentModuleGateState) {
   actionBtn.disabled = true;
 
   if (!gateState.readBottom) {
-    actionBtn.textContent = "Scroll to Bottom First";
+    actionBtn.textContent = `Keep Reading (${getReadingProgressPercent()}%)`;
     return;
   }
 
@@ -1829,6 +1913,19 @@ function updateCheckpointUi(completed, statusLabel = null, gateState = currentMo
   if (progressState) {
     progressState.textContent = completed ? "Cleared" : "In Progress";
   }
+
+  if (checkpointBtn) {
+    checkpointBtn.textContent = getCheckpointButtonText(completed, gateState);
+    checkpointBtn.disabled = true;
+  }
+
+  if (statusChip) {
+    statusChip.textContent = getCheckpointStatusText(completed, statusLabel, gateState);
+  }
+
+  updateModuleActionState(gateState);
+  updateModuleProgressRail(gateState);
+  return;
 
   if (checkpointBtn) {
     checkpointBtn.textContent = completed
@@ -3099,49 +3196,97 @@ function getHistoryTimelineItems() {
       year: "1830s",
       name: "Charles Babbage",
       text: "Designed the Difference Engine and Analytical Engine as early machine-computing concepts.",
-      portrait: "assets/modules/hardware/hard/module2/charles-babbage.jpg"
+      portrait: "assets/modules/hardware/hard/module2/charles-babbage.jpg",
+      personalDetails: {
+        born: "26 December 1791",
+        died: "18 October 1871",
+        origin: "London, England",
+        knownFor: "Difference Engine and Analytical Engine"
+      }
     },
     {
       year: "1840s",
       name: "Ada Lovelace",
       text: "Described how a machine could follow ordered instructions like a program.",
-      portrait: "assets/modules/hardware/hard/module2/ada-lovelace.jpg"
+      portrait: "assets/modules/hardware/hard/module2/ada-lovelace.jpg",
+      personalDetails: {
+        born: "10 December 1815",
+        died: "27 November 1852",
+        origin: "London, England",
+        knownFor: "Early algorithm design for Babbage's Analytical Engine"
+      }
     },
     {
       year: "1941",
       name: "Konrad Zuse",
       text: "Built the Z3, one of the earliest programmable computers.",
-      portrait: "assets/modules/hardware/hard/module2/konrad-zuse.jpg"
+      portrait: "assets/modules/hardware/hard/module2/konrad-zuse.jpg",
+      personalDetails: {
+        born: "22 June 1910",
+        died: "18 December 1995",
+        origin: "Berlin, Germany",
+        knownFor: "Z3 programmable computer"
+      }
     },
     {
       year: "1940s",
       name: "Alan Turing",
       text: "Helped define machine logic and the theoretical foundation of computing.",
-      portrait: "assets/modules/hardware/hard/module2/alan-turing.jpg"
+      portrait: "assets/modules/hardware/hard/module2/alan-turing.jpg",
+      personalDetails: {
+        born: "23 June 1912",
+        died: "7 June 1954",
+        origin: "London, England",
+        knownFor: "Turing machine and computation theory"
+      }
     },
     {
       year: "1945",
       name: "John von Neumann",
       text: "Shaped the stored-program architecture model used in modern computers.",
-      portrait: "assets/modules/hardware/hard/module2/john-von-neumann.jpg"
+      portrait: "assets/modules/hardware/hard/module2/john-von-neumann.jpg",
+      personalDetails: {
+        born: "28 December 1903",
+        died: "8 February 1957",
+        origin: "Budapest, Hungary",
+        knownFor: "Stored-program computer architecture"
+      }
     },
     {
       year: "1950s",
       name: "Grace Hopper",
       text: "Advanced compiler ideas and higher-level programming languages.",
-      portrait: "assets/modules/hardware/hard/module2/grace-hopper.jpg"
+      portrait: "assets/modules/hardware/hard/module2/grace-hopper.jpg",
+      personalDetails: {
+        born: "9 December 1906",
+        died: "1 January 1992",
+        origin: "New York City, USA",
+        knownFor: "Compiler work and programming languages"
+      }
     },
     {
       year: "1970s",
       name: "Robert Metcalfe",
       text: "Co-invented Ethernet and helped shape the growth of computer networking.",
-      portrait: "assets/modules/hardware/hard/module2/robert-metcalfe.jpg"
+      portrait: "assets/modules/hardware/hard/module2/robert-metcalfe.jpg",
+      personalDetails: {
+        born: "7 April 1946",
+        died: "Living",
+        origin: "Brooklyn, New York, USA",
+        knownFor: "Ethernet"
+      }
     },
     {
       year: "1989+",
       name: "Tim Berners-Lee",
       text: "Created the World Wide Web and transformed global information sharing.",
-      portrait: "assets/modules/hardware/hard/module2/tim-berners-lee.jpg"
+      portrait: "assets/modules/hardware/hard/module2/tim-berners-lee.jpg",
+      personalDetails: {
+        born: "8 June 1955",
+        died: "Living",
+        origin: "London, England",
+        knownFor: "World Wide Web"
+      }
     }
   ];
 }
@@ -3199,6 +3344,76 @@ function getComputerGenerationItems() {
   ];
 }
 
+function buildProfileRows(details = {}) {
+  return [
+    { label: "Born", value: details.born },
+    { label: "Died", value: details.died },
+    { label: "From", value: details.origin },
+    { label: "Known For", value: details.knownFor }
+  ].filter((item) => item.value);
+}
+
+function openModuleImageModal(profile) {
+  const modal = document.getElementById("moduleImageModal");
+  const modalImg = document.getElementById("moduleImageModalImg");
+  const modalCaption = document.getElementById("moduleImageModalCaption");
+  const modalKicker = document.getElementById("moduleImageModalKicker");
+  const modalTitle = document.getElementById("moduleImageModalTitle");
+  const modalDescription = document.getElementById("moduleImageModalDescription");
+  const modalDetails = document.getElementById("moduleImageModalDetails");
+
+  if (!modal || !modalImg || !modalCaption || !modalKicker || !modalTitle || !modalDescription || !modalDetails || !profile) {
+    return;
+  }
+
+  const detailRows = buildProfileRows(profile.personalDetails);
+  modalImg.src = profile.portrait || profile.src || "";
+  modalImg.alt = profile.name || profile.caption || "History profile";
+  modalCaption.textContent = profile.name || profile.caption || "History profile";
+  modalKicker.textContent = "History Profile";
+  modalTitle.textContent = profile.name || profile.caption || "Profile";
+  modalDescription.textContent = profile.text || profile.info || "This profile connects the image to the computer history timeline.";
+  modalDetails.hidden = detailRows.length === 0;
+  modalDetails.innerHTML = detailRows.map((item) => `
+    <div class="module-image-detail">
+      <span class="module-image-detail-label">${escapeHtml(item.label)}</span>
+      <span class="module-image-detail-value">${escapeHtml(item.value)}</span>
+    </div>
+  `).join("");
+
+  modal.classList.add("active");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModuleImageModal() {
+  const modal = document.getElementById("moduleImageModal");
+  if (!modal) return;
+
+  modal.classList.remove("active");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+function initializeModuleImageModal() {
+  const modal = document.getElementById("moduleImageModal");
+  const dialog = modal?.querySelector(".module-image-modal-dialog");
+  const closeBtn = document.getElementById("moduleImageModalClose");
+
+  closeBtn?.addEventListener("click", closeModuleImageModal);
+  modal?.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModuleImageModal();
+    }
+  });
+  dialog?.addEventListener("click", (event) => event.stopPropagation());
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModuleImageModal();
+    }
+  });
+}
+
 function renderHistoryTimeline(moduleData) {
   const section = document.getElementById("moduleTimelineSection");
   const visual = document.getElementById("moduleTimelineVisual");
@@ -3220,17 +3435,30 @@ function renderHistoryTimeline(moduleData) {
 
   section.hidden = false;
   visual.innerHTML = `<img src="${timelineImage.src}" alt="${timelineImage.alt || "Computer history timeline"}" loading="lazy" decoding="async">`;
-  strip.innerHTML = getHistoryTimelineItems().map((item) => `
-    <article class="module-timeline-item">
+  const timelineItems = getHistoryTimelineItems();
+  strip.innerHTML = timelineItems.map((item, index) => `
+    <article class="module-timeline-item module-profile-card" role="button" tabindex="0" data-history-profile-index="${index}" aria-label="Open profile for ${escapeHtml(item.name)}">
       <div class="module-timeline-portrait">
         <img src="${item.portrait}" alt="${item.name}" loading="lazy" decoding="async">
+        <span class="module-profile-cue">View Profile</span>
       </div>
       <span class="module-timeline-year">${item.year}</span>
       <h3 class="module-timeline-name">${item.name}</h3>
       <p class="module-timeline-text">${item.text}</p>
     </article>
   `).join("");
-  note.textContent = "Use the visual timeline first, then review the literal timeline cards below to connect each inventor to the right part of computer history.";
+  note.textContent = "Use the visual timeline first, then click any profile card below to enlarge the portrait and review personal details.";
+
+  strip.querySelectorAll("[data-history-profile-index]").forEach((card) => {
+    const item = timelineItems[Number(card.getAttribute("data-history-profile-index"))];
+    card.addEventListener("click", () => openModuleImageModal(item));
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openModuleImageModal(item);
+      }
+    });
+  });
 }
 
 function renderHistoryReference(moduleData) {
@@ -3922,6 +4150,8 @@ function updateIcon() {
 
 /* RUN */
 loadTheme();
+initializeModuleImageModal();
+bindModuleProgressRail();
 renderModulePage();
 
 initSounds();
@@ -3933,6 +4163,7 @@ document.body.addEventListener("click", () => {
 }, { once: true });
 
 window.addEventListener("scroll", () => {
+  updateCheckpointUi(currentModuleGateState.completed, null, currentModuleGateState);
   if (currentModuleGateState.completed) return;
   queueModuleResumeSave();
 }, { passive: true });

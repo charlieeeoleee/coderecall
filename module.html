@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/module.css">
+  <link rel="stylesheet" href="styles/module.css?v=20260423b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -50,7 +50,34 @@
       </article>
     </section>
 
-    <section class="module-content card">
+    <nav class="module-progress-rail card" aria-label="Module progress">
+      <button type="button" class="module-rail-step active" data-module-rail-target="moduleContentSection" data-module-rail-key="brief">
+        <span>01</span>
+        <strong>Mission Brief</strong>
+      </button>
+      <button type="button" class="module-rail-step" data-module-rail-target="moduleDocumentSection" data-module-rail-key="notes">
+        <span>02</span>
+        <strong>Notes</strong>
+      </button>
+      <button type="button" class="module-rail-step" data-module-rail-target="moduleObjectivesSection" data-module-rail-key="objectives">
+        <span>03</span>
+        <strong>Objectives</strong>
+      </button>
+      <button type="button" class="module-rail-step" data-module-rail-target="moduleSectionsSection" data-module-rail-key="path">
+        <span>04</span>
+        <strong>Lesson Path</strong>
+      </button>
+      <button type="button" class="module-rail-step" data-module-rail-target="moduleChallengeSection" data-module-rail-key="challenge">
+        <span>05</span>
+        <strong>Challenge</strong>
+      </button>
+      <button type="button" class="module-rail-step" data-module-rail-target="moduleActionsSection" data-module-rail-key="continue">
+        <span>06</span>
+        <strong>Continue</strong>
+      </button>
+    </nav>
+
+    <section class="module-content card" id="moduleContentSection">
       <div class="module-content-head">
         <h2>Mission Brief</h2>
         <span class="module-content-chip" id="moduleStatusChip">Ready to study</span>
@@ -66,7 +93,7 @@
       <div class="module-document-body" id="moduleDocument"></div>
     </section>
 
-    <section class="module-objectives card">
+    <section class="module-objectives card" id="moduleObjectivesSection">
       <div class="module-content-head">
         <h2>Objectives</h2>
         <span class="module-content-chip">Level Goals</span>
@@ -74,7 +101,7 @@
       <div class="module-pill-list" id="moduleObjectives"></div>
     </section>
 
-    <section class="module-sections card">
+    <section class="module-sections card" id="moduleSectionsSection">
       <div class="module-content-head">
         <h2>Lesson Path</h2>
         <span class="module-content-chip">Core Concepts</span>
@@ -187,7 +214,7 @@
       </p>
     </section>
 
-    <section class="module-challenge card">
+    <section class="module-challenge card" id="moduleChallengeSection">
       <div class="module-content-head">
         <h2 id="challengeTitle">Challenge</h2>
         <span class="module-content-chip">Quick Check + XP</span>
@@ -198,7 +225,12 @@
       <div class="module-pill-list" id="challengePoints"></div>
     </section>
 
-    <div class="module-actions">
+    <div class="module-actions" id="moduleActionsSection">
+      <div class="module-next-step" id="moduleNextStep">
+        <span id="moduleNextStepKicker">Next Step</span>
+        <strong id="moduleNextStepTitle">Start the lesson</strong>
+        <p id="moduleNextStepText">Read the mission brief, then work through the module until the challenge unlocks.</p>
+      </div>
       <button class="module-btn secondary-btn" onclick="goBackToLevels()">Back to Modules</button>
       <button class="module-btn success-btn" id="moduleCheckpointBtn" disabled>Checkpoint clears after reading</button>
       <button class="module-btn primary-btn" onclick="startQuiz()" id="moduleActionBtn">Continue</button>
@@ -1812,7 +1844,7 @@
       ]);
     }
   </script>
-  <script type="module" src="scripts/module.js?v=20260420a"></script>
+  <script type="module" src="scripts/module.js?v=20260423b"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

@@ -2,6 +2,49 @@
   min-height: 320px;
 }
 
+.certificate-vault-toolbar {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+  justify-content: space-between;
+  margin: 18px 0 20px;
+}
+
+.certificate-vault-search,
+.certificate-vault-filter {
+  display: grid;
+  gap: 7px;
+}
+
+.certificate-vault-search {
+  flex: 1 1 360px;
+}
+
+.certificate-vault-filter {
+  flex: 0 0 220px;
+}
+
+.certificate-vault-search span,
+.certificate-vault-filter span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.82;
+}
+
+.certificate-vault-search input,
+.certificate-vault-filter select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(8, 14, 31, 0.36);
+  color: #fff;
+  font: inherit;
+}
+
 .certificate-vault-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -67,6 +110,14 @@
   border-color: rgba(255, 94, 125, 0.18);
 }
 
+.certificate-vault-progress-label {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.76;
+}
+
 .certificate-vault-mark {
   width: 54px;
   height: 54px;
@@ -89,6 +140,52 @@
   font-size: 14px;
   line-height: 1.65;
   opacity: 0.86;
+}
+
+.certificate-progress {
+  display: grid;
+  gap: 10px;
+}
+
+.certificate-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+}
+
+.certificate-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #00e5ff, #32ffc7, #ff4da6);
+  box-shadow: 0 0 18px rgba(50,255,199,0.22);
+}
+
+.certificate-step-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.certificate-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
+.certificate-step.done {
+  color: #08111f;
+  background: linear-gradient(135deg,#00e5ff,#32ffc7);
+  border-color: transparent;
+  opacity: 1;
 }
 
 .certificate-vault-meta {
@@ -172,6 +269,13 @@ body.light-mode .certificate-vault-card {
   color: #1a2146;
 }
 
+body.light-mode .certificate-vault-search input,
+body.light-mode .certificate-vault-filter select {
+  background: rgba(17,24,39,0.04);
+  border-color: rgba(17,24,39,0.08);
+  color: #1a2146;
+}
+
 body.light-mode .certificate-vault-copy p,
 body.light-mode .certificate-vault-meta-row {
   color: rgba(26,33,70,0.82);
@@ -187,6 +291,12 @@ body.light-mode .certificate-vault-badge.locked {
   background: rgba(255, 94, 125, 0.08);
   border-color: rgba(255, 94, 125, 0.14);
   color: #b23b62;
+}
+
+body.light-mode .certificate-progress-track,
+body.light-mode .certificate-step {
+  background: rgba(17,24,39,0.05);
+  border-color: rgba(17,24,39,0.08);
 }
 
 body.light-mode .certificate-vault-btn {
@@ -212,6 +322,15 @@ body.light-mode .certificate-vault-empty {
 }
 
 @media (max-width: 720px) {
+  .certificate-vault-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .certificate-vault-filter {
+    flex-basis: auto;
+  }
+
   .certificate-vault-grid {
     grid-template-columns: 1fr;
   }

@@ -26,6 +26,9 @@ applyRoleNavigation("guest", "certificates.html");
 
 let currentUser = null;
 let currentIsGuest = false;
+let certificateSearchTerm = "";
+let certificateStatusFilter = "all";
+let latestCertificates = [];
 
 function updateUserUI(name, photo) {
   const username = document.getElementById("username");
@@ -99,6 +102,15 @@ function buildCertificateId(code, name, completedAt) {
   return `CR-${code}-${dateCode}-${compactName}`;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function getLocalSubjectCompletionState(subject) {
   const pretest =
     localStorage.getItem(`${subject}_pretest`) === "true" ||
@@ -118,6 +130,10 @@ function getLocalSubjectCompletionState(subject) {
     localStorage.getItem(`${subject}_posttest_done`) === "true" ||
     localStorage.getItem(`${subject}_posttest_attempt_done`) === "true";
   return {
+    pretest,
+    modules,
+    quiz,
+    posttest,
     completed: pretest && modules && quiz && posttest,
     completedAt: localStorage.getItem(`${subject}_posttest_completedAt`) || ""
   };
@@ -145,6 +161,10 @@ async function getRemoteSubjectCompletionState(subject) {
   const posttest = progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
 
   return {
+    pretest,
+    modules,
+    quiz,
+    posttest,
     completed: pretest && modules && quiz && posttest,
     completedAt: results[`${subject}_posttest`]?.completedAt || "",
     data
@@ -160,7 +180,32 @@ function getLatestDate(values = []) {
   return new Date(Math.max(...parsed.map((date) => date.getTime()))).toISOString();
 }
 
+function getSubjectProgressChecklist(state) {
+  return [
+    { label: "Pre-test", complete: Boolean(state.pretest) },
+    { label: "Modules", complete: Boolean(state.modules) },
+    { label: "Quiz", complete: Boolean(state.quiz) },
+    { label: "Post-test", complete: Boolean(state.posttest) }
+  ];
+}
+
+function getCompletionPercent(steps) {
+  if (!steps.length) return 0;
+  return Math.round((steps.filter((step) => step.complete).length / steps.length) * 100);
+}
+
+function getNextRequirement(steps) {
+  return steps.find((step) => !step.complete)?.label || "Ready to claim";
+}
+
 function buildCertificates(name, states) {
+  const hardwareSteps = getSubjectProgressChecklist(states.hardware);
+  const electricalSteps = getSubjectProgressChecklist(states.electrical);
+  const dualSteps = [
+    { label: "Hardware Certificate", complete: states.hardware.completed },
+    { label: "Electrical Certificate", complete: states.electrical.completed }
+  ];
+
   const certificates = [
     {
       key: "hardware",
@@ -169,6 +214,7 @@ function buildCertificates(name, states) {
       description: "Awarded after completing the full Computer Hardware path.",
       code: "HW",
       unlocked: states.hardware.completed,
+      steps: hardwareSteps,
       completedAt: states.hardware.completedAt,
       actionUrl: "certificate.html?subject=hardware",
       downloadUrl: "certificate.html?subject=hardware&mode=download"
@@ -180,6 +226,7 @@ function buildCertificates(name, states) {
       description: "Awarded after completing the full Electrical Wiring and Electronics path.",
       code: "EL",
       unlocked: states.electrical.completed,
+      steps: electricalSteps,
       completedAt: states.electrical.completedAt,
       actionUrl: "certificate.html?subject=electrical",
       downloadUrl: "certificate.html?subject=electrical&mode=download"
@@ -191,6 +238,7 @@ function buildCertificates(name, states) {
       description: "Awarded after completing both core subjects in Code Recall.",
       code: "DUAL",
       unlocked: states.hardware.completed && states.electrical.completed,
+      steps: dualSteps,
       completedAt: getLatestDate([states.hardware.completedAt, states.electrical.completedAt]),
       actionUrl: "certificate.html?kind=dual",
       downloadUrl: "certificate.html?kind=dual&mode=download"
@@ -199,6 +247,8 @@ function buildCertificates(name, states) {
 
   return certificates.map((item) => ({
     ...item,
+    progressPercent: getCompletionPercent(item.steps || []),
+    nextRequirement: getNextRequirement(item.steps || []),
     certificateId: item.unlocked ? buildCertificateId(item.code, name, item.completedAt) : "Locked",
     issuedLabel: item.unlocked ? formatDate(item.completedAt) : "Not issued yet"
   }));
@@ -217,6 +267,24 @@ function renderCertificates(certificates) {
   const grid = document.getElementById("certificateVaultGrid");
   if (!grid) return;
 
+  const normalizedSearch = certificateSearchTerm.trim().toLowerCase();
+  const filteredCertificates = certificates.filter((item) => {
+    const matchesStatus =
+      certificateStatusFilter === "all" ||
+      (certificateStatusFilter === "unlocked" && item.unlocked) ||
+      (certificateStatusFilter === "locked" && !item.unlocked);
+    const searchable = [
+      item.title,
+      item.description,
+      item.certificateId,
+      item.issuedLabel,
+      item.unlocked ? "unlocked" : "locked",
+      item.nextRequirement
+    ].join(" ").toLowerCase();
+
+    return matchesStatus && (!normalizedSearch || searchable.includes(normalizedSearch));
+  });
+
   if (!certificates.length) {
     grid.innerHTML = `
       <div class="certificate-vault-empty">
@@ -227,26 +295,51 @@ function renderCertificates(certificates) {
     return;
   }
 
-  grid.innerHTML = certificates.map((item) => `
+  if (!filteredCertificates.length) {
+    grid.innerHTML = `
+      <div class="certificate-vault-empty">
+        <h4>No certificates match your filter</h4>
+        <p>Try searching another subject or switch the filter back to all certificates.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filteredCertificates.map((item) => `
     <article class="certificate-vault-card ${item.unlocked ? "unlocked" : "locked"}">
       <div class="certificate-vault-top">
         <div>
           <span class="certificate-vault-badge ${item.unlocked ? "unlocked" : "locked"}">${item.unlocked ? "Unlocked" : "Locked"}</span>
+          <span class="certificate-vault-progress-label">${item.unlocked ? "Certificate ready" : `${item.progressPercent}% complete`}</span>
         </div>
         <div class="certificate-vault-mark">${item.icon}</div>
       </div>
       <div class="certificate-vault-copy">
-        <h4>${item.title}</h4>
-        <p>${item.description}</p>
+        <h4>${escapeHtml(item.title)}</h4>
+        <p>${escapeHtml(item.description)}</p>
+      </div>
+      <div class="certificate-progress">
+        <div class="certificate-progress-track">
+          <span style="width:${item.progressPercent}%"></span>
+        </div>
+        <div class="certificate-step-list">
+          ${(item.steps || []).map((step) => `
+            <span class="certificate-step ${step.complete ? "done" : ""}">${step.complete ? "✓" : "○"} ${escapeHtml(step.label)}</span>
+          `).join("")}
+        </div>
       </div>
       <div class="certificate-vault-meta">
         <div class="certificate-vault-meta-row">
           <span>Issued</span>
-          <strong>${item.issuedLabel}</strong>
+          <strong>${escapeHtml(item.issuedLabel)}</strong>
         </div>
         <div class="certificate-vault-meta-row">
           <span>Certificate ID</span>
-          <strong>${item.certificateId}</strong>
+          <strong>${escapeHtml(item.certificateId)}</strong>
+        </div>
+        <div class="certificate-vault-meta-row">
+          <span>${item.unlocked ? "Vault Status" : "Next Step"}</span>
+          <strong>${escapeHtml(item.unlocked ? "Ready to open" : item.nextRequirement)}</strong>
         </div>
       </div>
       <div class="certificate-vault-actions">
@@ -264,16 +357,41 @@ function renderCertificates(certificates) {
   });
 }
 
+function bindCertificateVaultControls() {
+  const search = document.getElementById("certificateSearch");
+  const filter = document.getElementById("certificateStatusFilter");
+
+  search?.addEventListener("input", () => {
+    certificateSearchTerm = search.value || "";
+    renderCertificates(latestCertificates);
+  });
+
+  filter?.addEventListener("change", () => {
+    certificateStatusFilter = filter.value || "all";
+    renderCertificates(latestCertificates);
+  });
+}
+
 async function loadCertificatesPage() {
   const remoteHardware = await getRemoteSubjectCompletionState("hardware");
   const remoteElectrical = await getRemoteSubjectCompletionState("electrical");
+  const localHardware = getLocalSubjectCompletionState("hardware");
+  const localElectrical = getLocalSubjectCompletionState("electrical");
   const hardware = {
-    completed: remoteHardware?.completed || getLocalSubjectCompletionState("hardware").completed,
-    completedAt: remoteHardware?.completedAt || getLocalSubjectCompletionState("hardware").completedAt
+    pretest: remoteHardware?.pretest || localHardware.pretest,
+    modules: remoteHardware?.modules || localHardware.modules,
+    quiz: remoteHardware?.quiz || localHardware.quiz,
+    posttest: remoteHardware?.posttest || localHardware.posttest,
+    completed: remoteHardware?.completed || localHardware.completed,
+    completedAt: remoteHardware?.completedAt || localHardware.completedAt
   };
   const electrical = {
-    completed: remoteElectrical?.completed || getLocalSubjectCompletionState("electrical").completed,
-    completedAt: remoteElectrical?.completedAt || getLocalSubjectCompletionState("electrical").completedAt
+    pretest: remoteElectrical?.pretest || localElectrical.pretest,
+    modules: remoteElectrical?.modules || localElectrical.modules,
+    quiz: remoteElectrical?.quiz || localElectrical.quiz,
+    posttest: remoteElectrical?.posttest || localElectrical.posttest,
+    completed: remoteElectrical?.completed || localElectrical.completed,
+    completedAt: remoteElectrical?.completedAt || localElectrical.completedAt
   };
 
   const learnerName = currentUser?.displayName
@@ -283,6 +401,7 @@ async function loadCertificatesPage() {
     || (currentIsGuest ? "Guest Learner" : "Learner");
 
   const certificates = buildCertificates(learnerName, { hardware, electrical });
+  latestCertificates = certificates;
   renderOverview(certificates);
   renderCertificates(certificates);
 }
@@ -391,6 +510,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 loadTheme();
+bindCertificateVaultControls();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();

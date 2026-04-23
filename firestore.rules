@@ -31,6 +31,64 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function keepsContactTicketIdentity() {
+      return request.resource.data.ticketId == resource.data.ticketId
+        && request.resource.data.category == resource.data.category
+        && request.resource.data.subject == resource.data.subject
+        && request.resource.data.message == resource.data.message
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.createdByName == resource.data.createdByName
+        && request.resource.data.createdByEmail == resource.data.createdByEmail
+        && request.resource.data.createdByRole == resource.data.createdByRole
+        && request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function keepsContactAdminFields() {
+      return request.resource.data.assignedAdminUid == resource.data.assignedAdminUid
+        && request.resource.data.assignedAdminName == resource.data.assignedAdminName
+        && request.resource.data.assignedAdminRole == resource.data.assignedAdminRole
+        && request.resource.data.replyText == resource.data.replyText
+        && request.resource.data.replyHistory == resource.data.replyHistory
+        && request.resource.data.repliedAt == resource.data.repliedAt
+        && request.resource.data.repliedByUid == resource.data.repliedByUid
+        && request.resource.data.repliedByName == resource.data.repliedByName
+        && request.resource.data.repliedByRole == resource.data.repliedByRole
+        && request.resource.data.resolvedAt == resource.data.resolvedAt
+        && request.resource.data.resolvedByUid == resource.data.resolvedByUid
+        && request.resource.data.resolvedByName == resource.data.resolvedByName
+        && request.resource.data.resolvedByRole == resource.data.resolvedByRole;
+    }
+
+    function existingConversationSize() {
+      return resource.data.conversationHistory is list
+        ? resource.data.conversationHistory.size()
+        : 0;
+    }
+
+    function appendedLearnerConversationEntryIsSafe() {
+      let nextSize = request.resource.data.conversationHistory.size();
+      let entry = request.resource.data.conversationHistory[nextSize - 1];
+      return entry.type == "learner"
+        && entry.text is string
+        && entry.text.size() > 0
+        && entry.byUid == request.auth.uid
+        && entry.byName is string
+        && entry.byRole is string
+        && entry.at is string;
+    }
+
+    function validLearnerContactFollowUp() {
+      return isOwner(resource.data.createdByUid)
+        && resource.data.status != "resolved"
+        && keepsContactTicketIdentity()
+        && keepsContactAdminFields()
+        && request.resource.data.conversationHistory is list
+        && request.resource.data.conversationHistory.size() > existingConversationSize()
+        && request.resource.data.conversationHistory.size() <= existingConversationSize() + 1
+        && appendedLearnerConversationEntryIsSafe();
+    }
+
     match /users/{userId} {
       allow create: if isOwner(userId);
       allow read: if isOwner(userId) || isAdmin();
@@ -86,7 +144,8 @@ service cloud.firestore {
             resource.data.assignedAdminUid == ""
             || resource.data.assignedAdminUid == request.auth.uid
           )
-        );
+        )
+        || validLearnerContactFollowUp();
     }
   }
 }

@@ -202,19 +202,34 @@ function getReplyHistory(item) {
   return [];
 }
 
-function getConversationHistory(item) {
-  const conversation = Array.isArray(item?.conversationHistory)
+function getStoredConversationHistory(item) {
+  return Array.isArray(item?.conversationHistory)
     ? item.conversationHistory.filter(Boolean)
     : [];
+}
 
-  if (conversation.length) {
-    return conversation;
-  }
+function conversationHasInitialMessage(conversation, item) {
+  return conversation.some((entry) => {
+    return entry?.type === "learner"
+      && entry?.byUid === item?.createdByUid
+      && entry?.text === item?.message;
+  });
+}
 
-  const fallback = [];
+function conversationHasAdminReply(conversation, reply) {
+  return conversation.some((entry) => {
+    return isAdminConversationEntry(entry)
+      && entry?.text === reply?.text
+      && (!reply?.byUid || entry?.byUid === reply.byUid);
+  });
+}
 
-  if (item?.message) {
-    fallback.push({
+function getConversationHistory(item) {
+  const conversation = getStoredConversationHistory(item);
+  const combined = [];
+
+  if (item?.message && !conversationHasInitialMessage(conversation, item)) {
+    combined.push({
       type: "learner",
       text: item.message,
       byUid: item.createdByUid || "",
@@ -224,8 +239,11 @@ function getConversationHistory(item) {
     });
   }
 
+  combined.push(...conversation);
+
   getReplyHistory(item).forEach((entry) => {
-    fallback.push({
+    if (conversationHasAdminReply(combined, entry)) return;
+    combined.push({
       type: "admin",
       text: entry.text || "",
       byUid: entry.byUid || "",
@@ -235,7 +253,13 @@ function getConversationHistory(item) {
     });
   });
 
-  return fallback;
+  return combined
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => {
+      const diff = timestampToMillis(a.entry.at) - timestampToMillis(b.entry.at);
+      return diff !== 0 ? diff : a.index - b.index;
+    })
+    .map(({ entry }) => entry);
 }
 
 function isAdminConversationEntry(entry) {
@@ -246,6 +270,40 @@ function isAdminConversationEntry(entry) {
 function getLatestAdminConversationEntry(item) {
   const adminEntries = getConversationHistory(item).filter((entry) => isAdminConversationEntry(entry));
   return adminEntries[adminEntries.length - 1] || null;
+}
+
+function getLatestConversationEntry(item) {
+  const conversation = getConversationHistory(item);
+  return conversation[conversation.length - 1] || null;
+}
+
+function getAdminTicketState(item) {
+  if (item?.status === "resolved") {
+    return {
+      key: "resolved",
+      label: "Resolved",
+      className: "resolved",
+      helper: "This conversation is closed unless an admin reopens it."
+    };
+  }
+
+  const latestEntry = getLatestConversationEntry(item);
+
+  if (!latestEntry || !isAdminConversationEntry(latestEntry)) {
+    return {
+      key: "needs_reply",
+      label: "Needs Reply",
+      className: "needs-reply",
+      helper: "The latest message is from the learner."
+    };
+  }
+
+  return {
+    key: "waiting_learner",
+    label: "Waiting for Learner",
+    className: "waiting-learner",
+    helper: "The latest message is from support."
+  };
 }
 
 function renderConversationHistory(item, options = {}) {
@@ -358,7 +416,8 @@ function applyMessageSort(messages, sortMode = "newest") {
 
   if (sortMode === "recent_reply") {
     return list.sort((a, b) => {
-      const diff = timestampToMillis(b.repliedAt) - timestampToMillis(a.repliedAt);
+      const diff = timestampToMillis(getLatestConversationEntry(b)?.at || b.updatedAt || b.repliedAt)
+        - timestampToMillis(getLatestConversationEntry(a)?.at || a.updatedAt || a.repliedAt);
       if (diff !== 0) return diff;
       return timestampToMillis(b.updatedAt || b.createdAt) - timestampToMillis(a.updatedAt || a.createdAt);
     });
@@ -777,6 +836,10 @@ function getFilteredAdminMessages(messages) {
     filtered = filtered.filter((item) => item.assignedAdminUid === currentUser?.uid && item.status !== "resolved");
   } else if (currentAdminInboxFilter === "resolved") {
     filtered = filtered.filter((item) => item.status === "resolved");
+  } else if (currentAdminInboxFilter === "needs_reply") {
+    filtered = filtered.filter((item) => getAdminTicketState(item).key === "needs_reply");
+  } else if (currentAdminInboxFilter === "waiting_learner") {
+    filtered = filtered.filter((item) => getAdminTicketState(item).key === "waiting_learner");
   }
 
   if (currentAdminCategoryFilter !== "all") {
@@ -1167,7 +1230,7 @@ function bindLearnerReplyActions() {
 
       try {
         const profile = await buildCurrentUserProfile(currentUser);
-        const conversationHistory = getConversationHistory(ticket);
+        const conversationHistory = getStoredConversationHistory(ticket);
         const newEntry = {
           type: "learner",
           text: replyText,
@@ -1244,9 +1307,10 @@ function renderAdminInbox(messages) {
     const canManage = canManageTicket(item);
     const isClaimedByOther = item.assignedAdminUid && item.assignedAdminUid !== currentUser?.uid;
     const canReply = canManage && item.status !== "resolved";
+    const ticketState = getAdminTicketState(item);
 
     return `
-    <article class="message-card">
+    <article class="message-card admin-ticket-card ${escapeHtml(ticketState.className)}">
       <div class="message-top">
         <div>
           <span class="ticket-id">${escapeHtml(item.ticketId || item.id || "TCK-PENDING")}</span>
@@ -1254,6 +1318,7 @@ function renderAdminInbox(messages) {
           <div class="message-meta-wrap">
             <span class="message-meta">${escapeHtml(item.category || "feedback")}</span>
             <span class="message-meta">${escapeHtml(item.status || "open")}</span>
+            <span class="message-meta admin-ticket-state ${escapeHtml(ticketState.className)}">${escapeHtml(ticketState.label)}</span>
             <span class="message-meta">${escapeHtml(item.createdByRole || "user")}</span>
           </div>
         </div>
@@ -1261,6 +1326,7 @@ function renderAdminInbox(messages) {
       </div>
       <div class="message-small">From: ${escapeHtml(item.createdByName || "User")} ${item.createdByEmail ? `(${escapeHtml(item.createdByEmail)})` : ""}</div>
       <p class="ticket-owner-note">${getTicketOwnerLabel(item)}</p>
+      <p class="ticket-owner-note admin-ticket-helper">${escapeHtml(ticketState.helper)}</p>
       <p class="message-body">${escapeHtml(item.message || "")}</p>
       ${getConversationHistory(item).length ? `
         <div class="message-reply-box">
@@ -1348,11 +1414,11 @@ function updateContactPageBadges(myMessages, allMessages) {
   }
 
   if (adminOpenBadge) {
-    const openCount = roleMeetsMinimum(currentRole, "admin")
-      ? allMessages.filter((item) => item.status !== "resolved").length
+    const needsReplyCount = roleMeetsMinimum(currentRole, "admin")
+      ? allMessages.filter((item) => getAdminTicketState(item).key === "needs_reply").length
       : 0;
-    adminOpenBadge.hidden = openCount === 0;
-    adminOpenBadge.textContent = `${openCount} Open`;
+    adminOpenBadge.hidden = needsReplyCount === 0;
+    adminOpenBadge.textContent = `${needsReplyCount} Need Reply`;
   }
 
   if (!roleMeetsMinimum(currentRole, "admin")) {
@@ -1360,9 +1426,9 @@ function updateContactPageBadges(myMessages, allMessages) {
       ? `(${unseenCount}) Contact Us - Code Recall`
       : "Contact Us - Code Recall";
   } else {
-    const openCount = allMessages.filter((item) => item.status !== "resolved").length;
-    document.title = openCount > 0
-      ? `(${openCount}) Contact Inbox - Code Recall`
+    const needsReplyCount = allMessages.filter((item) => getAdminTicketState(item).key === "needs_reply").length;
+    document.title = needsReplyCount > 0
+      ? `(${needsReplyCount}) Contact Inbox - Code Recall`
       : "Contact Us - Code Recall";
   }
 }
