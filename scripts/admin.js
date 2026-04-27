@@ -111,6 +111,7 @@ async function loadAdminDashboard() {
   renderLearningInsights(learnersCache);
   renderBottlenecks(learnersCache);
   renderDifficultyAnalytics(learnersCache);
+  renderSubjectCompletionBreakdown(learnersCache);
   renderStudentTable(learnersCache);
   renderDraftReviews(moduleDrafts, quizDrafts);
   wireBuilderForms();
@@ -222,11 +223,87 @@ function renderOverview(learners) {
     : 0;
   const modulesCleared = learners.reduce((sum, user) => sum + countCompletedModules(user.progress || {}), 0);
   const needsHelp = learners.filter((user) => learnerNeedsHelp(user.progress || {})).length;
+  const pretestAverage = summarizeAssessmentAverage(learners, "pretest");
+  const posttestAverage = summarizeAssessmentAverage(learners, "posttest");
+  const hardwareCompletion = summarizeSubjectCompletion(learners, "hardware");
+  const electricalCompletion = summarizeSubjectCompletion(learners, "electrical");
 
   setText("adminTotalLearners", learners.length);
   setText("adminNeedsHelp", needsHelp);
   setText("adminAverageXp", `${averageXp} XP`);
   setText("adminModulesCleared", `${modulesCleared} clears`);
+  setText("adminAveragePretest", `${pretestAverage.percent}%`);
+  setText("adminAveragePretestDetail", `${pretestAverage.count} recorded tests`);
+  setText("adminAveragePosttest", `${posttestAverage.percent}%`);
+  setText("adminAveragePosttestDetail", `${posttestAverage.count} recorded tests`);
+  setText("adminHardwareCompletion", `${hardwareCompletion.percent}%`);
+  setText("adminHardwareCompletionDetail", `${hardwareCompletion.completed} of ${hardwareCompletion.total} learners`);
+  setText("adminElectricalCompletion", `${electricalCompletion.percent}%`);
+  setText("adminElectricalCompletionDetail", `${electricalCompletion.completed} of ${electricalCompletion.total} learners`);
+}
+
+function summarizeAssessmentAverage(learners, stage) {
+  const entries = learners.flatMap((learner) => {
+    const results = learner.results || {};
+
+    return Object.entries(results)
+      .filter(([key, value]) => key.endsWith(`_${stage}`) && value && typeof value === "object")
+      .map(([, value]) => {
+        const score = Math.max(0, Number(value.score || 0));
+        const total = Math.max(score, Number(value.total || 0) || 0);
+        const percent = total ? (score / total) * 100 : Number(value.percent || 0);
+        return Number.isFinite(percent) ? percent : null;
+      })
+      .filter((value) => value != null);
+  });
+
+  if (!entries.length) {
+    return { percent: 0, count: 0 };
+  }
+
+  return {
+    percent: Math.round(entries.reduce((sum, value) => sum + value, 0) / entries.length),
+    count: entries.length
+  };
+}
+
+function summarizeSubjectCompletion(learners, subject) {
+  const completed = learners.filter((learner) => {
+    const progress = learner.progress || {};
+    const results = learner.results || {};
+    return progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
+  }).length;
+
+  return {
+    completed,
+    total: learners.length,
+    percent: learners.length ? Math.round((completed / learners.length) * 100) : 0
+  };
+}
+
+function summarizeSubjectStatusBuckets(learners, subject) {
+  return learners.reduce((summary, learner) => {
+    const progress = learner.progress || {};
+    const results = learner.results || {};
+    const completed = progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
+    const started = completed
+      || progress[`${subject}_pretest`] === true
+      || progress[`${subject}_modules`] === true
+      || progress[`${subject}_quiz`] === true
+      || results[`${subject}_pretest`] != null
+      || Object.keys(progress).some((key) => key.startsWith(`${subject}_`) && progress[key] === true)
+      || Object.keys(results).some((key) => key.startsWith(`${subject}_`));
+
+    if (completed) {
+      summary.completed += 1;
+    } else if (started) {
+      summary.inProgress += 1;
+    } else {
+      summary.notStarted += 1;
+    }
+
+    return summary;
+  }, { notStarted: 0, inProgress: 0, completed: 0 });
 }
 
 function renderLearningInsights(learners) {
@@ -278,6 +355,138 @@ function renderLearningInsights(learners) {
       .slice(0, 5),
     "No learner currently has a review queue."
   );
+
+  renderMissedTopicList("adminMostMissedTopics", summarizeMostMissedTopics(learners, 5));
+}
+
+function summarizeMostMissedTopics(learners, limit = 5) {
+  const topicMap = new Map();
+
+  learners.forEach((learner) => {
+    const items = Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview : [];
+
+    items.forEach((item) => {
+      const title = String(item?.title || item?.question || "Unlabeled Topic").trim();
+      const subject = String(item?.subject || "").trim();
+      const weight = Math.max(1, Number(item?.wrongCount || 1));
+      const key = `${subject}::${title}`;
+      const existing = topicMap.get(key) || {
+        title,
+        metric: 0,
+        learners: new Set(),
+        subject
+      };
+
+      existing.metric += weight;
+      existing.learners.add(learner.id || learner.email || learner.name || `learner-${existing.learners.size + 1}`);
+      topicMap.set(key, existing);
+    });
+  });
+
+  return Array.from(topicMap.values())
+    .map((item) => ({
+      title: item.title,
+      metric: item.metric,
+      detail: `${item.learners.size} learner(s) • ${item.subject || "general"}`,
+      learners: Array.from(item.learners),
+      subject: item.subject || "general",
+      entries: learners.flatMap((learner) => {
+        const reviewItems = Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview : [];
+        return reviewItems
+          .filter((review) => String(review?.title || review?.question || "Unlabeled Topic").trim() === item.title && String(review?.subject || "").trim() === item.subject)
+          .map((review) => ({
+            learnerName: learner.name || learner.email || "Learner",
+            learnerEmail: learner.email || "",
+            question: review.question || "No question text saved.",
+            wrongCount: Math.max(1, Number(review.wrongCount || 1))
+          }));
+      })
+    }))
+    .sort((a, b) => b.metric - a.metric || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
+function renderMissedTopicList(targetId, items) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  if (!items.length) {
+    target.innerHTML = `<div class="review-item"><p>No missed-topic data is available yet.</p></div>`;
+    return;
+  }
+
+  target.innerHTML = items.map((item, index) => `
+    <article class="review-item topic-breakdown-card">
+      <div class="insight-review-item">
+        <div>
+          <h5>${escapeHtml(item.title)}</h5>
+          <p>${escapeHtml(item.detail)}</p>
+        </div>
+        <strong>${item.metric}</strong>
+      </div>
+      <div class="topic-breakdown-stats">
+        <span class="topic-breakdown-stat">${item.learners.length} learner(s)</span>
+        <span class="topic-breakdown-stat">${escapeHtml(item.subject)}</span>
+      </div>
+      <button type="button" class="secondary-action topic-detail-btn" data-topic-detail="${index}">View Details</button>
+    </article>
+  `).join("");
+
+  const topicButtons = target.querySelectorAll("[data-topic-detail]");
+  topicButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const detailIndex = Number(button.dataset.topicDetail || -1);
+      if (detailIndex < 0 || detailIndex >= items.length) return;
+      openMissedTopicModal(items[detailIndex]);
+    });
+  });
+}
+
+function renderSubjectCompletionBreakdown(learners) {
+  const grid = document.getElementById("adminCompletionBreakdown");
+  if (!grid) return;
+
+  const subjects = [
+    { key: "hardware", label: "Computer Hardware" },
+    { key: "electrical", label: "Electrical" }
+  ];
+
+  grid.innerHTML = subjects.map((subject) => {
+    const buckets = summarizeSubjectStatusBuckets(learners, subject.key);
+    return `
+      <article class="analytics-card">
+        <span>${subject.label}</span>
+        <strong>${buckets.completed} completed</strong>
+        <p>${buckets.inProgress} in progress • ${buckets.notStarted} not started</p>
+      </article>
+    `;
+  }).join("");
+}
+
+function openMissedTopicModal(item) {
+  setText("missedTopicModalTitle", item.title || "Missed Topic");
+  setText("missedTopicModalSubtitle", `${item.metric} total misses • ${item.learners.length} learner(s) • ${item.subject || "general"}`);
+  const body = document.getElementById("missedTopicModalBody");
+  if (body) {
+    const learnerRows = item.entries.length
+      ? item.entries.map((entry) => `
+          <div class="topic-modal-row">
+            <strong>${escapeHtml(entry.learnerName)}</strong>
+            <p>${escapeHtml(entry.question)}</p>
+            <small>${escapeHtml(entry.learnerEmail || "No email")} • ${entry.wrongCount} miss(es)</small>
+          </div>
+        `).join("")
+      : `<div class="topic-modal-row"><p>No learner entries available.</p></div>`;
+
+    body.innerHTML = `
+      <section class="topic-modal-group">
+        <h4>Affected Learners</h4>
+        <div class="topic-modal-list">${learnerRows}</div>
+      </section>
+    `;
+  }
+
+  document.getElementById("missedTopicModal")?.classList.add("active");
 }
 
 function renderInsightList(targetId, items, emptyMessage) {
@@ -722,6 +931,10 @@ window.closeStudentProfile = function() {
   document.getElementById("studentProfileModal")?.classList.remove("active");
   const status = document.getElementById("feedbackNoteStatus");
   if (status) status.textContent = "";
+};
+
+window.closeMissedTopicModal = function() {
+  document.getElementById("missedTopicModal")?.classList.remove("active");
 };
 
 function wireFileNamePreview(input, statusId) {

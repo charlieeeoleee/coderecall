@@ -165,6 +165,99 @@ body{
   gap: 24px;
 }
 
+.subject-assessment-panel{
+  margin-top: 24px;
+  padding: 26px 28px;
+  border-radius: 22px;
+}
+
+.subject-assessment-head{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.subject-assessment-head h2{
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #eaf7ff;
+}
+
+.subject-assessment-head p{
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  opacity: 0.9;
+}
+
+.subject-assessment-grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.subject-assessment-card{
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-assessment-card-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.subject-assessment-card-head strong{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.subject-assessment-card-head span{
+  font-size: 12px;
+  font-weight: 700;
+  color: #7cf7d2;
+}
+
+.subject-assessment-metrics{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.subject-assessment-track{
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  overflow: hidden;
+}
+
+.subject-assessment-fill{
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.subject-assessment-fill.score{
+  background: linear-gradient(90deg, #ff2e88, #00d9ff);
+}
+
+.subject-assessment-fill.xp{
+  background: linear-gradient(90deg, #32ffc7, #00e5ff);
+}
+
 .subject-certificate-panel{
   display:flex;
   align-items:center;
@@ -692,6 +785,28 @@ body.light-mode .subject-certificate-panel{
   background: rgba(255,255,255,0.72);
 }
 
+body.light-mode .subject-assessment-panel{
+  background: rgba(255,255,255,0.72);
+}
+
+body.light-mode .subject-assessment-head h2{
+  color: #111827;
+}
+
+body.light-mode .subject-assessment-head p{
+  color: rgba(17,24,39,0.76);
+}
+
+body.light-mode .subject-assessment-card{
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.06);
+  color: #111827;
+}
+
+body.light-mode .subject-assessment-track{
+  background: rgba(15,23,42,0.08);
+}
+
 body.light-mode .subject-certificate-copy h2{
   color: #111827;
 }
@@ -741,6 +856,10 @@ body.light-mode .subject-certificate-copy p{
   .subject-card{
     min-height: 165px;
     padding: 20px;
+  }
+
+  .subject-assessment-grid{
+    grid-template-columns: 1fr;
   }
 
   .subject-card h2{

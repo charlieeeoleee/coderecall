@@ -871,9 +871,17 @@ window.closeRationaleAndContinue = function () {
 function showResult() {
   const total = quizQuestions.length || 1;
   const percent = Math.round((score / total) * 100);
+  const xpEarned = getQuizXPReward(score);
+  const xpPercent = Math.max(0, Math.min(100, Math.round((xpEarned / Math.max(1, total)) * 100)));
 
+  document.getElementById("resultTitle").textContent = `${currentMeta.tag} Complete`;
   document.getElementById("resultScore").textContent = `${score}/${total}`;
   document.getElementById("resultPercent").textContent = `${percent}%`;
+  document.getElementById("resultXP").textContent = `${xpEarned} XP`;
+  document.getElementById("resultScoreMeta").textContent = `${score} / ${total}`;
+  document.getElementById("resultXpMeta").textContent = `${xpEarned} XP`;
+  document.getElementById("resultScoreFill").style.width = `${percent}%`;
+  document.getElementById("resultXpFill").style.width = `${xpPercent}%`;
   document.getElementById("resultMessage").textContent = `You scored ${score} out of ${total}.`;
   document.getElementById("resultModal").classList.add("active");
 }
@@ -993,6 +1001,7 @@ async function saveQuizResultToStorageAndFirestore() {
     score,
     total,
     percent,
+    xpEarned,
     completedAt: new Date().toISOString()
   };
 
@@ -1009,11 +1018,13 @@ async function saveQuizResultToStorageAndFirestore() {
 
   localStorage.setItem(getQuizStorageKey(), "true");
   localStorage.setItem(`${resultKey}_score`, String(score));
+  localStorage.setItem(`${resultKey}_total`, String(total));
   localStorage.setItem(`${resultKey}_percent`, String(percent));
   localStorage.setItem(`${resultKey}_done`, "true");
   localStorage.setItem(`${resultKey}_completedAt`, resultPayload.completedAt);
   localStorage.setItem(`${resultKey}_xp_awarded`, String(xpEarned));
   localStorage.setItem(`${canonicalResultKey}_score`, String(score));
+  localStorage.setItem(`${canonicalResultKey}_total`, String(total));
   localStorage.setItem(`${canonicalResultKey}_percent`, String(percent));
   localStorage.setItem(`${canonicalResultKey}_done`, "true");
   localStorage.setItem(`${canonicalResultKey}_completedAt`, resultPayload.completedAt);

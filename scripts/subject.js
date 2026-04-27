@@ -70,6 +70,13 @@ const meta = subjectMeta[subject] || {
 document.getElementById("subjectTitle").textContent = meta.title;
 document.getElementById("subjectDesc").textContent = meta.desc;
 
+const QUIZ_LEVEL_COUNTS = { easy: 25, medium: 25, hard: 25 };
+const QUIZ_LEVEL_QUESTIONS = 3;
+const QUIZ_LEVEL_XP_PER_CORRECT = 2;
+const QUIZ_TRACK_MAX_LEVELS = Object.values(QUIZ_LEVEL_COUNTS).reduce((sum, count) => sum + count, 0);
+const QUIZ_TRACK_MAX_SCORE = QUIZ_TRACK_MAX_LEVELS * QUIZ_LEVEL_QUESTIONS;
+const QUIZ_TRACK_MAX_XP = QUIZ_TRACK_MAX_SCORE * QUIZ_LEVEL_XP_PER_CORRECT;
+
 function showSubjectNotice(message) {
   const modal = document.getElementById("subjectNoticeModal");
   const text = document.getElementById("subjectNoticeText");
@@ -192,6 +199,148 @@ async function ensureUserDoc(uid) {
   return userRef;
 }
 
+function readLocalAssessmentResult(stage) {
+  const score = Number(localStorage.getItem(`${subject}_${stage}_score`) || 0);
+  const total = Number(localStorage.getItem(`${subject}_${stage}_total`) || 0);
+  const percent = Number(localStorage.getItem(`${subject}_${stage}_percent`) || 0);
+  const xpEarned = Number(localStorage.getItem(`${subject}_${stage}_xp_awarded`) || 0);
+  const completedAt = localStorage.getItem(`${subject}_${stage}_completedAt`) || "";
+  const done = localStorage.getItem(`${subject}_${stage}_done`) === "true";
+
+  if (!done && !completedAt && !score && !percent && !xpEarned) {
+    return null;
+  }
+
+  return {
+    subject,
+    type: stage,
+    score,
+    total,
+    percent,
+    xpEarned,
+    completedAt
+  };
+}
+
+function readLocalQuizTrackResults() {
+  const results = {};
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index) || "";
+    if (!new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_result$`).test(key)) continue;
+    try {
+      results[key] = JSON.parse(localStorage.getItem(key) || "null");
+    } catch {
+      results[key] = null;
+    }
+  }
+  return results;
+}
+
+function summarizeQuizTrack(allResults = {}) {
+  const quizEntries = Object.entries(allResults).filter(([key, value]) => {
+    return new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_result$`).test(key) && value;
+  });
+
+  const levelsCleared = quizEntries.length;
+  const totalCorrect = quizEntries.reduce((sum, [, value]) => sum + Number(value.score || 0), 0);
+  const totalQuestions = quizEntries.reduce((sum, [, value]) => sum + Number(value.total || QUIZ_LEVEL_QUESTIONS), 0);
+  const xpEarned = totalCorrect * QUIZ_LEVEL_XP_PER_CORRECT;
+  const scorePercent = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+  const xpPercent = QUIZ_TRACK_MAX_XP ? Math.round((xpEarned / QUIZ_TRACK_MAX_XP) * 100) : 0;
+
+  return {
+    levelsCleared,
+    totalCorrect,
+    totalQuestions,
+    xpEarned,
+    scorePercent,
+    xpPercent
+  };
+}
+
+function renderAssessmentCard(prefix, payload) {
+  const stateEl = document.getElementById(`${prefix}State`);
+  const scoreEl = document.getElementById(`${prefix}Score`);
+  const xpEl = document.getElementById(`${prefix}XP`);
+  const scoreFill = document.getElementById(`${prefix}ScoreFill`);
+  const xpFill = document.getElementById(`${prefix}XpFill`);
+  if (!stateEl || !scoreEl || !xpEl || !scoreFill || !xpFill) return;
+
+  stateEl.textContent = payload.state;
+  scoreEl.textContent = payload.scoreLabel;
+  xpEl.textContent = payload.xpLabel;
+  scoreFill.style.width = `${Math.max(0, Math.min(100, Number(payload.scorePercent || 0)))}%`;
+  xpFill.style.width = `${Math.max(0, Math.min(100, Number(payload.xpPercent || 0)))}%`;
+}
+
+async function renderAssessmentOverview() {
+  let remoteResults = {};
+
+  if (currentUser) {
+    const userRef = await ensureUserDoc(currentUser.uid);
+    const snap = await getDoc(userRef);
+    const data = snap.data() || {};
+    remoteResults = data.results || {};
+  }
+
+  const mergedResults = {
+    ...readLocalQuizTrackResults(),
+    ...remoteResults
+  };
+
+  const pretest = remoteResults[`${subject}_pretest`] || readLocalAssessmentResult("pretest");
+  const posttest = remoteResults[`${subject}_posttest`] || readLocalAssessmentResult("posttest");
+  const quizTrack = summarizeQuizTrack(mergedResults);
+
+  renderAssessmentCard("subjectPretest", pretest
+    ? {
+        state: `${pretest.percent || 0}%`,
+        scoreLabel: `${pretest.score || 0} / ${pretest.total || 0}`,
+        xpLabel: `${pretest.xpEarned || pretest.score || 0} XP`,
+        scorePercent: pretest.percent || 0,
+        xpPercent: pretest.total ? Math.round(((pretest.xpEarned || pretest.score || 0) / pretest.total) * 100) : 0
+      }
+    : {
+        state: "Not taken",
+        scoreLabel: "0 / 0",
+        xpLabel: "0 XP",
+        scorePercent: 0,
+        xpPercent: 0
+      });
+
+  renderAssessmentCard("subjectQuiz", quizTrack.levelsCleared
+    ? {
+        state: `${quizTrack.levelsCleared} level(s)`,
+        scoreLabel: `${quizTrack.totalCorrect} correct`,
+        xpLabel: `${quizTrack.xpEarned} XP`,
+        scorePercent: quizTrack.scorePercent,
+        xpPercent: quizTrack.xpPercent
+      }
+    : {
+        state: "No levels cleared",
+        scoreLabel: "0 correct",
+        xpLabel: "0 XP",
+        scorePercent: 0,
+        xpPercent: 0
+      });
+
+  renderAssessmentCard("subjectPosttest", posttest
+    ? {
+        state: `${posttest.percent || 0}%`,
+        scoreLabel: `${posttest.score || 0} / ${posttest.total || 0}`,
+        xpLabel: `${posttest.xpEarned || posttest.score || 0} XP`,
+        scorePercent: posttest.percent || 0,
+        xpPercent: posttest.total ? Math.round(((posttest.xpEarned || posttest.score || 0) / posttest.total) * 100) : 0
+      }
+    : {
+        state: "Not taken",
+        scoreLabel: "0 / 0",
+        xpLabel: "0 XP",
+        scorePercent: 0,
+        xpPercent: 0
+      });
+}
+
 async function getMergedProgress() {
   const localProgress = {
     [getProgressKey("pretest")]: hasLocalCompletion("pretest"),
@@ -309,6 +458,8 @@ async function loadProgress() {
   if (pretestDone && modulesDone && quizDone && completion.completed) {
     showCertificatePanel(completion.completedAt);
   }
+
+  await renderAssessmentOverview();
 }
 
 /* =========================

@@ -1489,6 +1489,81 @@ body.light-mode .view-full-btn{
   color:#7ff7ff;
 }
 
+.subject-assessment-stack{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding-top:6px;
+  border-top:1px solid rgba(255,255,255,0.08);
+}
+
+.subject-assessment-row{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(12,14,40,0.28);
+  border:1px solid rgba(255,255,255,0.06);
+}
+
+.subject-assessment-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.subject-assessment-head h5{
+  margin:0 0 4px;
+  font-size:14px;
+  font-weight:800;
+}
+
+.subject-assessment-head p{
+  margin:0;
+  font-size:12px;
+  opacity:0.78;
+}
+
+.subject-assessment-values{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:2px;
+  font-size:12px;
+  white-space:nowrap;
+}
+
+.subject-assessment-values strong{
+  color:#7ff7ff;
+}
+
+.subject-assessment-track{
+  position:relative;
+  height:8px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,0.08);
+}
+
+.subject-assessment-track.xp{
+  height:6px;
+}
+
+.subject-assessment-fill{
+  height:100%;
+  border-radius:999px;
+}
+
+.subject-assessment-fill.score{
+  background:linear-gradient(90deg,#ff4aa2,#8f7bff);
+}
+
+.subject-assessment-fill.xp{
+  background:linear-gradient(90deg,#35e0c8,#00d4ff);
+}
+
 body.light-mode .review-tool-card,
 body.light-mode .wrong-answer-card,
 body.light-mode .subject-progress-card,
@@ -1505,6 +1580,23 @@ body.light-mode .subject-progress-percent{
 
 body.light-mode .subject-progress-meta strong{
   color:#0a84ae;
+}
+
+body.light-mode .subject-assessment-stack{
+  border-top-color:rgba(60, 40, 120, 0.08);
+}
+
+body.light-mode .subject-assessment-row{
+  background:rgba(255,255,255,0.58);
+  border-color:rgba(60, 40, 120, 0.08);
+}
+
+body.light-mode .subject-assessment-values strong{
+  color:#0a84ae;
+}
+
+body.light-mode .subject-assessment-track{
+  background:rgba(60, 40, 120, 0.08);
 }
 
 body.light-mode .insight-pill{
@@ -1559,6 +1651,14 @@ body.light-mode .review-empty-state{
 
   .subject-progress-top{
     flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .subject-assessment-head{
+    flex-direction:column;
+  }
+
+  .subject-assessment-values{
     align-items:flex-start;
   }
 }

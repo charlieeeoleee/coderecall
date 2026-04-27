@@ -1905,6 +1905,41 @@ function updateModuleActionState(gateState = currentModuleGateState) {
   actionBtn.textContent = "Finalizing Module...";
 }
 
+function updateModuleNextStep(gateState = currentModuleGateState) {
+  const kickerEl = document.getElementById("moduleNextStepKicker");
+  const titleEl = document.getElementById("moduleNextStepTitle");
+  const textEl = document.getElementById("moduleNextStepText");
+  if (!kickerEl || !titleEl || !textEl) return;
+
+  if (gateState.completed) {
+    kickerEl.textContent = "Completed";
+    titleEl.textContent = moduleNumber < totalModulesForDifficulty ? "Proceed to the next module" : "Return to the module list";
+    textEl.textContent =
+      moduleNumber < totalModulesForDifficulty
+        ? "This checkpoint is cleared. Use Continue to move to the next module."
+        : "This difficulty path is complete. Use Continue to return to the module list.";
+    return;
+  }
+
+  if (!gateState.readBottom) {
+    kickerEl.textContent = "Reading Phase";
+    titleEl.textContent = "Work through the lesson content";
+    textEl.textContent = `Current reading progress is ${getReadingProgressPercent()}%. Keep scrolling until the challenge section unlocks.`;
+    return;
+  }
+
+  if (!gateState.quickCheckAttempted) {
+    kickerEl.textContent = "Challenge Phase";
+    titleEl.textContent = "Finish the Quick Check";
+    textEl.textContent = "Answer every Quick Check item. The checkpoint clears automatically after the challenge is complete.";
+    return;
+  }
+
+  kickerEl.textContent = "Checkpoint";
+  titleEl.textContent = "Finalizing module progress";
+  textEl.textContent = "The module is processing your checkpoint state now. Continue will unlock once finalization completes.";
+}
+
 function updateCheckpointUi(completed, statusLabel = null, gateState = currentModuleGateState) {
   const progressState = document.getElementById("moduleProgressState");
   const checkpointBtn = document.getElementById("moduleCheckpointBtn");
@@ -1924,6 +1959,7 @@ function updateCheckpointUi(completed, statusLabel = null, gateState = currentMo
   }
 
   updateModuleActionState(gateState);
+  updateModuleNextStep(gateState);
   updateModuleProgressRail(gateState);
   return;
 
@@ -3059,6 +3095,10 @@ function renderMiniQuiz(container, quizItems) {
   const actions = document.createElement("div");
   actions.className = "module-quiz-actions";
   actions.innerHTML = `
+    <div class="module-quiz-progress" aria-live="polite">
+      <span class="module-quiz-progress-label" id="moduleQuizProgressLabel">0 / ${quizItems.length} answered</span>
+      <span class="module-quiz-progress-track"><i class="module-quiz-progress-fill" id="moduleQuizProgressBar"></i></span>
+    </div>
     <button type="button" class="module-btn primary-btn" id="moduleQuizCheckBtn">Check Answers</button>
     <p class="module-quiz-score" id="moduleQuizScore"></p>
     <p class="module-quiz-score" id="moduleQuizStatus">Answer all items, then press Check Answers to complete this Quick Check.</p>
@@ -3069,6 +3109,43 @@ function renderMiniQuiz(container, quizItems) {
   const checkBtn = document.getElementById("moduleQuizCheckBtn");
   const scoreEl = document.getElementById("moduleQuizScore");
   const statusEl = document.getElementById("moduleQuizStatus");
+  const progressLabel = document.getElementById("moduleQuizProgressLabel");
+  const progressBar = document.getElementById("moduleQuizProgressBar");
+
+  function refreshQuizProgress() {
+    let answeredCount = 0;
+
+    quizItems.forEach((_, index) => {
+      const selected = container.querySelector(`input[name="module-quiz-${index}"]:checked`);
+      const card = quiz.children[index];
+      card?.classList.toggle("answered", Boolean(selected));
+      if (selected) answeredCount += 1;
+
+      container.querySelectorAll(`input[name="module-quiz-${index}"]`).forEach((input) => {
+        input.closest(".module-quiz-option")?.classList.toggle("selected", input.checked);
+      });
+    });
+
+    const percent = quizItems.length ? Math.round((answeredCount / quizItems.length) * 100) : 0;
+    if (progressLabel) {
+      progressLabel.textContent = `${answeredCount} / ${quizItems.length} answered`;
+    }
+    if (progressBar) {
+      progressBar.style.width = `${percent}%`;
+    }
+    if (checkBtn) {
+      checkBtn.disabled = answeredCount !== quizItems.length;
+    }
+    if (statusEl && answeredCount !== quizItems.length && !currentModuleGateState.quickCheckAttempted) {
+      statusEl.textContent = "Answer every item to unlock the Quick Check result.";
+    }
+  }
+
+  container.querySelectorAll('.module-quiz-option input').forEach((input) => {
+    input.addEventListener("change", refreshQuizProgress);
+  });
+
+  refreshQuizProgress();
 
   checkBtn?.addEventListener("click", async () => {
     let score = 0;
@@ -3077,12 +3154,14 @@ function renderMiniQuiz(container, quizItems) {
     quizItems.forEach((item, index) => {
       const selected = container.querySelector(`input[name="module-quiz-${index}"]:checked`);
       const feedback = document.getElementById(`moduleQuizFeedback${index}`);
+      const card = quiz.children[index];
 
       if (!feedback) return;
 
       if (!selected) {
         feedback.textContent = "Choose one answer first.";
         feedback.className = "module-quiz-feedback pending";
+        card?.classList.remove("correct", "incorrect");
         return;
       }
 
@@ -3092,9 +3171,13 @@ function renderMiniQuiz(container, quizItems) {
         score += 1;
         feedback.textContent = `Correct: ${item.answer}`;
         feedback.className = "module-quiz-feedback correct";
+        card?.classList.add("correct");
+        card?.classList.remove("incorrect");
       } else {
         feedback.textContent = `Correct answer: ${item.answer}`;
         feedback.className = "module-quiz-feedback incorrect";
+        card?.classList.add("incorrect");
+        card?.classList.remove("correct");
       }
     });
 

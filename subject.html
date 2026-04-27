@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/subject.css?v=20260420a">
+  <link rel="stylesheet" href="styles/subject.css?v=20260427a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -73,6 +73,66 @@
           <p>Final assessment</p>
         </div>
       </button>
+    </section>
+
+    <section class="subject-assessment-panel card" id="subjectAssessmentPanel">
+      <div class="subject-assessment-head">
+        <span class="subject-badge">ASSESSMENT SCORES</span>
+        <h2>Assessment Performance</h2>
+        <p>Track raw points and XP earned for this subject's pre-test, quiz track, and post-test.</p>
+      </div>
+      <div class="subject-assessment-grid">
+        <article class="subject-assessment-card">
+          <div class="subject-assessment-card-head">
+            <strong>Pre-Test</strong>
+            <span id="subjectPretestState">Not taken</span>
+          </div>
+          <div class="subject-assessment-metrics">
+            <span id="subjectPretestScore">0 / 0</span>
+            <span id="subjectPretestXP">0 XP</span>
+          </div>
+          <div class="subject-assessment-track">
+            <div class="subject-assessment-fill score" id="subjectPretestScoreFill"></div>
+          </div>
+          <div class="subject-assessment-track">
+            <div class="subject-assessment-fill xp" id="subjectPretestXpFill"></div>
+          </div>
+        </article>
+
+        <article class="subject-assessment-card">
+          <div class="subject-assessment-card-head">
+            <strong>Quiz Track</strong>
+            <span id="subjectQuizState">No levels cleared</span>
+          </div>
+          <div class="subject-assessment-metrics">
+            <span id="subjectQuizScore">0 correct</span>
+            <span id="subjectQuizXP">0 XP</span>
+          </div>
+          <div class="subject-assessment-track">
+            <div class="subject-assessment-fill score" id="subjectQuizScoreFill"></div>
+          </div>
+          <div class="subject-assessment-track">
+            <div class="subject-assessment-fill xp" id="subjectQuizXpFill"></div>
+          </div>
+        </article>
+
+        <article class="subject-assessment-card">
+          <div class="subject-assessment-card-head">
+            <strong>Post-Test</strong>
+            <span id="subjectPosttestState">Not taken</span>
+          </div>
+          <div class="subject-assessment-metrics">
+            <span id="subjectPosttestScore">0 / 0</span>
+            <span id="subjectPosttestXP">0 XP</span>
+          </div>
+          <div class="subject-assessment-track">
+            <div class="subject-assessment-fill score" id="subjectPosttestScoreFill"></div>
+          </div>
+          <div class="subject-assessment-track">
+            <div class="subject-assessment-fill xp" id="subjectPosttestXpFill"></div>
+          </div>
+        </article>
+      </div>
     </section>
 
     <section class="subject-certificate-panel card" id="subjectCertificatePanel" hidden>
@@ -245,7 +305,7 @@
       };
     })();
   </script>
-  <script type="module" src="scripts/subject.js?v=20260420a"></script>
+  <script type="module" src="scripts/subject.js?v=20260427a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

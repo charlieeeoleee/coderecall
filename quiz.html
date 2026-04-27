@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz.css?v=20260410d">
+  <link rel="stylesheet" href="styles/quiz.css?v=20260427a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -97,6 +97,30 @@
           <span class="stat-label">Percentage</span>
           <span class="stat-value" id="resultPercent">0%</span>
         </div>
+        <div class="result-stat">
+          <span class="stat-label">XP Earned</span>
+          <span class="stat-value" id="resultXP">0 XP</span>
+        </div>
+      </div>
+      <div class="result-bars">
+        <div class="result-bar-card">
+          <div class="result-bar-head">
+            <span>Points Earned</span>
+            <strong id="resultScoreMeta">0 / 30</strong>
+          </div>
+          <div class="result-bar-track">
+            <div class="result-bar-fill score" id="resultScoreFill"></div>
+          </div>
+        </div>
+        <div class="result-bar-card">
+          <div class="result-bar-head">
+            <span>XP Reward</span>
+            <strong id="resultXpMeta">0 XP</strong>
+          </div>
+          <div class="result-bar-track">
+            <div class="result-bar-fill xp" id="resultXpFill"></div>
+          </div>
+        </div>
       </div>
       <button class="quiz-btn primary-btn" onclick="finishQuizFlow()">Return to Subject</button>
     </div>
@@ -111,7 +135,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/quiz.js?v=20260420a"></script>
+  <script type="module" src="scripts/quiz.js?v=20260427a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

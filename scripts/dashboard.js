@@ -568,10 +568,18 @@ function getTotalTrackableItemsForSubject(subject) {
   return getTotalModulesForSubject(subject) + (QUIZ_LEVELS_PER_DIFFICULTY * 3) + 2;
 }
 
+function toPercent(value, max) {
+  if (!max) return 0;
+  return Math.max(0, Math.min(100, Math.round((Number(value || 0) / max) * 100)));
+}
+
 function buildSubjectProgressSnapshot(progress = {}, results = {}) {
   return ["hardware", "electrical"].map((subject) => {
     const totalModules = getTotalModulesForSubject(subject);
     const totalItems = getTotalTrackableItemsForSubject(subject);
+    const totalQuizLevels = QUIZ_LEVELS_PER_DIFFICULTY * 3;
+    const quizTrackMaxScore = totalQuizLevels * 3;
+    const quizTrackMaxXP = quizTrackMaxScore * QUIZ_LEVEL_XP_PER_CORRECT;
 
     const moduleDoneCount = Object.keys(progress).filter((key) =>
       new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done$`).test(key) && progress[key] === true
@@ -583,8 +591,14 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
 
     const pretestDone = progress[`${subject}_pretest`] === true || results[`${subject}_pretest`] != null;
     const posttestDone = progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
+    const pretestResult = results[`${subject}_pretest`] || {};
+    const posttestResult = results[`${subject}_posttest`] || {};
     const pretestXP = getAssessmentXP("pretest", results[`${subject}_pretest`]);
     const posttestXP = getAssessmentXP("posttest", results[`${subject}_posttest`]);
+    const pretestScore = Math.max(0, Number(pretestResult?.score || 0));
+    const posttestScore = Math.max(0, Number(posttestResult?.score || 0));
+    const pretestTotal = Math.max(pretestScore, Number(pretestResult?.total || 0) || 10);
+    const posttestTotal = Math.max(posttestScore, Number(posttestResult?.total || 0) || 10);
 
     const quickCheckXP = Object.entries(progress).reduce((sum, [key, value]) => {
       if (!new RegExp(`^${subject}_(easy|medium|hard)_module_\\d+_done_quick_check_best_score$`).test(key)) {
@@ -607,6 +621,16 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
       return sum + (Number(value?.score || 0) * QUIZ_LEVEL_XP_PER_CORRECT);
     }, 0);
 
+    const quizTrack = Object.entries(results).reduce((summary, [key, value]) => {
+      if (!new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_result$`).test(key)) {
+        return summary;
+      }
+
+      summary.correct += Math.max(0, Number(value?.score || 0));
+      summary.questions += Math.max(Number(value?.total || 0) || 0, 3);
+      return summary;
+    }, { correct: 0, questions: 0 });
+
     const testXP = (pretestDone ? pretestXP : 0) + (posttestDone ? posttestXP : 0);
     const completedItems = moduleDoneCount + quizLevelDoneCount + (pretestDone ? 1 : 0) + (posttestDone ? 1 : 0);
     const percent = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -621,7 +645,33 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
       moduleDoneCount,
       totalModules,
       quizLevelDoneCount,
-      totalQuizLevels: QUIZ_LEVELS_PER_DIFFICULTY * 3
+      totalQuizLevels,
+      assessments: {
+        pretest: {
+          state: pretestDone ? "Completed" : "Not taken",
+          score: pretestScore,
+          total: pretestTotal,
+          xp: pretestDone ? pretestXP : 0,
+          scorePercent: pretestDone ? toPercent(pretestScore, pretestTotal) : 0,
+          xpPercent: pretestDone ? toPercent(pretestXP, pretestTotal) : 0
+        },
+        quizTrack: {
+          state: quizLevelDoneCount ? `${quizLevelDoneCount}/${totalQuizLevels} levels cleared` : "No quiz levels cleared",
+          score: quizTrack.correct,
+          total: Math.max(quizTrack.questions, quizTrackMaxScore),
+          xp: quizXP,
+          scorePercent: toPercent(quizTrack.correct, quizTrackMaxScore),
+          xpPercent: toPercent(quizXP, quizTrackMaxXP)
+        },
+        posttest: {
+          state: posttestDone ? "Completed" : "Not taken",
+          score: posttestScore,
+          total: posttestTotal,
+          xp: posttestDone ? posttestXP : 0,
+          scorePercent: posttestDone ? toPercent(posttestScore, posttestTotal) : 0,
+          xpPercent: posttestDone ? toPercent(posttestXP, posttestTotal) : 0
+        }
+      }
     };
   });
 }
@@ -672,6 +722,32 @@ function renderSubjectProgressSection(subjects = []) {
         <span>${item.moduleDoneCount}/${item.totalModules} modules</span>
         <span>${item.quizLevelDoneCount}/${item.totalQuizLevels} quiz levels</span>
         <strong>${item.xp} XP</strong>
+      </div>
+      <div class="subject-assessment-stack">
+        ${[
+          { label: "Pre-Test", data: item.assessments.pretest },
+          { label: "Quiz Track", data: item.assessments.quizTrack },
+          { label: "Post-Test", data: item.assessments.posttest }
+        ].map((assessment) => `
+          <section class="subject-assessment-row">
+            <div class="subject-assessment-head">
+              <div>
+                <h5>${assessment.label}</h5>
+                <p>${escapeHtml(assessment.data.state)}</p>
+              </div>
+              <div class="subject-assessment-values">
+                <span>${assessment.data.score}/${assessment.data.total} pts</span>
+                <strong>${assessment.data.xp} XP</strong>
+              </div>
+            </div>
+            <div class="subject-assessment-track">
+              <div class="subject-assessment-fill score" style="width:${assessment.data.scorePercent}%"></div>
+            </div>
+            <div class="subject-assessment-track xp">
+              <div class="subject-assessment-fill xp" style="width:${assessment.data.xpPercent}%"></div>
+            </div>
+          </section>
+        `).join("")}
       </div>
     </article>
   `).join("");

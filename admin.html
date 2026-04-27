@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260420a">
+  <link rel="stylesheet" href="styles/admin.css?v=20260427c">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -61,6 +61,10 @@
         <div class="overview-card"><h3>Students Needing Help</h3><p id="adminNeedsHelp">0</p></div>
         <div class="overview-card"><h3>Average XP</h3><p id="adminAverageXp">0</p></div>
         <div class="overview-card"><h3>Modules Cleared</h3><p id="adminModulesCleared">0 / 18</p></div>
+        <div class="overview-card"><h3>Average Pre-Test</h3><p id="adminAveragePretest">0%</p><small id="adminAveragePretestDetail">0 recorded tests</small></div>
+        <div class="overview-card"><h3>Average Post-Test</h3><p id="adminAveragePosttest">0%</p><small id="adminAveragePosttestDetail">0 recorded tests</small></div>
+        <div class="overview-card"><h3>Hardware Completion</h3><p id="adminHardwareCompletion">0%</p><small id="adminHardwareCompletionDetail">0 of 0 learners</small></div>
+        <div class="overview-card"><h3>Electrical Completion</h3><p id="adminElectricalCompletion">0%</p><small id="adminElectricalCompletionDetail">0 of 0 learners</small></div>
       </div>
 
       <section class="panel-card wide inbox-shortcut-card">
@@ -103,6 +107,10 @@
             <h4>Largest Review Queues</h4>
             <div id="adminReviewQueues" class="review-list"></div>
           </section>
+          <section class="insight-list-wrap">
+            <h4>Most Missed Topics</h4>
+            <div id="adminMostMissedTopics" class="review-list"></div>
+          </section>
         </div>
       </section>
 
@@ -125,6 +133,16 @@
             </div>
           </div>
           <div class="analytics-grid" id="difficultyAnalytics"></div>
+        </section>
+
+        <section class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3>Subject Completion Breakdown</h3>
+              <p>Separate learners who have not started, are still in progress, or already completed each subject.</p>
+            </div>
+          </div>
+          <div class="analytics-grid" id="adminCompletionBreakdown"></div>
         </section>
 
         <section class="panel-card wide">
@@ -237,8 +255,21 @@
     </div>
   </div>
 
+  <div id="missedTopicModal" class="admin-modal">
+    <div class="admin-modal-box">
+      <div class="admin-modal-head">
+        <div>
+          <h3 id="missedTopicModalTitle">Missed Topic</h3>
+          <p id="missedTopicModalSubtitle">Learners and related review items</p>
+        </div>
+        <button class="modal-close-btn" onclick="closeMissedTopicModal()">Close</button>
+      </div>
+      <div id="missedTopicModalBody" class="profile-layout"></div>
+    </div>
+  </div>
+
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
-  <script type="module" src="scripts/admin.js?v=20260420a"></script>
+  <script type="module" src="scripts/admin.js?v=20260427c"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>
