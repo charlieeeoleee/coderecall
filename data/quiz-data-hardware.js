@@ -219,7 +219,7 @@ export const hardwareQuizData = {
         {
           level: 6,
           sub: 3,
-          question: "What type of PSU cable is being shown in the picture?",
+          question: "What type of cable is being shown in the picture?",
           choices: [
             "SATA Cable",
             "CPU Cable",

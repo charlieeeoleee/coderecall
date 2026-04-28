@@ -29,9 +29,41 @@ applyRoleNavigation("guest", "review.html");
 let currentUser = null;
 let currentIsGuest = false;
 let reviewItems = [];
-const reviewMode = (new URLSearchParams(window.location.search).get("mode") || "").toLowerCase();
+const reviewParams = new URLSearchParams(window.location.search);
+const reviewMode = (reviewParams.get("mode") || "").toLowerCase();
+const reviewSubjectFilter = (reviewParams.get("subject") || "").toLowerCase();
 let flashcardItems = [];
 let flashcardIndex = 0;
+const HARDWARE_QUIZ_IMAGE_OVERRIDES = {
+  easy: {
+    "1.3": { image: "assets/quizzes/hardware/docx/image10.png" },
+    "2.3": { image: "assets/modules/hardware/easy/module1/image-42.png" },
+    "6.3": { image: "assets/quizzes/hardware/docx/image5.png" },
+    "7.3": { image: "assets/quizzes/hardware/docx/image17.png", imageCropBottom: 58 },
+    "8.3": { image: "assets/quizzes/hardware/docx/image25.png" },
+    "9.2": { image: "assets/quizzes/hardware/docx/image13.png" },
+    "10.2": { image: "assets/quizzes/hardware/docx/image19.png" },
+    "12.3": { image: "assets/quizzes/hardware/docx/image27.png" },
+    "18.3": { image: "assets/quizzes/hardware/docx/image28.png" },
+    "20.3": { image: "assets/quizzes/hardware/docx/image16.png" },
+    "21.3": { image: "assets/quizzes/hardware/docx/image8.png" },
+    "24.3": { image: "assets/quizzes/hardware/docx/image21.png" },
+    "25.3": { image: "assets/quizzes/hardware/docx/image6.png" }
+  },
+  hard: {
+    "21.3": { image: "assets/quizzes/hardware/docx/image4.png" },
+    "25.3": { image: "assets/quizzes/hardware/docx/image22.png" }
+  }
+};
+
+function withTimeout(promise, fallbackValue, timeoutMs = 1500) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+    })
+  ]);
+}
 
 function escapeHtml(value) {
   return String(value || "")
@@ -153,14 +185,49 @@ function getRetryState(item) {
   };
 }
 
+function showFlashcardRetryPopup(item, onContinue) {
+  const popup = document.getElementById("flashcardRetryPopup");
+  const message = document.getElementById("flashcardRetryMessage");
+  const continueBtn = document.getElementById("flashcardRetryContinueBtn");
+  if (!popup || !message || !continueBtn) {
+    onContinue?.();
+    return;
+  }
+
+  const retryAt = item?.retryAvailableAt ? new Date(item.retryAvailableAt) : null;
+  const retryDateLabel = retryAt && !Number.isNaN(retryAt.getTime())
+    ? retryAt.toLocaleDateString(undefined, {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      })
+    : "tomorrow";
+
+  message.textContent = `This question is locked for today. Use the flashcard for memory review now, then answer the source question again on ${retryDateLabel}.`;
+  continueBtn.onclick = () => {
+    popup.classList.remove("active");
+    onContinue?.();
+  };
+  popup.classList.add("active");
+}
+
 function isDueMemoryReviewItem(item) {
   const retryState = getRetryState(item);
   return Boolean(item?.actionUrl) && retryState.canOpen && item?.quizType !== "pretest";
 }
 
 function getVisibleReviewItems(items) {
-  if (reviewMode !== "memory" && reviewMode !== "retention" && !isFlashcardMode()) return items;
-  return items.filter(isDueMemoryReviewItem);
+  let nextItems = items;
+
+  if (reviewMode === "memory" || reviewMode === "retention" || isFlashcardMode()) {
+    nextItems = nextItems.filter(isDueMemoryReviewItem);
+  }
+
+  if (reviewSubjectFilter) {
+    nextItems = nextItems.filter((item) => String(item?.subject || "").toLowerCase() === reviewSubjectFilter);
+  }
+
+  return nextItems;
 }
 
 function applyReviewModeLabels() {
@@ -175,8 +242,9 @@ function applyReviewModeLabels() {
   const clearBtn = document.querySelector(".review-page-section .view-full-btn");
 
   if (isFlashcardMode()) {
+    const subjectLabel = reviewSubjectFilter ? ` for ${reviewSubjectFilter === "hardware" ? "Computer Hardware" : "Electrical"}` : "";
     if (titleEl) titleEl.textContent = "Memory Flashcards";
-    if (subtitleEl) subtitleEl.textContent = "Flip due retention items into flashcards and mark whether you still remember them.";
+    if (subtitleEl) subtitleEl.textContent = `Flip due retention items${subjectLabel} into flashcards and mark whether you still remember them.`;
     if (countLabelEl) countLabelEl.textContent = "Cards Due";
     if (latestLabelEl) latestLabelEl.textContent = "Current Deck";
     if (sectionTitleEl) sectionTitleEl.textContent = "Flashcard Review";
@@ -198,6 +266,52 @@ function getFlashcardAnswer(item) {
   return item?.correctAnswer || "Review the original activity for the full answer.";
 }
 
+async function hydrateFlashcardItem(item) {
+  if (!item) return item;
+  if (item.image) return item;
+
+  if (item.quizType === "quiz-level") {
+    try {
+      const levelKey = Number(item.level || item.quizLevel || 0);
+      const subKey = Number(item.sub || 0);
+      if (!levelKey || !subKey) return item;
+
+      if (String(item.subject || "").toLowerCase() === "hardware") {
+        const module = await import("../data/quiz-data-hardware.js");
+        const rawQuestion = module.hardwareQuizData?.hardware?.[item.difficulty || "easy"]?.[levelKey]?.find(
+          (question) => Number(question?.sub || 0) === subKey
+        );
+        const override = HARDWARE_QUIZ_IMAGE_OVERRIDES[item.difficulty || "easy"]?.[`${levelKey}.${subKey}`] || {};
+        if (rawQuestion?.image || override.image) {
+          return {
+            ...item,
+            image: String(override.image || rawQuestion?.image || ""),
+            imageCropBottom: Number(override.imageCropBottom || rawQuestion?.imageCropBottom || 0) || 0
+          };
+        }
+      }
+
+      if (String(item.subject || "").toLowerCase() === "electrical") {
+        const module = await import("../data/quiz-data-electrical.js");
+        const rawQuestion = module.electricalQuizData?.electrical?.[item.difficulty || "easy"]?.[levelKey]?.find(
+          (question) => Number(question?.sub || 0) === subKey
+        );
+        if (rawQuestion?.image) {
+          return {
+            ...item,
+            image: String(rawQuestion.image || ""),
+            imageCropBottom: Number(rawQuestion.imageCropBottom || 0) || 0
+          };
+        }
+      }
+    } catch (error) {
+      console.warn("Unable to hydrate flashcard visual.", error);
+    }
+  }
+
+  return item;
+}
+
 function updateFlashcardVisibility(isFlashcard) {
   const flashcardSection = document.getElementById("flashcardReviewSection");
   const list = document.getElementById("wrongAnswerReviewList");
@@ -209,7 +323,7 @@ function updateFlashcardVisibility(isFlashcard) {
   }
 }
 
-function renderFlashcardDeck(items) {
+async function renderFlashcardDeck(items) {
   updateFlashcardVisibility(true);
   const body = document.getElementById("flashcardReviewBody");
   const progressText = document.getElementById("flashcardProgressText");
@@ -228,7 +342,10 @@ function renderFlashcardDeck(items) {
 
   const safeIndex = Math.max(0, Math.min(flashcardIndex, items.length - 1));
   flashcardIndex = safeIndex;
-  const item = items[safeIndex];
+  const item = await hydrateFlashcardItem(items[safeIndex]);
+  if (item && item !== items[safeIndex]) {
+    items[safeIndex] = item;
+  }
   progressText.textContent = `${safeIndex + 1} / ${items.length}`;
 
   body.innerHTML = `
@@ -238,6 +355,20 @@ function renderFlashcardDeck(items) {
         <span class="flashcard-chip secondary">${escapeHtml(item.title || item.quizType || item.source || "review")}</span>
         <span class="flashcard-chip">Stage ${Number(item.stageIndex || 0) + 1}</span>
       </div>
+      ${item?.image
+        ? `
+          <div class="flashcard-stage-visual">
+            <img
+              src="${escapeHtml(item.image)}"
+              alt="Flashcard visual"
+              class="flashcard-stage-image${Number(item?.imageCropBottom || 0) > 0 ? " is-cropped" : ""}"
+              style="${Number(item?.imageCropBottom || 0) > 0 ? `--flashcard-image-crop-bottom:${Number(item.imageCropBottom)}px;` : ""}"
+              loading="lazy"
+              decoding="async"
+            >
+          </div>
+        `
+        : ""}
       <h4 class="flashcard-stage-prompt">${escapeHtml(item.question || "Review prompt unavailable.")}</h4>
       <div id="flashcardBackFace" class="flashcard-stage-answer flashcard-hidden">
         <strong>Correct Answer</strong>
@@ -268,8 +399,17 @@ function renderFlashcardDeck(items) {
   });
 
   againBtn?.addEventListener("click", () => {
-    flashcardIndex = Math.min(flashcardIndex + 1, Math.max(0, flashcardItems.length - 1));
-    renderFlashcardDeck(flashcardItems);
+    const advanceDeck = () => {
+      flashcardIndex = Math.min(flashcardIndex + 1, Math.max(0, flashcardItems.length - 1));
+      renderFlashcardDeck(flashcardItems);
+    };
+
+    if (item?.retryPolicy === "next_day" || item?.retryAvailableAt) {
+      showFlashcardRetryPopup(item, advanceDeck);
+      return;
+    }
+
+    advanceDeck();
   });
 
   rememberedBtn?.addEventListener("click", async () => {
@@ -364,14 +504,20 @@ function renderReviewItems(items) {
 async function loadReviewPage() {
   localStorage.setItem("review_page_opened", "true");
   reviewItems = reviewMode === "retention" || isFlashcardMode()
-    ? await loadRetentionQueue({
-        db,
-        user: currentUser
-      })
-    : await loadWrongAnswerReview({
-        db,
-        user: currentUser
-      });
+    ? await withTimeout(
+        loadRetentionQueue({
+          db,
+          user: currentUser
+        }),
+        []
+      )
+    : await withTimeout(
+        loadWrongAnswerReview({
+          db,
+          user: currentUser
+        }),
+        []
+      );
   applyReviewModeLabels();
   const visibleItems = getVisibleReviewItems(reviewItems);
   renderStats(visibleItems);

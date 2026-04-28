@@ -147,7 +147,19 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/quiz.js?v=20260428b"></script>
+  <div class="quiz-modal" id="retentionGateModal">
+    <div class="quiz-modal-box result-box">
+      <span class="quiz-tag">MEMORY REVIEW DUE</span>
+      <h3>Flashcards Recommended First</h3>
+      <p id="retentionGateText">You have due memory cards for this subject. Reviewing them first can improve retention before you continue this assessment.</p>
+      <div class="quiz-actions">
+        <button class="quiz-btn secondary-btn" id="retentionGateContinueBtn" type="button">Continue Anyway</button>
+        <button class="quiz-btn primary-btn" id="retentionGateReviewBtn" type="button">Review Flashcards Now</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="scripts/quiz.js?v=20260428c"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

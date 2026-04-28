@@ -22,7 +22,7 @@ import {
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
-import { saveRetentionReview, resolveRetentionReview } from "./retention-store.js";
+import { saveRetentionReview, resolveRetentionReview, loadRetentionQueue } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
@@ -52,7 +52,7 @@ let score = 0;
 let selectedChoice = null;
 let selectedConfidence = null;
 let pendingContinue = null;
-let xpAwardedThisAttempt = false;
+let retentionGateShown = false;
 let resolveAuthReady = null;
 const authReadyPromise = new Promise((resolve) => {
   resolveAuthReady = resolve;
@@ -61,6 +61,9 @@ let authReadyResolved = false;
 let cachedUserRef = null;
 let cachedUserData = null;
 let pendingStudyHistorySavePromise = null;
+let awardedQuestionIds = new Set();
+let correctQuestionIdsThisRun = new Set();
+let lastEarnedXP = 0;
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
 const RESUME_ACTIVITY_KEY = "resume_activity";
@@ -94,6 +97,31 @@ function getQuizBaseUrl() {
 
 function getQuizResumeUrl() {
   return `${getQuizBaseUrl()}&resume=1`;
+}
+
+function normalizeQuestionIdList(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function getQuestionIdentifier(question, fallbackIndex = currentIndex) {
+  if (question?.level != null && question?.sub != null) {
+    return `${question.level}.${question.sub}`;
+  }
+
+  const fallbackText = String(question?.question || `question_${fallbackIndex + 1}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80);
+
+  return fallbackText || `question_${fallbackIndex + 1}`;
+}
+
+function getSubjectDisplayName() {
+  return subject === "hardware" ? "Computer Hardware" : "Electrical";
 }
 
 function readLocalResumeActivity() {
@@ -245,6 +273,7 @@ async function saveQuizResumeState() {
     score,
     selectedChoice,
     selectedConfidence,
+    correctQuestionIdsThisRun: Array.from(correctQuestionIdsThisRun),
     questions: quizQuestions,
     updatedAt: new Date().toISOString()
   };
@@ -284,6 +313,7 @@ function restoreQuizResumeState() {
   score = Math.max(0, Number(state.score || 0));
   selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
   selectedConfidence = typeof state.selectedConfidence === "string" ? state.selectedConfidence : null;
+  correctQuestionIdsThisRun = new Set(normalizeQuestionIdList(state.correctQuestionIdsThisRun));
   return true;
 }
 
@@ -648,10 +678,50 @@ function getResultDocKey() {
   return `${subject}_${type}`;
 }
 
-function getQuizXPReward(scoreValue = score) {
-  if (type === "pretest") return Math.max(0, Number(scoreValue) || 0);
-  if (type === "posttest") return Math.max(0, Number(scoreValue) || 0);
+function getPerQuestionXPReward() {
+  if (type === "pretest") return XP_RULES.pretest;
+  if (type === "posttest") return XP_RULES.posttest;
   return XP_RULES.quizLevel;
+}
+
+function getQuizXPReward(scoreValue = score) {
+  return Math.max(0, Number(scoreValue) || 0) * getPerQuestionXPReward();
+}
+
+function readLocalQuizResultPayload() {
+  try {
+    const resultKey = getResultDocKey();
+    const scoreValue = localStorage.getItem(`${resultKey}_score`);
+    if (scoreValue == null) return null;
+
+    return {
+      xpAwardedQuestionIds: normalizeQuestionIdList(
+        JSON.parse(localStorage.getItem(`${resultKey}_xp_awarded_question_ids`) || "[]")
+      )
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function syncAwardedQuestionIds() {
+  const nextIds = new Set(
+    normalizeQuestionIdList(readLocalQuizResultPayload()?.xpAwardedQuestionIds)
+  );
+
+  if (currentUser) {
+    try {
+      const data = await getCachedUserData(currentUser.uid, { force: true });
+      const remoteIds = normalizeQuestionIdList(
+        data?.results?.[getResultDocKey()]?.xpAwardedQuestionIds
+      );
+      remoteIds.forEach((id) => nextIds.add(id));
+    } catch (error) {
+      console.warn("Unable to sync awarded question XP state.", error);
+    }
+  }
+
+  awardedQuestionIds = nextIds;
 }
 
 function isPretestAlreadyTaken() {
@@ -765,6 +835,59 @@ function getConfidenceLabel(confidence) {
   if (confidence === "somewhat_sure") return "Somewhat Sure";
   if (confidence === "guessing") return "Guessing";
   return "Unknown";
+}
+
+function withTimeout(promise, fallbackValue, timeoutMs = 1200) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+    })
+  ]);
+}
+
+async function maybeShowRetentionGate() {
+  if (retentionGateShown) return;
+
+  await authReadyPromise;
+  const queueItems = await withTimeout(
+    loadRetentionQueue({
+      db,
+      user: currentUser
+    }),
+    []
+  );
+
+  const dueItems = (queueItems || []).filter((item) =>
+    String(item?.subject || "").toLowerCase() === subject
+    && item?.actionUrl
+    && item?.quizType !== "pretest"
+    && item?.dueAt
+    && new Date(item.dueAt).getTime() <= Date.now()
+  );
+
+  if (!dueItems.length) return;
+
+  const modal = document.getElementById("retentionGateModal");
+  const text = document.getElementById("retentionGateText");
+  const reviewBtn = document.getElementById("retentionGateReviewBtn");
+  const continueBtn = document.getElementById("retentionGateContinueBtn");
+  if (!modal || !text || !reviewBtn || !continueBtn) return;
+
+  retentionGateShown = true;
+  text.textContent = `You have ${dueItems.length} due memory card${dueItems.length === 1 ? "" : "s"} for ${getSubjectDisplayName()}. Reviewing them first can improve retention before you continue this assessment.`;
+  reviewBtn.onclick = () => {
+    window.location.href = `review.html?mode=flashcards&subject=${encodeURIComponent(subject)}`;
+  };
+  continueBtn.onclick = () => {
+    modal.classList.remove("active");
+  };
+  modal.classList.add("active");
+}
+
+async function promptRetentionGateAfterWeakAnswer() {
+  retentionGateShown = false;
+  await maybeShowRetentionGate();
 }
 
 function renderQuestion() {
@@ -897,6 +1020,8 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
     sub: question?.sub || currentIndex + 1,
     title: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} ${type === "pretest" ? "Pre-Test" : type === "posttest" ? "Post-Test" : "Quiz"}`,
     question: String(question?.question || ""),
+    image: String(question?.image || ""),
+    imageCropBottom: Number(question?.imageCropBottom || 0) || 0,
     selectedAnswer: String(selectedAnswer || ""),
     correctAnswer: getCorrectAnswerText(question),
     rationale: buildReviewRationale(question),
@@ -920,8 +1045,8 @@ window.closeRationaleAndContinue = function () {
 function showResult() {
   const total = quizQuestions.length || 1;
   const percent = Math.round((score / total) * 100);
-  const xpEarned = getQuizXPReward(score);
-  const xpPercent = Math.max(0, Math.min(100, Math.round((xpEarned / Math.max(1, total)) * 100)));
+  const xpEarned = lastEarnedXP;
+  const xpPercent = Math.max(0, Math.min(100, Math.round((xpEarned / Math.max(1, total * getPerQuestionXPReward())) * 100)));
 
   document.getElementById("resultTitle").textContent = `${currentMeta.tag} Complete`;
   document.getElementById("resultScore").textContent = `${score}/${total}`;
@@ -1036,7 +1161,7 @@ async function saveQuizResultToStorageAndFirestore() {
 
   const total = quizQuestions.length || 1;
   const percent = Math.round((score / total) * 100);
-  const xpEarned = getQuizXPReward(score);
+  const xpEarned = lastEarnedXP;
   const resultKey = getResultDocKey();
   const flags = getProgressFlags();
   const selectedSubject = (sessionStorage.getItem(SELECTED_SUBJECT_KEY) || "").toLowerCase();
@@ -1051,6 +1176,7 @@ async function saveQuizResultToStorageAndFirestore() {
     total,
     percent,
     xpEarned,
+    xpAwardedQuestionIds: Array.from(awardedQuestionIds),
     completedAt: new Date().toISOString()
   };
 
@@ -1072,12 +1198,14 @@ async function saveQuizResultToStorageAndFirestore() {
   localStorage.setItem(`${resultKey}_done`, "true");
   localStorage.setItem(`${resultKey}_completedAt`, resultPayload.completedAt);
   localStorage.setItem(`${resultKey}_xp_awarded`, String(xpEarned));
+  localStorage.setItem(`${resultKey}_xp_awarded_question_ids`, JSON.stringify(resultPayload.xpAwardedQuestionIds));
   localStorage.setItem(`${canonicalResultKey}_score`, String(score));
   localStorage.setItem(`${canonicalResultKey}_total`, String(total));
   localStorage.setItem(`${canonicalResultKey}_percent`, String(percent));
   localStorage.setItem(`${canonicalResultKey}_done`, "true");
   localStorage.setItem(`${canonicalResultKey}_completedAt`, resultPayload.completedAt);
   localStorage.setItem(`${canonicalResultKey}_xp_awarded`, String(xpEarned));
+  localStorage.setItem(`${canonicalResultKey}_xp_awarded_question_ids`, JSON.stringify(resultPayload.xpAwardedQuestionIds));
   localStorage.setItem(`${canonicalResultKey}_attempt_done`, "true");
 
   if (!currentUser) return;
@@ -1109,26 +1237,17 @@ async function saveQuizResultToStorageAndFirestore() {
   mergeCachedUserData({ progress, results });
 }
 
-async function awardQuizXPOnce() {
-  if (xpAwardedThisAttempt) return;
-
-  const attemptDone = localStorage.getItem(getQuizStorageKey()) === "true";
-  if (attemptDone) {
-    xpAwardedThisAttempt = true;
-    return;
-  }
-
-  await addXP(getQuizXPReward(score));
-  xpAwardedThisAttempt = true;
-}
-
 async function finishAttempt() {
   document.getElementById("quizProgressFill").style.width = "100%";
   document.getElementById("quizProgressText").textContent = "100% Completed";
 
-  await awardQuizXPOnce();
+  const newlyAwardedIds = Array.from(correctQuestionIdsThisRun).filter((id) => !awardedQuestionIds.has(id));
+  newlyAwardedIds.forEach((id) => awardedQuestionIds.add(id));
+  lastEarnedXP = newlyAwardedIds.length * getPerQuestionXPReward();
+  await addXP(lastEarnedXP);
   await saveQuizResultToStorageAndFirestore();
   await clearQuizResumeState();
+  correctQuestionIdsThisRun = new Set();
   showResult();
 }
 
@@ -1155,6 +1274,7 @@ window.handleNext = function () {
   const lowConfidence = isLowConfidenceAnswer(selectedConfidence);
 
   if (isCorrect) {
+    correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion, currentIndex));
     resolveWrongAnswerReview({
       db,
       user: currentUser,
@@ -1170,6 +1290,10 @@ window.handleNext = function () {
           ...reviewPayload,
           seedReason: "low_confidence_correct"
         }
+      }).then(() => {
+        promptRetentionGateAfterWeakAnswer().catch((error) => {
+          console.warn("Unable to show retention gate after low-confidence answer.", error);
+        });
       }).catch((error) => {
         console.warn("Unable to queue low-confidence retention item.", error);
       });
@@ -1213,6 +1337,10 @@ window.handleNext = function () {
       ...reviewPayload,
       seedReason: "wrong_answer"
     }
+  }).then(() => {
+    promptRetentionGateAfterWeakAnswer().catch((error) => {
+      console.warn("Unable to show retention gate after wrong answer.", error);
+    });
   }).catch((error) => {
     console.warn("Unable to queue retention review item.", error);
   });
@@ -1279,18 +1407,35 @@ if (isPretestAlreadyTaken()) {
   loadTheme();
   showPretestLockModal("You already took the pre-test.");
 } else {
-  prepareQuestions();
-  loadTheme();
-  renderQuestion();
+  Promise.resolve()
+    .then(() => syncAwardedQuestionIds())
+    .then(() => {
+      prepareQuestions();
+      loadTheme();
+      renderQuestion();
+    })
+    .catch((error) => {
+      console.warn("Unable to initialize quiz XP award state.", error);
+      prepareQuestions();
+      loadTheme();
+      renderQuestion();
+    });
 }
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
   currentIsGuest = !user && localStorage.getItem("guest") === "true";
+  syncAwardedQuestionIds().catch((error) => {
+    console.warn("Unable to refresh awarded question XP state.", error);
+  });
 
   if (!authReadyResolved) {
     authReadyResolved = true;
     resolveAuthReady?.();
+  }
+
+  if (!isPretestAlreadyTaken()) {
+    retentionGateShown = false;
   }
 });
 

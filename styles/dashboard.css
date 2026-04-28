@@ -1413,6 +1413,30 @@ body.light-mode .view-full-btn{
   font-weight:700;
 }
 
+.flashcard-stage-visual{
+  position:relative;
+  margin:0 0 18px;
+  padding:14px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.flashcard-stage-image{
+  width:100%;
+  max-height:320px;
+  object-fit:contain;
+  display:block;
+  border-radius:16px;
+  background:rgba(255,255,255,0.04);
+}
+
+.flashcard-stage-image.is-cropped{
+  height:calc(320px - var(--flashcard-image-crop-bottom, 0px));
+  object-fit:cover;
+  object-position:center top;
+}
+
 .flashcard-stage-answer{
   position:relative;
   margin:0;
@@ -1836,6 +1860,15 @@ body.light-mode .flashcard-chip{
 body.light-mode .flashcard-chip.secondary{
   background:rgba(0,134,176,0.12);
   color:#007ca6;
+}
+
+body.light-mode .flashcard-stage-visual{
+  background:rgba(255,255,255,0.72);
+  border-color:rgba(60, 40, 120, 0.08);
+}
+
+body.light-mode .flashcard-stage-image{
+  background:rgba(37,27,75,0.04);
 }
 
 body.light-mode .flashcard-btn{

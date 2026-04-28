@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260428c">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260428d">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -114,7 +114,19 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/review.js?v=20260428c"></script>
+  <div id="flashcardRetryPopup" class="popup">
+    <div class="popup-box">
+      <h3 id="flashcardRetryTitle">Answer Again Tomorrow</h3>
+      <p id="flashcardRetryMessage">
+        This question is locked for today. Use the flashcard for memory review now, then answer the source question again tomorrow.
+      </p>
+      <div class="popup-actions">
+        <button id="flashcardRetryContinueBtn" type="button">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="scripts/review.js?v=20260428e"></script>
   <script src="scripts/loading.js?v=20260419a" defer></script>
 </body>
 </html>

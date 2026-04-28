@@ -110,6 +110,18 @@
   </div>
   </div>
 
+  <div class="level-modal" id="retentionGateModal">
+    <div class="level-modal-box">
+      <span class="level-tag">MEMORY REVIEW DUE</span>
+      <h3>Flashcards Recommended First</h3>
+      <p id="retentionGateText">You have due memory cards for this subject. Reviewing them first can improve retention before you continue this quiz level.</p>
+      <div class="level-actions">
+        <button class="level-btn secondary-btn" id="retentionGateContinueBtn" type="button">Continue Anyway</button>
+        <button class="level-btn primary-btn" id="retentionGateReviewBtn" type="button">Review Flashcards Now</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     window.goBackToLevels = window.goBackToLevels || function () {
       const params = new URLSearchParams(window.location.search);
@@ -118,7 +130,7 @@
       window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
     };
   </script>
-  <script type="module" src="scripts/quiz-level.js?v=20260428b"></script>
+  <script type="module" src="scripts/quiz-level.js?v=20260428c"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

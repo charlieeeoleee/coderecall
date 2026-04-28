@@ -80,6 +80,8 @@ function normalizeRetentionEntry(payload = {}) {
     sub: Number(payload.sub || 0) || 0,
     title: String(payload.title || ""),
     question: String(payload.question || ""),
+    image: String(payload.image || ""),
+    imageCropBottom: Number(payload.imageCropBottom || 0) || 0,
     selectedAnswer: String(payload.selectedAnswer || ""),
     correctAnswer: String(payload.correctAnswer || ""),
     rationale: String(payload.rationale || ""),

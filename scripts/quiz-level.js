@@ -12,7 +12,7 @@ import {
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
-import { saveRetentionReview, resolveRetentionReview } from "./retention-store.js";
+import { saveRetentionReview, resolveRetentionReview, loadRetentionQueue } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
 
 const firebaseConfig = {
@@ -34,7 +34,7 @@ const difficulty = (params.get("difficulty") || "easy").toLowerCase();
 const quizLevel = parseInt(params.get("quizLevel") || "1", 10);
 
 const XP_PER_CORRECT = 2;
-const MAX_DAILY_TRIES_PER_QUESTION = 1;
+const MAX_DAILY_TRIES_PER_QUESTION = 3;
 
 const HARDWARE_DOC_IMAGE_BASE = "assets/quizzes/hardware/docx";
 const HARDWARE_QUIZ_LEVEL_FALLBACKS = {
@@ -218,6 +218,13 @@ let rationaleNextAction = "advance";
 let currentTotalXP = 0;
 let questionBankCache = null;
 const RESUME_ACTIVITY_KEY = "resume_activity";
+let retentionGateShown = false;
+let awardedQuestionIds = new Set();
+let correctQuestionIdsThisRun = new Set();
+
+function getSubjectDisplayName() {
+  return subject === "hardware" ? "Computer Hardware" : "Electrical";
+}
 
 function shuffleArray(array) {
   const cloned = [...array];
@@ -376,6 +383,13 @@ function getResultKey() {
   return `${subject}_${difficulty}_quiz_level_${quizLevel}_result`;
 }
 
+function normalizeQuestionIdList(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
 function getOverallQuizKey() {
   return `${subject}_${difficulty}_quiz`;
 }
@@ -451,6 +465,7 @@ async function saveQuizLevelResumeState() {
     score,
     selectedChoice,
     selectedConfidence,
+    correctQuestionIdsThisRun: Array.from(correctQuestionIdsThisRun),
     questions,
     updatedAt: new Date().toISOString()
   };
@@ -491,7 +506,37 @@ function restoreQuizLevelResumeState() {
   score = Math.max(0, Number(state.score || 0));
   selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
   selectedConfidence = typeof state.selectedConfidence === "string" ? state.selectedConfidence : null;
+  correctQuestionIdsThisRun = new Set(normalizeQuestionIdList(state.correctQuestionIdsThisRun));
   return true;
+}
+
+function readLocalLevelResult() {
+  try {
+    return JSON.parse(localStorage.getItem(getResultKey()) || "null");
+  } catch {
+    return null;
+  }
+}
+
+async function syncAwardedQuestionIds() {
+  const nextIds = new Set(
+    normalizeQuestionIdList(readLocalLevelResult()?.xpAwardedQuestionIds)
+  );
+
+  if (currentUser) {
+    try {
+      const userRef = await ensureUserDoc(currentUser.uid);
+      const snap = await getDoc(userRef);
+      const remoteIds = normalizeQuestionIdList(
+        snap.data()?.results?.[getResultKey()]?.xpAwardedQuestionIds
+      );
+      remoteIds.forEach((id) => nextIds.add(id));
+    } catch (error) {
+      console.warn("Unable to sync awarded question XP state.", error);
+    }
+  }
+
+  awardedQuestionIds = nextIds;
 }
 
 function getWeekKey() {
@@ -573,6 +618,10 @@ function recordQuestionAttempt(question, isCorrect) {
 function isQuestionLockedForToday(question) {
   const state = getQuestionDailyState(question);
   return state.attempts >= MAX_DAILY_TRIES_PER_QUESTION && !state.answeredCorrectly;
+}
+
+function getRemainingQuestionTries(state) {
+  return Math.max(0, MAX_DAILY_TRIES_PER_QUESTION - Number(state?.attempts || 0));
 }
 
 async function ensureUserDoc(uid) {
@@ -766,6 +815,58 @@ function getConfidenceLabel(confidence) {
   return "Unknown";
 }
 
+function withTimeout(promise, fallbackValue, timeoutMs = 1200) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(fallbackValue), timeoutMs);
+    })
+  ]);
+}
+
+async function maybeShowRetentionGate() {
+  if (retentionGateShown) return;
+
+  const queueItems = await withTimeout(
+    loadRetentionQueue({
+      db,
+      user: currentUser
+    }),
+    []
+  );
+
+  const dueItems = (queueItems || []).filter((item) =>
+    String(item?.subject || "").toLowerCase() === subject
+    && item?.actionUrl
+    && item?.quizType !== "pretest"
+    && item?.dueAt
+    && new Date(item.dueAt).getTime() <= Date.now()
+  );
+
+  if (!dueItems.length) return;
+
+  const modal = document.getElementById("retentionGateModal");
+  const text = document.getElementById("retentionGateText");
+  const reviewBtn = document.getElementById("retentionGateReviewBtn");
+  const continueBtn = document.getElementById("retentionGateContinueBtn");
+  if (!modal || !text || !reviewBtn || !continueBtn) return;
+
+  retentionGateShown = true;
+  text.textContent = `You have ${dueItems.length} due memory card${dueItems.length === 1 ? "" : "s"} for ${getSubjectDisplayName()}. Reviewing them first can improve retention before you continue this quiz level.`;
+  reviewBtn.onclick = () => {
+    window.location.href = `review.html?mode=flashcards&subject=${encodeURIComponent(subject)}`;
+  };
+  continueBtn.onclick = () => {
+    modal.classList.remove("active");
+  };
+  modal.classList.add("active");
+}
+
+async function promptRetentionGateAfterWeakAnswer() {
+  retentionGateShown = false;
+  await maybeShowRetentionGate();
+}
+
 function renderQuestion() {
   const restoredChoice = selectedChoice;
   const restoredConfidence = selectedConfidence;
@@ -780,7 +881,7 @@ function renderQuestion() {
     currentIndex += 1;
     showRationaleWithAction(false, currentQuestion, {
       title: "Try Again Tomorrow",
-      text: "You already used both tries for this question today. We'll move to the next question for now, and you can answer this one again tomorrow.",
+      text: `You already used all ${MAX_DAILY_TRIES_PER_QUESTION} tries for this question today. We'll move to the next question for now, and you can answer this one again tomorrow.`,
       buttonText: currentIndex < questions.length ? "Continue" : "Finish",
       nextAction: currentIndex < questions.length ? "advance" : "finish"
     });
@@ -872,6 +973,8 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
     sub: question?.sub || currentIndex + 1,
     title: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} ${difficulty} Level ${quizLevel}`,
     question: String(question?.question || ""),
+    image: String(question?.image || ""),
+    imageCropBottom: Number(question?.imageCropBottom || 0) || 0,
     selectedAnswer: String(selectedAnswer || ""),
     correctAnswer: String(question?.answer || ""),
     rationale: buildRationale(question, false),
@@ -973,7 +1076,9 @@ async function addLevelXP(amount) {
   renderXpDock(currentXP + amount);
 }
 
-async function saveLevelCompletion() {
+async function saveLevelCompletion({ earnedXP, awardedIds }) {
+  const awardedIdList = Array.from(new Set(normalizeQuestionIdList(awardedIds)));
+
   localStorage.setItem(getLevelDoneKey(), "true");
   if (difficulty === "easy") {
     localStorage.setItem(getLegacyLevelDoneKey(), "true");
@@ -985,6 +1090,8 @@ async function saveLevelCompletion() {
     quizLevel,
     score,
     total: questions.length,
+    earnedXP,
+    xpAwardedQuestionIds: awardedIdList,
     completedAt: new Date().toISOString()
   }));
 
@@ -1022,6 +1129,8 @@ async function saveLevelCompletion() {
     quizLevel,
     score,
     total: questions.length,
+    earnedXP,
+    xpAwardedQuestionIds: awardedIdList,
     completedAt: new Date().toISOString()
   };
 
@@ -1032,10 +1141,16 @@ async function finishLevel() {
   document.getElementById("levelProgressFill").style.width = "100%";
   document.getElementById("levelProgressText").textContent = "100% Completed";
 
-  const earnedXP = score * XP_PER_CORRECT;
+  const newlyAwardedIds = Array.from(correctQuestionIdsThisRun).filter((id) => !awardedQuestionIds.has(id));
+  newlyAwardedIds.forEach((id) => awardedQuestionIds.add(id));
+  const earnedXP = newlyAwardedIds.length * XP_PER_CORRECT;
   await addLevelXP(earnedXP);
-  await saveLevelCompletion();
+  await saveLevelCompletion({
+    earnedXP,
+    awardedIds: Array.from(awardedQuestionIds)
+  });
   await clearQuizLevelResumeState();
+  correctQuestionIdsThisRun = new Set();
 
   document.getElementById("resultMessage").textContent =
     `You completed Level ${quizLevel} with a score of ${score}/${questions.length} and earned ${earnedXP} XP.`;
@@ -1056,6 +1171,7 @@ window.handleNext = function () {
   const questionState = recordQuestionAttempt(currentQuestion, isCorrect);
 
   if (isCorrect) {
+    correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion));
     resolveWrongAnswerReview({
       db,
       user: currentUser,
@@ -1071,6 +1187,10 @@ window.handleNext = function () {
           ...reviewPayload,
           seedReason: "low_confidence_correct"
         }
+      }).then(() => {
+        promptRetentionGateAfterWeakAnswer().catch((error) => {
+          console.warn("Unable to show retention gate after low-confidence answer.", error);
+        });
       }).catch((error) => {
         console.warn("Unable to queue low-confidence retention item.", error);
       });
@@ -1115,6 +1235,10 @@ window.handleNext = function () {
         ...reviewPayload,
         seedReason: "wrong_answer"
       }
+    }).then(() => {
+      promptRetentionGateAfterWeakAnswer().catch((error) => {
+        console.warn("Unable to show retention gate after wrong answer.", error);
+      });
     }).catch((error) => {
       console.warn("Unable to queue retention review item.", error);
     });
@@ -1124,8 +1248,11 @@ window.handleNext = function () {
     saveQuizLevelResumeState().catch((error) => {
       console.warn("Unable to save quiz level resume state.", error);
     });
+    const remainingTries = getRemainingQuestionTries(questionState);
     showRationaleWithAction(false, currentQuestion, {
-      text: `${buildRationale(currentQuestion, false)} This question is now locked for today and has been added to Wrong-Answer Review. You can answer it again tomorrow.`,
+      text: remainingTries > 0
+        ? `${buildRationale(currentQuestion, false)} This question has been added to Wrong-Answer Review. You still have ${remainingTries} ${remainingTries === 1 ? "try" : "tries"} left for this question today.`
+        : `${buildRationale(currentQuestion, false)} This question is now locked for today and has been added to Wrong-Answer Review. You can answer it again tomorrow.`,
       buttonText: currentIndex < questions.length ? "Continue" : "Finish",
       nextAction: currentIndex < questions.length ? "advance" : "finish"
     });
@@ -1169,6 +1296,7 @@ async function initializePage() {
     console.warn("Unable to save study history for quiz level.", error);
   });
   await prepareQuestions();
+  await syncAwardedQuestionIds();
   restoreQuizLevelResumeState();
   renderQuestion();
   tryStartMusic();
@@ -1184,9 +1312,13 @@ async function initializePage() {
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
+  syncAwardedQuestionIds().catch((error) => {
+    console.warn("Unable to refresh awarded question XP state.", error);
+  });
   syncXpDock().catch((error) => {
     console.error("Error syncing XP dock:", error);
   });
+  retentionGateShown = false;
 });
 
 initializePage();
