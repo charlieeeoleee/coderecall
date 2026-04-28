@@ -42,6 +42,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const QUIZ_LEVELS_PER_DIFFICULTY = 25;
+const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 
 let currentUser = null;
 let learnersCache = [];
@@ -831,6 +833,9 @@ async function openStudentProfile(learner) {
   const body = document.getElementById("studentProfileBody");
   const progress = learner.progress || {};
   const results = learner.results || {};
+  const weakTopics = summarizeLearnerWeakTopics(learner);
+  const studyHistory = summarizeLearnerStudyHistory(learner);
+  const assessmentBars = buildLearnerAssessmentBars(learner);
 
   if (body) {
     body.innerHTML = `
@@ -851,6 +856,26 @@ async function openStudentProfile(learner) {
           <h4>Assessment Snapshot</h4>
           <div class="profile-list">
             ${buildResultRows(results)}
+          </div>
+        </section>
+      </div>
+      <section class="profile-section">
+        <h4>Assessment Performance</h4>
+        <div class="learner-assessment-grid">
+          ${buildLearnerAssessmentBarMarkup(assessmentBars)}
+        </div>
+      </section>
+      <div class="profile-columns">
+        <section class="profile-section">
+          <h4>Weak Topics</h4>
+          <div class="review-list">
+            ${buildWeakTopicRows(weakTopics)}
+          </div>
+        </section>
+        <section class="profile-section">
+          <h4>Recent Activity History</h4>
+          <div class="review-list">
+            ${buildStudyHistoryRows(studyHistory)}
           </div>
         </section>
       </div>
@@ -879,6 +904,187 @@ function buildResultRows(results) {
     .map(([key, value]) => `<div class="profile-row"><span>${escapeHtml(key)}</span><span>${typeof value === "number" ? value : escapeHtml(String(value))}</span></div>`);
 
   return rows.length ? rows.join("") : `<div class="profile-row"><span>No assessment results recorded yet.</span><span>-</span></div>`;
+}
+
+function buildLearnerAssessmentBars(learner) {
+  return [
+    buildLearnerSubjectAssessment(learner, "hardware", "Computer Hardware"),
+    buildLearnerSubjectAssessment(learner, "electrical", "Electrical")
+  ];
+}
+
+function buildLearnerSubjectAssessment(learner, subject, label) {
+  const results = learner.results || {};
+  const totalQuizLevels = QUIZ_LEVELS_PER_DIFFICULTY * 3;
+  const quizTrackMaxScore = totalQuizLevels * 3;
+  const quizTrackMaxXp = quizTrackMaxScore * QUIZ_LEVEL_XP_PER_CORRECT;
+
+  const pretest = normalizeLearnerResult(results[`${subject}_pretest`], 10);
+  const posttest = normalizeLearnerResult(results[`${subject}_posttest`], 10);
+
+  const quizTrack = Object.entries(results).reduce((summary, [key, value]) => {
+    if (!new RegExp(`^${subject}_(easy|medium|hard)_quiz_level_\\d+_result$`).test(key)) {
+      return summary;
+    }
+
+    const score = Math.max(0, Number(value?.score || 0));
+    const total = Math.max(score, Number(value?.total || 0) || 3);
+    summary.score += score;
+    summary.total += total;
+    return summary;
+  }, { score: 0, total: 0 });
+
+  const quizTrackXp = quizTrack.score * QUIZ_LEVEL_XP_PER_CORRECT;
+
+  return {
+    label,
+    stages: [
+      {
+        label: "Pre-Test",
+        score: pretest.score,
+        total: pretest.total,
+        xp: pretest.xp,
+        scorePercent: getPercent(pretest.score, pretest.total),
+        xpPercent: getPercent(pretest.xp, pretest.total)
+      },
+      {
+        label: "Quiz Track",
+        score: quizTrack.score,
+        total: Math.max(quizTrack.total, quizTrackMaxScore),
+        xp: quizTrackXp,
+        scorePercent: getPercent(quizTrack.score, quizTrackMaxScore),
+        xpPercent: getPercent(quizTrackXp, quizTrackMaxXp)
+      },
+      {
+        label: "Post-Test",
+        score: posttest.score,
+        total: posttest.total,
+        xp: posttest.xp,
+        scorePercent: getPercent(posttest.score, posttest.total),
+        xpPercent: getPercent(posttest.xp, posttest.total)
+      }
+    ]
+  };
+}
+
+function normalizeLearnerResult(result, fallbackTotal = 10) {
+  const score = Math.max(0, Number(result?.score || 0));
+  const total = Math.max(score, Number(result?.total || 0) || fallbackTotal);
+  const xp = Math.max(0, Number(result?.xpEarned || score || 0));
+  return { score, total, xp };
+}
+
+function getPercent(value, total) {
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, Math.round((Number(value || 0) / Number(total || 1)) * 100)));
+}
+
+function buildLearnerAssessmentBarMarkup(subjects) {
+  return subjects.map((subject) => `
+    <article class="learner-assessment-card">
+      <h5>${escapeHtml(subject.label)}</h5>
+      <div class="learner-assessment-stack">
+        ${subject.stages.map((stage) => `
+          <section class="learner-assessment-row">
+            <div class="learner-assessment-head">
+              <div>
+                <strong>${escapeHtml(stage.label)}</strong>
+                <span>${stage.score}/${stage.total} pts</span>
+              </div>
+              <span>${stage.xp} XP</span>
+            </div>
+            <div class="learner-assessment-track">
+              <div class="learner-assessment-fill score" style="width:${stage.scorePercent}%"></div>
+            </div>
+            <div class="learner-assessment-track xp">
+              <div class="learner-assessment-fill xp" style="width:${stage.xpPercent}%"></div>
+            </div>
+          </section>
+        `).join("")}
+      </div>
+    </article>
+  `).join("");
+}
+
+function summarizeLearnerWeakTopics(learner) {
+  const items = Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview : [];
+  const topicMap = new Map();
+
+  items.forEach((item) => {
+    const title = String(item?.title || item?.question || "Unlabeled Topic").trim();
+    const subject = String(item?.subject || "general").trim() || "general";
+    const key = `${subject}::${title}`;
+    const existing = topicMap.get(key) || {
+      title,
+      subject,
+      misses: 0,
+      latestQuestion: String(item?.question || "No question text saved.")
+    };
+
+    existing.misses += Math.max(1, Number(item?.wrongCount || 1));
+    if (item?.question) {
+      existing.latestQuestion = String(item.question);
+    }
+    topicMap.set(key, existing);
+  });
+
+  return Array.from(topicMap.values())
+    .sort((a, b) => b.misses - a.misses || a.title.localeCompare(b.title))
+    .slice(0, 6);
+}
+
+function buildWeakTopicRows(items) {
+  if (!items.length) {
+    return `<div class="review-item"><p>No weak-topic data recorded yet.</p></div>`;
+  }
+
+  return items.map((item) => `
+    <article class="review-item">
+      <h5>${escapeHtml(item.title)}</h5>
+      <div class="review-meta">
+        <span class="meta-pill">${escapeHtml(item.subject)}</span>
+        <span class="meta-pill">${item.misses} miss(es)</span>
+      </div>
+      <p>${escapeHtml(item.latestQuestion)}</p>
+    </article>
+  `).join("");
+}
+
+function summarizeLearnerStudyHistory(learner) {
+  const items = Array.isArray(learner.studyHistory) ? learner.studyHistory : [];
+  return [...items]
+    .sort((a, b) => new Date(b?.timestamp || 0).getTime() - new Date(a?.timestamp || 0).getTime())
+    .slice(0, 8);
+}
+
+function buildStudyHistoryRows(items) {
+  if (!items.length) {
+    return `<div class="review-item"><p>No activity history recorded yet.</p></div>`;
+  }
+
+  return items.map((item) => `
+    <article class="review-item">
+      <h5>${escapeHtml(item?.title || "Learning Activity")}</h5>
+      <div class="review-meta">
+        <span class="meta-pill">${escapeHtml(item?.subject || "general")}</span>
+        <span class="meta-pill">${escapeHtml(item?.difficulty || item?.kind || "activity")}</span>
+      </div>
+      <p>${escapeHtml(item?.detail || "No activity detail saved.")}</p>
+      <p>${escapeHtml(formatHistoryTimestamp(item?.timestamp))}</p>
+    </article>
+  `).join("");
+}
+
+function formatHistoryTimestamp(value) {
+  const date = new Date(value || 0);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 async function loadFeedbackNotes(studentId) {

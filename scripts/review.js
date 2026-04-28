@@ -9,6 +9,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadWrongAnswerReview, clearWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
+import { loadRetentionQueue, clearRetentionQueue, resolveRetentionReview } from "./retention-store.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -28,6 +29,9 @@ applyRoleNavigation("guest", "review.html");
 let currentUser = null;
 let currentIsGuest = false;
 let reviewItems = [];
+const reviewMode = (new URLSearchParams(window.location.search).get("mode") || "").toLowerCase();
+let flashcardItems = [];
+let flashcardIndex = 0;
 
 function escapeHtml(value) {
   return String(value || "")
@@ -99,6 +103,10 @@ function renderStats(items) {
   document.getElementById("reviewLatestSource").textContent = items[0]?.title || "-";
 }
 
+function isFlashcardMode() {
+  return reviewMode === "flashcards";
+}
+
 function canRevealCorrectAnswer(item) {
   return item?.quizType === "pretest";
 }
@@ -145,7 +153,155 @@ function getRetryState(item) {
   };
 }
 
+function isDueMemoryReviewItem(item) {
+  const retryState = getRetryState(item);
+  return Boolean(item?.actionUrl) && retryState.canOpen && item?.quizType !== "pretest";
+}
+
+function getVisibleReviewItems(items) {
+  if (reviewMode !== "memory" && reviewMode !== "retention" && !isFlashcardMode()) return items;
+  return items.filter(isDueMemoryReviewItem);
+}
+
+function applyReviewModeLabels() {
+  if (!isFlashcardMode() && reviewMode !== "memory" && reviewMode !== "retention") return;
+
+  const titleEl = document.getElementById("reviewPageTitle");
+  const subtitleEl = document.getElementById("reviewPageSubtitle");
+  const countLabelEl = document.getElementById("reviewItemCountLabel");
+  const latestLabelEl = document.getElementById("reviewLatestSourceLabel");
+  const sectionTitleEl = document.getElementById("reviewSectionTitle");
+  const sectionNoteEl = document.getElementById("reviewSectionNote");
+  const clearBtn = document.querySelector(".review-page-section .view-full-btn");
+
+  if (isFlashcardMode()) {
+    if (titleEl) titleEl.textContent = "Memory Flashcards";
+    if (subtitleEl) subtitleEl.textContent = "Flip due retention items into flashcards and mark whether you still remember them.";
+    if (countLabelEl) countLabelEl.textContent = "Cards Due";
+    if (latestLabelEl) latestLabelEl.textContent = "Current Deck";
+    if (sectionTitleEl) sectionTitleEl.textContent = "Flashcard Review";
+    if (sectionNoteEl) sectionNoteEl.textContent = "Use these cards for quick retrieval practice before reopening the full source activity.";
+    if (clearBtn) clearBtn.textContent = "Clear Flashcard Deck";
+    return;
+  }
+
+  if (titleEl) titleEl.textContent = "Today's Memory Review";
+  if (subtitleEl) subtitleEl.textContent = "Reopen only the review items that are due for retrieval practice today.";
+  if (countLabelEl) countLabelEl.textContent = "Due Today";
+  if (latestLabelEl) latestLabelEl.textContent = "Latest Due Topic";
+  if (sectionTitleEl) sectionTitleEl.textContent = "Due Review Items";
+  if (sectionNoteEl) sectionNoteEl.textContent = "Only items that can be answered again today are shown here.";
+  if (clearBtn) clearBtn.textContent = "Clear Review List";
+}
+
+function getFlashcardAnswer(item) {
+  return item?.correctAnswer || "Review the original activity for the full answer.";
+}
+
+function updateFlashcardVisibility(isFlashcard) {
+  const flashcardSection = document.getElementById("flashcardReviewSection");
+  const list = document.getElementById("wrongAnswerReviewList");
+  if (flashcardSection) {
+    flashcardSection.hidden = !isFlashcard;
+  }
+  if (list) {
+    list.style.display = isFlashcard ? "none" : "grid";
+  }
+}
+
+function renderFlashcardDeck(items) {
+  updateFlashcardVisibility(true);
+  const body = document.getElementById("flashcardReviewBody");
+  const progressText = document.getElementById("flashcardProgressText");
+  if (!body || !progressText) return;
+
+  if (!items.length) {
+    progressText.textContent = "0 / 0";
+    body.innerHTML = `
+      <div class="flashcard-empty-state">
+        <h4>No flashcards due right now</h4>
+        <p>Once retention items reach their review date, they will appear here as a memory deck.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const safeIndex = Math.max(0, Math.min(flashcardIndex, items.length - 1));
+  flashcardIndex = safeIndex;
+  const item = items[safeIndex];
+  progressText.textContent = `${safeIndex + 1} / ${items.length}`;
+
+  body.innerHTML = `
+    <article class="flashcard-stage-card">
+      <div class="flashcard-stage-meta">
+        <span class="flashcard-chip">${escapeHtml(item.subject || "subject")}</span>
+        <span class="flashcard-chip secondary">${escapeHtml(item.title || item.quizType || item.source || "review")}</span>
+        <span class="flashcard-chip">Stage ${Number(item.stageIndex || 0) + 1}</span>
+      </div>
+      <h4 class="flashcard-stage-prompt">${escapeHtml(item.question || "Review prompt unavailable.")}</h4>
+      <div id="flashcardBackFace" class="flashcard-stage-answer flashcard-hidden">
+        <strong>Correct Answer</strong>
+        <div class="flashcard-answer-text">${escapeHtml(getFlashcardAnswer(item))}</div>
+        <div class="flashcard-rationale">${escapeHtml(item.rationale || "Open the source activity to revisit the full explanation.")}</div>
+      </div>
+      <div class="flashcard-actions">
+        <button class="flashcard-btn primary" id="flashcardRevealBtn" type="button">Flip Card</button>
+        <button class="flashcard-btn warning flashcard-hidden" id="flashcardAgainBtn" type="button">Need Again</button>
+        <button class="flashcard-btn secondary flashcard-hidden" id="flashcardRememberedBtn" type="button">I Remember It</button>
+        <button class="flashcard-btn flashcard-hidden" id="flashcardSourceBtn" type="button">Open Source</button>
+      </div>
+    </article>
+  `;
+
+  const backFace = document.getElementById("flashcardBackFace");
+  const revealBtn = document.getElementById("flashcardRevealBtn");
+  const againBtn = document.getElementById("flashcardAgainBtn");
+  const rememberedBtn = document.getElementById("flashcardRememberedBtn");
+  const sourceBtn = document.getElementById("flashcardSourceBtn");
+
+  revealBtn?.addEventListener("click", () => {
+    backFace?.classList.remove("flashcard-hidden");
+    revealBtn.classList.add("flashcard-hidden");
+    againBtn?.classList.remove("flashcard-hidden");
+    rememberedBtn?.classList.remove("flashcard-hidden");
+    sourceBtn?.classList.remove("flashcard-hidden");
+  });
+
+  againBtn?.addEventListener("click", () => {
+    flashcardIndex = Math.min(flashcardIndex + 1, Math.max(0, flashcardItems.length - 1));
+    renderFlashcardDeck(flashcardItems);
+  });
+
+  rememberedBtn?.addEventListener("click", async () => {
+    flashcardItems = await resolveRetentionReview({
+      db,
+      user: currentUser,
+      payload: item
+    });
+    reviewItems = flashcardItems;
+    const visibleItems = getVisibleReviewItems(flashcardItems);
+    if (flashcardIndex >= visibleItems.length) {
+      flashcardIndex = Math.max(0, visibleItems.length - 1);
+    }
+    renderStats(visibleItems);
+    renderFlashcardDeck(visibleItems);
+  });
+
+  sourceBtn?.addEventListener("click", () => {
+    if (item?.actionUrl) {
+      window.location.href = item.actionUrl;
+    }
+  });
+}
+
 function renderReviewItems(items) {
+  if (isFlashcardMode()) {
+    flashcardItems = items;
+    renderFlashcardDeck(items);
+    return;
+  }
+
+  updateFlashcardVisibility(false);
   const container = document.getElementById("wrongAnswerReviewList");
   if (!container) return;
 
@@ -198,20 +354,28 @@ function renderReviewItems(items) {
         user: currentUser,
         payload: target
       });
-      renderStats(reviewItems);
-      renderReviewItems(reviewItems);
+      const visibleItems = getVisibleReviewItems(reviewItems);
+      renderStats(visibleItems);
+      renderReviewItems(visibleItems);
     });
   });
 }
 
 async function loadReviewPage() {
   localStorage.setItem("review_page_opened", "true");
-  reviewItems = await loadWrongAnswerReview({
-    db,
-    user: currentUser
-  });
-  renderStats(reviewItems);
-  renderReviewItems(reviewItems);
+  reviewItems = reviewMode === "retention" || isFlashcardMode()
+    ? await loadRetentionQueue({
+        db,
+        user: currentUser
+      })
+    : await loadWrongAnswerReview({
+        db,
+        user: currentUser
+      });
+  applyReviewModeLabels();
+  const visibleItems = getVisibleReviewItems(reviewItems);
+  renderStats(visibleItems);
+  renderReviewItems(visibleItems);
 }
 
 function hasGuestProgress() {
@@ -279,6 +443,7 @@ function clearGuestSession() {
     "guest_last_active_date",
     "guest_pending_save",
     "wrong_answer_review_items",
+    "retention_queue_items",
     "study_history_items",
     "review_page_opened",
     "study_history_opened"
@@ -308,12 +473,22 @@ window.logout = async function() {
 
 window.clearReviewItems = async function() {
   reviewItems = [];
-  await clearWrongAnswerReview({
-    db,
-    user: currentUser
-  });
-  renderStats(reviewItems);
-  renderReviewItems(reviewItems);
+  flashcardItems = [];
+  flashcardIndex = 0;
+  if (reviewMode === "retention" || isFlashcardMode()) {
+    await clearRetentionQueue({
+      db,
+      user: currentUser
+    });
+  } else {
+    await clearWrongAnswerReview({
+      db,
+      user: currentUser
+    });
+  }
+  const visibleItems = getVisibleReviewItems(reviewItems);
+  renderStats(visibleItems);
+  renderReviewItems(visibleItems);
 };
 
 onAuthStateChanged(auth, async (user) => {

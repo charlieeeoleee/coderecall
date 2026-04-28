@@ -101,6 +101,19 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .profile-section { padding: 16px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
 .profile-section h4 { margin: 0 0 12px; }
 .profile-list { display: grid; gap: 10px; }
+.learner-assessment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.learner-assessment-card { padding: 16px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
+.learner-assessment-card h5 { margin: 0 0 12px; font-size: 15px; }
+.learner-assessment-stack { display: grid; gap: 12px; }
+.learner-assessment-row { display: grid; gap: 8px; }
+.learner-assessment-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; font-size: 12px; }
+.learner-assessment-head > div { display: grid; gap: 2px; }
+.learner-assessment-head strong { font-size: 13px; }
+.learner-assessment-track { position: relative; height: 8px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,0.08); }
+.learner-assessment-track.xp { height: 6px; }
+.learner-assessment-fill { height: 100%; border-radius: 999px; }
+.learner-assessment-fill.score { background: linear-gradient(90deg, #ff4aa2, #8f7bff); }
+.learner-assessment-fill.xp { background: linear-gradient(90deg, #35e0c8, #00d4ff); }
 .profile-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -159,9 +172,11 @@ body.light-mode .admin-form select,
 body.light-mode .review-item,
 body.light-mode .profile-section,
 body.light-mode .profile-stat-card,
+body.light-mode .learner-assessment-card,
 body.light-mode .grant-item,
 body.light-mode .user-top,
 body.light-mode .admin-modal-box { background: rgba(255,255,255,0.82); color: #1e1547; }
+body.light-mode .learner-assessment-track { background: rgba(60, 40, 120, 0.08); }
 .inline-select {
   width: 100%;
   min-width: 170px;
@@ -258,6 +273,7 @@ body.light-mode .secondary-btn {
   .insights-admin-grid,
   .review-grid,
   .insights-admin-columns,
+  .learner-assessment-grid,
   .profile-stats,
   .profile-columns { grid-template-columns: 1fr; }
 }

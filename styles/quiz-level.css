@@ -293,6 +293,62 @@ body{
   color: white;
 }
 
+.level-confidence-panel{
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.level-confidence-panel-head{
+  margin-bottom: 14px;
+}
+
+.level-confidence-title{
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #eaf7ff;
+}
+
+.level-confidence-subtitle{
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.82;
+}
+
+.level-confidence-options{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.level-confidence-btn{
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.05);
+  color: inherit;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.24s ease, box-shadow 0.24s ease, background 0.24s ease, border-color 0.24s ease;
+}
+
+.level-confidence-btn:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+}
+
+.level-confidence-btn.selected{
+  background: linear-gradient(135deg, rgba(255,46,136,0.28), rgba(0,217,255,0.22), rgba(50,255,199,0.18));
+  border-color: rgba(0,229,255,0.42);
+  box-shadow: 0 14px 28px rgba(0,217,255,0.14);
+}
+
 .choice-media-wrap{
   display: block;
   width: 100%;
@@ -459,6 +515,30 @@ body.light-mode .choice-btn.selected{
   border: none !important;
 }
 
+body.light-mode .level-confidence-panel{
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(15,23,42,0.08);
+}
+
+body.light-mode .level-confidence-title{
+  color: #111827;
+}
+
+body.light-mode .level-confidence-subtitle{
+  color: rgba(17,24,39,0.74);
+}
+
+body.light-mode .level-confidence-btn{
+  background: rgba(0,0,0,0.03);
+  color: #111827;
+  border-color: rgba(15,23,42,0.08);
+}
+
+body.light-mode .level-confidence-btn.selected{
+  background: linear-gradient(135deg, rgba(255,46,136,0.16), rgba(0,217,255,0.14), rgba(50,255,199,0.12));
+  border-color: rgba(0,217,255,0.34);
+}
+
 body.light-mode .secondary-btn{
   background: linear-gradient(135deg, #6d5dfc, #9d4edd) !important;
   color: #ffffff !important;
@@ -524,6 +604,10 @@ body.light-mode .sound-toggle-slider{
   }
 
   .level-choices-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .level-confidence-options{
     grid-template-columns: 1fr;
   }
 

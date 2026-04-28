@@ -30,6 +30,7 @@ import {
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { loadWrongAnswerReview } from "./review-store.js";
+import { loadRetentionQueue } from "./retention-store.js";
 import { loadStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
@@ -378,6 +379,7 @@ async function loadDashboard() {
   renderCertificatesPreview(subjectSnapshot);
   await Promise.all([
     renderReviewInsights(data),
+    renderMemoryReviewInsights(data),
     renderStudyHistoryInsights(data),
     loadLeaderboard()
   ]);
@@ -549,6 +551,7 @@ function loadGuestDashboard() {
   renderSubjectProgressSection(guestSnapshot);
   renderCertificatesPreview(guestSnapshot);
   renderReviewInsights();
+  renderMemoryReviewInsights({});
   renderStudyHistoryInsights({});
   renderDashboardAchievementsExpanded({
     xp: guestXP,
@@ -800,6 +803,7 @@ function renderCertificatesPreview(subjects = []) {
 
 function setInsightLoadingState(isLoading) {
   [
+    "memoryReviewCard",
     "continueLearningCard",
     "wrongAnswerReviewCard",
     "studyHistoryCard",
@@ -893,6 +897,45 @@ async function renderReviewInsights(userData = {}) {
   countEl.textContent = String(items.length);
   document.getElementById("wrongAnswerReviewCard")?.classList.remove("is-loading");
   renderMissedTopics(items);
+}
+
+function isDueMemoryReviewItem(item) {
+  if (!item || !item?.actionUrl) return false;
+  const dueAt = item?.dueAt ? new Date(item.dueAt) : null;
+  if (!dueAt || Number.isNaN(dueAt.getTime())) return false;
+  return dueAt.getTime() <= Date.now();
+}
+
+async function renderMemoryReviewInsights(userData = {}) {
+  const countEl = document.getElementById("memoryReviewCount");
+  const textEl = document.getElementById("memoryReviewPreviewText");
+  const cardEl = document.getElementById("memoryReviewCard");
+  if (!countEl || !textEl || !cardEl) return;
+
+  const queueItems = Array.isArray(userData?.retentionQueue)
+    ? userData.retentionQueue
+    : await loadRetentionQueue({
+        db,
+        user: currentUser
+      });
+
+  const dueItems = queueItems
+    .filter(isDueMemoryReviewItem)
+    .sort((a, b) => new Date(a?.dueAt || 0).getTime() - new Date(b?.dueAt || 0).getTime());
+
+  countEl.textContent = String(dueItems.length);
+  cardEl.classList.remove("is-loading");
+
+  if (!dueItems.length) {
+    textEl.textContent = "No retention items are due right now. New items will appear here after their spaced review interval unlocks.";
+    return;
+  }
+
+  const latest = dueItems[0];
+  const title = latest?.title || latest?.question || "Review item";
+  const subject = latest?.subject || "general";
+  const stageDays = Number(latest?.intervalDays || 0);
+  textEl.textContent = `${title} • ${subject} • ${dueItems.length} due • ${stageDays ? `${stageDays}-day review` : "review due"}`;
 }
 
 function renderContinueLearning(items = []) {
@@ -1055,6 +1098,14 @@ window.goToLeaderboard = function() {
 
 window.goToWrongAnswerReview = function() {
   window.location.href = "review.html";
+};
+
+window.goToMemoryReview = function() {
+  window.location.href = "review.html?mode=retention";
+};
+
+window.goToMemoryFlashcards = function() {
+  window.location.href = "review.html?mode=flashcards";
 };
 
 window.goToStudyHistory = function() {
@@ -1442,6 +1493,7 @@ function clearGuestSession() {
     "guest_last_active_date",
     "guest_pending_save",
     "wrong_answer_review_items",
+    "retention_queue_items",
     "study_history_items",
     "hardware_pretest",
     "hardware_modules",

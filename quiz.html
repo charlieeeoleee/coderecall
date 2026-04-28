@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz.css?v=20260427a">
+  <link rel="stylesheet" href="styles/quiz.css?v=20260428b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -66,6 +66,18 @@
       </div>
 
       <div class="choices-grid" id="choicesContainer"></div>
+
+      <section class="confidence-panel" aria-labelledby="confidenceHeading">
+        <div class="confidence-panel-head">
+          <h3 class="confidence-title" id="confidenceHeading">How sure are you?</h3>
+          <p class="confidence-subtitle">Low-confidence correct answers can still return in memory review.</p>
+        </div>
+        <div class="confidence-options" id="confidenceOptions">
+          <button class="confidence-btn" type="button" data-confidence="sure">Sure</button>
+          <button class="confidence-btn" type="button" data-confidence="somewhat_sure">Somewhat Sure</button>
+          <button class="confidence-btn" type="button" data-confidence="guessing">Guessing</button>
+        </div>
+      </section>
 
       <div class="quiz-actions">
       <button class="quiz-btn secondary-btn" id="backBtn" onclick="goBackToSubject()">Back</button>
@@ -135,7 +147,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/quiz.js?v=20260427a"></script>
+  <script type="module" src="scripts/quiz.js?v=20260428b"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

@@ -793,6 +793,16 @@ window.resetSubjectProgress = function(subject) {
       })();
       localStorage.setItem("study_history_items", JSON.stringify(filteredStudyHistory));
 
+      const filteredRetentionQueue = (() => {
+        try {
+          const items = JSON.parse(localStorage.getItem("retention_queue_items") || "[]");
+          return Array.isArray(items) ? items.filter((item) => item?.subject !== subject) : [];
+        } catch {
+          return [];
+        }
+      })();
+      localStorage.setItem("retention_queue_items", JSON.stringify(filteredRetentionQueue));
+
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
         const docSnap = await getDoc(userRef);
@@ -811,6 +821,9 @@ window.resetSubjectProgress = function(subject) {
           const nextStudyHistory = Array.isArray(data.studyHistory)
             ? data.studyHistory.filter((item) => item?.subject !== subject)
             : [];
+          const nextRetentionQueue = Array.isArray(data.retentionQueue)
+            ? data.retentionQueue.filter((item) => item?.subject !== subject)
+            : [];
           const nextXP = computeSystemXP(nextProgress, nextResults);
           const nextWeeklyXP = Math.min(Number(data.xpWeekly || 0), nextXP);
 
@@ -823,6 +836,7 @@ window.resetSubjectProgress = function(subject) {
             results: nextResults,
             wrongAnswerReview: nextWrongAnswerReview,
             studyHistory: nextStudyHistory,
+            retentionQueue: nextRetentionQueue,
             resumeActivity: data.resumeActivity?.subject === subject ? null : (data.resumeActivity || null)
           });
 
@@ -896,6 +910,9 @@ function clearGuestSession() {
     "guest_streak",
     "guest_last_active_date",
     "guest_pending_save",
+    "wrong_answer_review_items",
+    "retention_queue_items",
+    "study_history_items",
     "hardware_pretest",
     "hardware_modules",
     "hardware_quiz",

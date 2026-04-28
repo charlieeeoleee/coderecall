@@ -360,6 +360,13 @@ body{
   margin-bottom:12px;
 }
 
+.section-head-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
 .section-note{
   font-size:12px;
   opacity:0.8;
@@ -384,6 +391,11 @@ body{
   transform:translateY(-2px) scale(1.02);
   box-shadow:0 10px 24px rgba(0,229,255,0.24);
   filter:brightness(1.04);
+}
+
+.alt-action-btn{
+  background:linear-gradient(135deg,#6d5dfc,#9d4edd);
+  color:#fff;
 }
 
 /* DASHBOARD LEADERBOARD PREVIEW */
@@ -1314,6 +1326,185 @@ body.light-mode .view-full-btn{
   min-height:260px;
 }
 
+.flashcard-review-section{
+  margin-top:18px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+.flashcard-review-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+}
+
+.flashcard-review-head h4{
+  margin:0 0 6px;
+  font-size:22px;
+}
+
+.flashcard-review-head p{
+  margin:0;
+  font-size:14px;
+  opacity:0.82;
+}
+
+.flashcard-progress-meta{
+  padding:10px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.08);
+  font-size:13px;
+  font-weight:700;
+}
+
+.flashcard-stage-card{
+  position:relative;
+  overflow:hidden;
+  padding:24px;
+  border-radius:24px;
+  background:linear-gradient(135deg, rgba(255,255,255,0.08), rgba(0,217,255,0.08));
+  border:1px solid rgba(255,255,255,0.10);
+}
+
+.flashcard-stage-card::before{
+  content:"";
+  position:absolute;
+  inset:-20% auto auto -10%;
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,46,151,0.18), transparent 68%);
+  pointer-events:none;
+}
+
+.flashcard-stage-meta{
+  position:relative;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:16px;
+}
+
+.flashcard-chip{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:6px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.08);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:0.4px;
+  text-transform:uppercase;
+}
+
+.flashcard-chip.secondary{
+  background:rgba(0,229,255,0.14);
+}
+
+.flashcard-stage-prompt{
+  position:relative;
+  margin:0 0 18px;
+  font-size:28px;
+  line-height:1.35;
+  font-weight:700;
+}
+
+.flashcard-stage-answer{
+  position:relative;
+  margin:0;
+  padding:18px 20px;
+  border-radius:18px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.flashcard-stage-answer strong{
+  font-size:14px;
+  opacity:0.82;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+}
+
+.flashcard-answer-text{
+  font-size:26px;
+  font-weight:800;
+  line-height:1.2;
+}
+
+.flashcard-rationale{
+  font-size:15px;
+  line-height:1.65;
+  opacity:0.9;
+}
+
+.flashcard-hidden{
+  display:none;
+}
+
+.flashcard-actions{
+  margin-top:18px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.flashcard-btn{
+  border:none;
+  border-radius:14px;
+  padding:12px 18px;
+  font-family:'Poppins', sans-serif;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+  transition:transform 0.2s ease, box-shadow 0.28s ease, filter 0.28s ease;
+}
+
+.flashcard-btn:hover{
+  transform:translateY(-2px);
+}
+
+.flashcard-btn.primary{
+  background:linear-gradient(135deg,#00e5ff,#00ffcc);
+  color:#04111d;
+}
+
+.flashcard-btn.secondary{
+  background:linear-gradient(135deg,#6d5dfc,#9d4edd);
+  color:#fff;
+}
+
+.flashcard-btn.warning{
+  background:linear-gradient(135deg,#ff2e97,#ff8c00);
+  color:#fff;
+}
+
+.flashcard-empty-state{
+  padding:28px 22px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.04);
+  border:1px dashed rgba(255,255,255,0.16);
+  text-align:center;
+}
+
+.flashcard-empty-state h4{
+  margin:0 0 10px;
+  font-size:20px;
+}
+
+.flashcard-empty-state p{
+  margin:0;
+  opacity:0.82;
+}
+
 .wrong-answer-review-list{
   display:grid;
   gap:16px;
@@ -1623,6 +1814,41 @@ body.light-mode .review-empty-state{
   border-color:rgba(58,37,117,0.14);
 }
 
+body.light-mode .alt-action-btn{
+  background:linear-gradient(135deg,#6d5dfc,#9d4edd);
+  color:#fff;
+}
+
+body.light-mode .flashcard-progress-meta,
+body.light-mode .flashcard-stage-card,
+body.light-mode .flashcard-stage-answer{
+  background:rgba(255,255,255,0.72);
+  border-color:rgba(60, 40, 120, 0.08);
+  color:#251b4b;
+}
+
+body.light-mode .flashcard-chip{
+  background:rgba(37,27,75,0.06);
+  border-color:rgba(37,27,75,0.08);
+  color:#251b4b;
+}
+
+body.light-mode .flashcard-chip.secondary{
+  background:rgba(0,134,176,0.12);
+  color:#007ca6;
+}
+
+body.light-mode .flashcard-btn{
+  background:rgba(37,27,75,0.08);
+  color:#251b4b;
+}
+
+body.light-mode .flashcard-empty-state{
+  background:rgba(255,255,255,0.7);
+  border-color:rgba(58,37,117,0.14);
+  color:#251b4b;
+}
+
 @media(max-width:900px){
   .review-tool-card{
     grid-template-columns:1fr;
@@ -1660,6 +1886,23 @@ body.light-mode .review-empty-state{
 
   .subject-assessment-values{
     align-items:flex-start;
+  }
+
+  .section-head-actions{
+    width:100%;
+  }
+
+  .flashcard-review-head{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .flashcard-stage-prompt{
+    font-size:22px;
+  }
+
+  .flashcard-answer-text{
+    font-size:22px;
   }
 }
 

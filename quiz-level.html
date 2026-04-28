@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz-level.css?v=20260419a">
+  <link rel="stylesheet" href="styles/quiz-level.css?v=20260428b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -67,6 +67,18 @@
 
       <div class="level-choices-grid" id="choicesContainer"></div>
 
+      <section class="level-confidence-panel" aria-labelledby="levelConfidenceHeading">
+        <div class="level-confidence-panel-head">
+          <h3 class="level-confidence-title" id="levelConfidenceHeading">How sure are you?</h3>
+          <p class="level-confidence-subtitle">Low-confidence correct answers can still be scheduled for memory review.</p>
+        </div>
+        <div class="level-confidence-options" id="confidenceOptions">
+          <button class="level-confidence-btn" type="button" data-confidence="sure">Sure</button>
+          <button class="level-confidence-btn" type="button" data-confidence="somewhat_sure">Somewhat Sure</button>
+          <button class="level-confidence-btn" type="button" data-confidence="guessing">Guessing</button>
+        </div>
+      </section>
+
       <div class="level-actions">
       <button class="level-btn secondary-btn" id="backBtn" onclick="goBackToLevels()">Back</button>
         <button class="level-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next &rarr;</button>
@@ -106,7 +118,7 @@
       window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
     };
   </script>
-  <script type="module" src="scripts/quiz-level.js?v=20260420a"></script>
+  <script type="module" src="scripts/quiz-level.js?v=20260428b"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
   <title>Code Recall Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260427a">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260428c">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -104,11 +104,25 @@
         <div class="section-head">
           <div>
             <h3>Review Tools</h3>
-            <span class="section-note">Go back to questions you missed</span>
+            <span class="section-note">Go back to questions you missed and revisit due memory-review items</span>
           </div>
-          <button class="view-full-btn" onclick="goToWrongAnswerReview()">Open Wrong-Answer Review</button>
+          <div class="section-head-actions">
+            <button class="view-full-btn alt-action-btn" onclick="goToMemoryFlashcards()">Memory Flashcards</button>
+            <button class="view-full-btn" onclick="goToMemoryReview()">Start Memory Review</button>
+          </div>
         </div>
         <div class="review-tools-grid">
+          <article id="memoryReviewCard" class="review-tool-card is-loading">
+            <div class="review-tool-icon">&#129504;</div>
+            <div class="review-tool-copy">
+              <h4>Today's Memory Review</h4>
+              <p id="memoryReviewPreviewText">Due review items will appear here once your spaced review queue starts filling up.</p>
+            </div>
+            <div class="review-tool-metric">
+              <span id="memoryReviewCount">0</span>
+              <small>due</small>
+            </div>
+          </article>
           <article id="wrongAnswerReviewCard" class="review-tool-card is-loading">
             <div class="review-tool-icon">&#128221;</div>
             <div class="review-tool-copy">
@@ -247,7 +261,7 @@
   <!-- CONFETTI -->
   <div id="confettiContainer" class="confetti-container"></div>
 
-  <script type="module" src="scripts/dashboard.js?v=20260427a"></script>
+  <script type="module" src="scripts/dashboard.js?v=20260428c"></script>
   <script src="scripts/loading.js?v=20260420b" defer></script>
 </body>
 </html>

@@ -22,6 +22,7 @@ import {
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
+import { saveRetentionReview, resolveRetentionReview } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
@@ -49,6 +50,7 @@ let quizQuestions = [];
 let currentIndex = 0;
 let score = 0;
 let selectedChoice = null;
+let selectedConfidence = null;
 let pendingContinue = null;
 let xpAwardedThisAttempt = false;
 let resolveAuthReady = null;
@@ -242,6 +244,7 @@ async function saveQuizResumeState() {
     currentIndex,
     score,
     selectedChoice,
+    selectedConfidence,
     questions: quizQuestions,
     updatedAt: new Date().toISOString()
   };
@@ -280,6 +283,7 @@ function restoreQuizResumeState() {
   currentIndex = Math.max(0, Math.min(Number(state.currentIndex || 0), state.questions.length - 1));
   score = Math.max(0, Number(state.score || 0));
   selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
+  selectedConfidence = typeof state.selectedConfidence === "string" ? state.selectedConfidence : null;
   return true;
 }
 
@@ -721,10 +725,54 @@ function updateProgress() {
   document.getElementById("quizProgressText").textContent = `${percent}% Completed`;
 }
 
+function updateNextButtonState() {
+  const nextBtn = document.getElementById("nextBtn");
+  if (!nextBtn) return;
+  nextBtn.disabled = !(selectedChoice && selectedConfidence);
+}
+
+function bindConfidenceOptions() {
+  const options = Array.from(document.querySelectorAll("#confidenceOptions .confidence-btn"));
+  options.forEach((button) => {
+    button.addEventListener("click", () => {
+      options.forEach((item) => item.classList.remove("selected"));
+      button.classList.add("selected");
+      selectedConfidence = String(button.dataset.confidence || "");
+      updateNextButtonState();
+      saveQuizResumeState().catch((error) => {
+        console.warn("Unable to save quiz resume state.", error);
+      });
+    });
+  });
+}
+
+function renderConfidenceSelection(restoredConfidence = null) {
+  const options = Array.from(document.querySelectorAll("#confidenceOptions .confidence-btn"));
+  options.forEach((button) => {
+    const isSelected = restoredConfidence && button.dataset.confidence === restoredConfidence;
+    button.classList.toggle("selected", Boolean(isSelected));
+  });
+  selectedConfidence = restoredConfidence || null;
+  updateNextButtonState();
+}
+
+function isLowConfidenceAnswer(confidence) {
+  return confidence === "guessing" || confidence === "somewhat_sure";
+}
+
+function getConfidenceLabel(confidence) {
+  if (confidence === "sure") return "Sure";
+  if (confidence === "somewhat_sure") return "Somewhat Sure";
+  if (confidence === "guessing") return "Guessing";
+  return "Unknown";
+}
+
 function renderQuestion() {
   const nextBtn = document.getElementById("nextBtn");
   const restoredChoice = selectedChoice;
+  const restoredConfidence = selectedConfidence;
   selectedChoice = null;
+  selectedConfidence = null;
   nextBtn.disabled = true;
 
   const currentQuestion = quizQuestions[currentIndex];
@@ -765,7 +813,7 @@ function renderQuestion() {
       document.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
       button.classList.add("selected");
       selectedChoice = choice;
-      nextBtn.disabled = false;
+      updateNextButtonState();
       saveQuizResumeState().catch((error) => {
         console.warn("Unable to save quiz resume state.", error);
       });
@@ -775,10 +823,10 @@ function renderQuestion() {
     if (restoredChoice && restoredChoice === choice) {
       button.classList.add("selected");
       selectedChoice = choice;
-      nextBtn.disabled = false;
     }
   });
 
+  renderConfidenceSelection(restoredConfidence);
   nextBtn.textContent = currentIndex === quizQuestions.length - 1 ? "Submit" : "Next";
   saveQuizResumeState().catch((error) => {
     console.warn("Unable to save quiz resume state.", error);
@@ -855,6 +903,7 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
     actionUrl: `quiz.html?subject=${encodeURIComponent(subject)}&type=${encodeURIComponent(type)}&level=${encodeURIComponent(level)}`,
     retryAvailableAt: hasNextDayRetry ? tomorrow.toISOString() : "",
     retryPolicy: hasNextDayRetry ? "next_day" : "locked",
+    confidence: selectedConfidence || "",
     lastAnsweredAt: new Date().toISOString()
   };
 }
@@ -1098,25 +1147,53 @@ function continueToNext() {
 }
 
 window.handleNext = function () {
-  if (!selectedChoice) return;
+  if (!selectedChoice || !selectedConfidence) return;
 
   const currentQuestion = quizQuestions[currentIndex];
   const isCorrect = selectedChoice === currentQuestion.answer;
+  const reviewPayload = buildWrongAnswerReviewPayload(currentQuestion, selectedChoice);
+  const lowConfidence = isLowConfidenceAnswer(selectedConfidence);
 
   if (isCorrect) {
     resolveWrongAnswerReview({
       db,
       user: currentUser,
-      payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
+      payload: reviewPayload
     }).catch((error) => {
       console.warn("Unable to resolve wrong-answer review item.", error);
     });
+    if (lowConfidence) {
+      saveRetentionReview({
+        db,
+        user: currentUser,
+        payload: {
+          ...reviewPayload,
+          seedReason: "low_confidence_correct"
+        }
+      }).catch((error) => {
+        console.warn("Unable to queue low-confidence retention item.", error);
+      });
+    } else {
+      resolveRetentionReview({
+        db,
+        user: currentUser,
+        payload: reviewPayload
+      }).catch((error) => {
+        console.warn("Unable to advance retention review item.", error);
+      });
+    }
     score += 1;
     playSound("correct");
     selectedChoice = null;
+    selectedConfidence = null;
     saveQuizResumeState().catch((error) => {
       console.warn("Unable to save quiz resume state.", error);
     });
+    if (lowConfidence) {
+      pendingContinue = continueToNext;
+      showRationale(`Correct, but you marked this as ${getConfidenceLabel(reviewPayload.confidence).toLowerCase()}. It has been added to Today's Memory Review so the concept can come back later.`);
+      return;
+    }
     continueToNext();
     return;
   }
@@ -1125,11 +1202,22 @@ window.handleNext = function () {
   saveWrongAnswerReview({
     db,
     user: currentUser,
-    payload: buildWrongAnswerReviewPayload(currentQuestion, selectedChoice)
+    payload: reviewPayload
   }).catch((error) => {
     console.warn("Unable to save wrong-answer review item.", error);
   });
+  saveRetentionReview({
+    db,
+    user: currentUser,
+    payload: {
+      ...reviewPayload,
+      seedReason: "wrong_answer"
+    }
+  }).catch((error) => {
+    console.warn("Unable to queue retention review item.", error);
+  });
   selectedChoice = null;
+  selectedConfidence = null;
   saveQuizResumeState().catch((error) => {
     console.warn("Unable to save quiz resume state.", error);
   });
@@ -1209,6 +1297,7 @@ onAuthStateChanged(auth, (user) => {
 initSounds();
 initGlobalClickSound();
 setupSoundToggles();
+bindConfidenceOptions();
 tryStartMusic();
 
 document.body.addEventListener("click", () => {
