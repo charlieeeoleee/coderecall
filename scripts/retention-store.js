@@ -17,12 +17,57 @@ function safeParseItems(raw) {
   }
 }
 
-function readLocalRetentionQueue() {
-  return safeParseItems(localStorage.getItem(RETENTION_QUEUE_KEY));
+function getLegacyRetentionQueueStorageKey() {
+  return RETENTION_QUEUE_KEY;
 }
 
-function writeLocalRetentionQueue(items) {
-  localStorage.setItem(RETENTION_QUEUE_KEY, JSON.stringify(items.slice(0, MAX_RETENTION_ITEMS)));
+function getScopedRetentionQueueStorageKey(user = null) {
+  if (user?.uid) {
+    return `${RETENTION_QUEUE_KEY}_${user.uid}`;
+  }
+
+  if (localStorage.getItem("guest") === "true") {
+    return `${RETENTION_QUEUE_KEY}_guest`;
+  }
+
+  return `${RETENTION_QUEUE_KEY}_anonymous`;
+}
+
+export function getRetentionQueueStorageKeys() {
+  return Object.keys(localStorage).filter(
+    (key) => key === RETENTION_QUEUE_KEY || key.startsWith(`${RETENTION_QUEUE_KEY}_`)
+  );
+}
+
+export function clearAllLocalRetentionQueueStorage() {
+  getRetentionQueueStorageKeys().forEach((key) => localStorage.removeItem(key));
+}
+
+function readLocalRetentionQueue(user = null) {
+  const scopedKey = getScopedRetentionQueueStorageKey(user);
+  const scopedRaw = localStorage.getItem(scopedKey);
+
+  if (scopedRaw !== null) {
+    return safeParseItems(scopedRaw);
+  }
+
+  if (!user?.uid) {
+    const legacyItems = safeParseItems(localStorage.getItem(getLegacyRetentionQueueStorageKey()));
+    if (legacyItems.length) {
+      writeLocalRetentionQueue(legacyItems, user);
+      localStorage.removeItem(getLegacyRetentionQueueStorageKey());
+      return legacyItems;
+    }
+  }
+
+  return [];
+}
+
+function writeLocalRetentionQueue(items, user = null) {
+  localStorage.setItem(
+    getScopedRetentionQueueStorageKey(user),
+    JSON.stringify(items.slice(0, MAX_RETENTION_ITEMS))
+  );
 }
 
 function normalizeRetentionConfig(config = {}) {
@@ -235,23 +280,23 @@ function advanceRetentionItem(items, payload = {}) {
 }
 
 export async function saveRetentionReview({ db, user, payload }) {
-  const localItems = readLocalRetentionQueue();
+  const localItems = readLocalRetentionQueue(user);
   const nextItems = upsertRetentionItem(localItems, payload);
-  writeLocalRetentionQueue(nextItems);
+  writeLocalRetentionQueue(nextItems, user);
   await syncRemoteRetentionQueue(db, user, nextItems);
   return nextItems;
 }
 
 export async function resolveRetentionReview({ db, user, payload }) {
-  const localItems = readLocalRetentionQueue();
+  const localItems = readLocalRetentionQueue(user);
   const nextItems = advanceRetentionItem(localItems, payload);
-  writeLocalRetentionQueue(nextItems);
+  writeLocalRetentionQueue(nextItems, user);
   await syncRemoteRetentionQueue(db, user, nextItems);
   return nextItems;
 }
 
 export async function loadRetentionQueue({ db, user }) {
-  const localItems = readLocalRetentionQueue();
+  const localItems = readLocalRetentionQueue(user);
 
   if (!db || !user?.uid) {
     return localItems;
@@ -274,7 +319,7 @@ export async function loadRetentionQueue({ db, user }) {
       .sort((a, b) => new Date(a.dueAt || 0).getTime() - new Date(b.dueAt || 0).getTime())
       .slice(0, MAX_RETENTION_ITEMS);
 
-    writeLocalRetentionQueue(merged);
+    writeLocalRetentionQueue(merged, user);
     return merged;
   } catch {
     return localItems;
@@ -282,6 +327,17 @@ export async function loadRetentionQueue({ db, user }) {
 }
 
 export async function clearRetentionQueue({ db, user }) {
-  writeLocalRetentionQueue([]);
+  writeLocalRetentionQueue([], user);
   await syncRemoteRetentionQueue(db, user, []);
+}
+
+export async function removeRetentionQueueItemsBySubject({ db, user, subject }) {
+  const normalizedSubject = String(subject || "").toLowerCase();
+  const nextItems = readLocalRetentionQueue(user).filter(
+    (item) => String(item?.subject || "").toLowerCase() !== normalizedSubject
+  );
+
+  writeLocalRetentionQueue(nextItems, user);
+  await syncRemoteRetentionQueue(db, user, nextItems);
+  return nextItems;
 }

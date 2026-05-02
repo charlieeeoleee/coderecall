@@ -877,7 +877,7 @@ function withTimeout(promise, fallbackValue, timeoutMs = 1200) {
   ]);
 }
 
-async function maybeShowRetentionGate() {
+async function maybeShowRetentionGate({ trigger = "existing_due" } = {}) {
   if (retentionGateShown) return;
 
   await authReadyPromise;
@@ -906,7 +906,13 @@ async function maybeShowRetentionGate() {
   if (!modal || !text || !reviewBtn || !continueBtn) return;
 
   retentionGateShown = true;
-  text.textContent = `You have ${dueItems.length} due memory card${dueItems.length === 1 ? "" : "s"} for ${getSubjectDisplayName()}. Reviewing them first can improve retention before you continue this assessment.`;
+  if (trigger === "weak_answer") {
+    text.textContent = dueItems.length === 1
+      ? `This answer has been added to your memory review for ${getSubjectDisplayName()}. You can review the flashcard now or continue this assessment first.`
+      : `This answer has been added to your memory review for ${getSubjectDisplayName()}, and you now have ${dueItems.length} due memory card${dueItems.length === 1 ? "" : "s"} for this subject. You can review them now or continue this assessment first.`;
+  } else {
+    text.textContent = `You already have ${dueItems.length} due memory card${dueItems.length === 1 ? "" : "s"} for ${getSubjectDisplayName()} from earlier review work. Reviewing them first can improve retention before you continue this assessment.`;
+  }
   reviewBtn.onclick = () => {
     window.location.href = `review.html?mode=flashcards&subject=${encodeURIComponent(subject)}`;
   };
@@ -918,7 +924,7 @@ async function maybeShowRetentionGate() {
 
 async function promptRetentionGateAfterWeakAnswer() {
   retentionGateShown = false;
-  await maybeShowRetentionGate();
+  await maybeShowRetentionGate({ trigger: "weak_answer" });
 }
 
 function renderQuestion() {

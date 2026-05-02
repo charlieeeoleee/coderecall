@@ -21,12 +21,16 @@ import {
   handleSoundToggle,
   handleMusicToggle
 } from "./sound.js";
-import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
+import { applyRoleNavigation, resolveUserRole, syncUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import {
   getRetentionScheduleConfig,
-  saveRetentionScheduleConfig
+  saveRetentionScheduleConfig,
+  clearAllLocalRetentionQueueStorage,
+  removeRetentionQueueItemsBySubject,
+  clearRetentionQueue
 } from "./retention-store.js";
+import { clearWrongAnswerReview } from "./review-store.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -747,83 +751,6 @@ window.resetProgress = function() {
   );
 };
 
-window.resetHardwareModules = function() {
-  openSystemPopup(
-    "Reset Hardware Modules",
-    "Reset only the Computer Hardware module path and its module XP? This keeps your hardware pre-test, hardware quizzes, hardware post-test, and all electrical progress.",
-    async () => {
-      const localKeysToRemove = getHardwareModuleLocalKeys();
-      localKeysToRemove.forEach((key) => localStorage.removeItem(key));
-
-      const recentCompletion = (() => {
-        try {
-          return JSON.parse(localStorage.getItem("recent_module_completion") || "null");
-        } catch {
-          return null;
-        }
-      })();
-
-      if (recentCompletion?.subject === "hardware") {
-        localStorage.removeItem("recent_module_completion");
-      }
-
-      const resumeActivity = (() => {
-        try {
-          return JSON.parse(localStorage.getItem("resume_activity") || "null");
-        } catch {
-          return null;
-        }
-      })();
-
-      if (resumeActivity?.kind === "module" && resumeActivity?.subject === "hardware") {
-        localStorage.removeItem("resume_activity");
-      }
-
-      if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
-        const docSnap = await getDoc(userRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data() || {};
-          const nextProgress = Object.fromEntries(
-            Object.entries(data.progress || {}).filter(([key]) =>
-              !/^hardware_(easy|medium|hard)_module_\d+/.test(key)
-            )
-          );
-          const nextResults = { ...(data.results || {}) };
-          const nextXP = computeSystemXP(nextProgress, nextResults);
-          const nextWeeklyXP = Math.min(Number(data.xpWeekly || 0), nextXP);
-
-          await setDoc(userRef, {
-            ...data,
-            xp: nextXP,
-            xpWeekly: nextWeeklyXP,
-            xpChange: 0,
-            progress: nextProgress,
-            results: nextResults,
-            resumeActivity:
-              data.resumeActivity?.kind === "module" && data.resumeActivity?.subject === "hardware"
-                ? null
-                : (data.resumeActivity || null)
-          });
-
-          await syncPublicLeaderboardEntry(db, currentUser.uid, {
-            name: data.name || currentUser.displayName || currentUser.email || "User",
-            photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-            xp: nextXP,
-            xpWeekly: nextWeeklyXP,
-            xpChange: 0
-          });
-        }
-      }
-
-      closeSystemPopup();
-      showInfoPopup("Hardware Modules Reset", "Only the Computer Hardware module path was reset. You can now retake the hardware modules cleanly.");
-      window.location.reload();
-    }
-  );
-};
-
 window.resetSubjectProgress = function(subject) {
   const label = getSubjectLabel(subject);
 
@@ -878,15 +805,11 @@ window.resetSubjectProgress = function(subject) {
       })();
       localStorage.setItem("study_history_items", JSON.stringify(filteredStudyHistory));
 
-      const filteredRetentionQueue = (() => {
-        try {
-          const items = JSON.parse(localStorage.getItem("retention_queue_items") || "[]");
-          return Array.isArray(items) ? items.filter((item) => item?.subject !== subject) : [];
-        } catch {
-          return [];
-        }
-      })();
-      localStorage.setItem("retention_queue_items", JSON.stringify(filteredRetentionQueue));
+      await removeRetentionQueueItemsBySubject({
+        db,
+        user: currentUser,
+        subject
+      });
 
       if (currentUser) {
         const userRef = doc(db, "users", currentUser.uid);
@@ -996,7 +919,6 @@ function clearGuestSession() {
     "guest_last_active_date",
     "guest_pending_save",
     "wrong_answer_review_items",
-    "retention_queue_items",
     "study_history_items",
     "hardware_pretest",
     "hardware_modules",
@@ -1009,6 +931,7 @@ function clearGuestSession() {
   ];
 
   keysToRemove.forEach((key) => localStorage.removeItem(key));
+  clearAllLocalRetentionQueueStorage();
 }
 
 function openGuestLogoutPopup() {

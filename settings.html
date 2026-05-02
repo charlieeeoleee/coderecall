@@ -245,10 +245,14 @@
 
         <div class="system-actions">
           <button class="action-btn logout-action" onclick="logout()">Logout</button>
-          <button class="action-btn warning-btn" onclick="resetHardwareModules()">Reset Hardware Modules</button>
           <button class="action-btn warning-btn" onclick="resetSubjectProgress('hardware')">Reset Hardware Subject</button>
           <button class="action-btn warning-btn" onclick="resetSubjectProgress('electrical')">Reset Electrical Subject</button>
+          <button class="action-btn warning-btn" onclick="clearMemoryReview()">Clear Memory Review</button>
+          <button class="action-btn warning-btn" onclick="clearWrongAnswerReviewQueue()">Clear Wrong-Answer Review</button>
           <button class="action-btn danger-btn" onclick="resetProgress()">Reset Progress</button>
+          <button class="action-btn" onclick="exportProgressSnapshot()">Export Progress Snapshot</button>
+          <button class="action-btn secondary-action-btn" onclick="resetContactAlerts()">Reset Contact Alerts</button>
+          <button class="action-btn secondary-action-btn" onclick="refreshRoleAccess()">Refresh Role Access</button>
           <button class="action-btn warning-btn" onclick="clearLocalData()">Clear Local Data</button>
         </div>
         </div>

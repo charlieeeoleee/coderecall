@@ -8,6 +8,7 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
+import { clearAllLocalRetentionQueueStorage } from "./retention-store.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -562,7 +563,6 @@ function clearGuestSession() {
     "guest_last_active_date",
     "guest_pending_save",
     "wrong_answer_review_items",
-    "retention_queue_items",
     "study_history_items",
     "recent_module_completion",
     "resume_activity",
@@ -575,6 +575,7 @@ function clearGuestSession() {
     "electrical_quiz",
     "electrical_posttest"
   ].forEach((key) => localStorage.removeItem(key));
+  clearAllLocalRetentionQueueStorage();
 }
 
 window.confirmGuestLogout = function() {

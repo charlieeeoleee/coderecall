@@ -30,7 +30,7 @@ import {
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadPublicLeaderboard, syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { loadWrongAnswerReview } from "./review-store.js";
-import { loadRetentionQueue } from "./retention-store.js";
+import { loadRetentionQueue, clearAllLocalRetentionQueueStorage } from "./retention-store.js";
 import { loadStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
@@ -1493,7 +1493,6 @@ function clearGuestSession() {
     "guest_last_active_date",
     "guest_pending_save",
     "wrong_answer_review_items",
-    "retention_queue_items",
     "study_history_items",
     "hardware_pretest",
     "hardware_modules",
@@ -1506,6 +1505,7 @@ function clearGuestSession() {
   ];
 
   keysToRemove.forEach((key) => localStorage.removeItem(key));
+  clearAllLocalRetentionQueueStorage();
 }
 
 /* =========================
