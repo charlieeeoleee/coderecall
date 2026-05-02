@@ -11,7 +11,7 @@ import {
   handleMusicToggle
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
-import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
+import { saveWrongAnswerReview, resolveWrongAnswerReview, loadWrongAnswerReview } from "./review-store.js";
 import { saveRetentionReview, resolveRetentionReview, loadRetentionQueue } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
 
@@ -221,9 +221,40 @@ const RESUME_ACTIVITY_KEY = "resume_activity";
 let retentionGateShown = false;
 let awardedQuestionIds = new Set();
 let correctQuestionIdsThisRun = new Set();
+let wrongAnswerReviewKeys = new Set();
+let recoveredMistakesThisRun = 0;
 
 function getSubjectDisplayName() {
   return subject === "hardware" ? "Computer Hardware" : "Electrical";
+}
+
+function buildReviewTrackingKey(payload = {}) {
+  const questionIdentity = payload.level != null && payload.sub != null
+    ? `${payload.level}.${payload.sub}`
+    : String(payload.question || "unknown")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 80) || "unknown";
+
+  return [
+    payload.source || "quiz",
+    payload.subject || "subject",
+    payload.quizType || payload.difficulty || "default",
+    payload.quizLevel || payload.level || "na",
+    questionIdentity
+  ].join("|");
+}
+
+async function syncWrongAnswerReviewKeys() {
+  const items = await withTimeout(
+    loadWrongAnswerReview({
+      db,
+      user: currentUser
+    }),
+    []
+  );
+  wrongAnswerReviewKeys = new Set((items || []).map((item) => String(item?.key || "").trim()).filter(Boolean));
 }
 
 function shuffleArray(array) {
@@ -1154,11 +1185,22 @@ async function finishLevel() {
 
   document.getElementById("resultMessage").textContent =
     `You completed Level ${quizLevel} with a score of ${score}/${questions.length} and earned ${earnedXP} XP.`;
+  const recoverySummary = document.getElementById("resultRecoverySummary");
+  if (recoverySummary) {
+    if (recoveredMistakesThisRun > 0) {
+      recoverySummary.hidden = false;
+      recoverySummary.textContent = `Recovery win: you fixed ${recoveredMistakesThisRun} previously missed question${recoveredMistakesThisRun === 1 ? "" : "s"} in this level.`;
+    } else {
+      recoverySummary.hidden = true;
+      recoverySummary.textContent = "";
+    }
+  }
   const finishLevelBtn = document.getElementById("finishLevelBtn");
   if (finishLevelBtn) {
     finishLevelBtn.textContent = quizLevel < await getTotalLevels() ? "Next Level" : "Back to Levels";
   }
   document.getElementById("resultModal").classList.add("active");
+  recoveredMistakesThisRun = 0;
 }
 
 window.handleNext = function () {
@@ -1167,11 +1209,16 @@ window.handleNext = function () {
   const currentQuestion = questions[currentIndex];
   const isCorrect = selectedChoice === currentQuestion.answer;
   const reviewPayload = buildWrongAnswerReviewPayload(currentQuestion, selectedChoice);
+  const reviewTrackingKey = buildReviewTrackingKey(reviewPayload);
   const lowConfidence = isLowConfidenceAnswer(selectedConfidence);
   const questionState = recordQuestionAttempt(currentQuestion, isCorrect);
 
   if (isCorrect) {
     correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion));
+    if (wrongAnswerReviewKeys.has(reviewTrackingKey)) {
+      recoveredMistakesThisRun += 1;
+      wrongAnswerReviewKeys.delete(reviewTrackingKey);
+    }
     resolveWrongAnswerReview({
       db,
       user: currentUser,
@@ -1228,6 +1275,7 @@ window.handleNext = function () {
     }).catch((error) => {
       console.warn("Unable to save wrong-answer review item.", error);
     });
+    wrongAnswerReviewKeys.add(reviewTrackingKey);
     saveRetentionReview({
       db,
       user: currentUser,
@@ -1296,7 +1344,7 @@ async function initializePage() {
     console.warn("Unable to save study history for quiz level.", error);
   });
   await prepareQuestions();
-  await syncAwardedQuestionIds();
+  await Promise.all([syncAwardedQuestionIds(), syncWrongAnswerReviewKeys()]);
   restoreQuizLevelResumeState();
   renderQuestion();
   tryStartMusic();
@@ -1314,6 +1362,9 @@ onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
   syncAwardedQuestionIds().catch((error) => {
     console.warn("Unable to refresh awarded question XP state.", error);
+  });
+  syncWrongAnswerReviewKeys().catch((error) => {
+    console.warn("Unable to refresh wrong-answer review tracking state.", error);
   });
   syncXpDock().catch((error) => {
     console.error("Error syncing XP dock:", error);

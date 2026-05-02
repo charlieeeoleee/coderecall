@@ -244,7 +244,7 @@ function applyReviewModeLabels() {
   if (isFlashcardMode()) {
     const subjectLabel = reviewSubjectFilter ? ` for ${reviewSubjectFilter === "hardware" ? "Computer Hardware" : "Electrical"}` : "";
     if (titleEl) titleEl.textContent = "Memory Flashcards";
-    if (subtitleEl) subtitleEl.textContent = `Flip due retention items${subjectLabel} into flashcards and mark whether you still remember them.`;
+    if (subtitleEl) subtitleEl.textContent = `Flip due retention items${subjectLabel} into flashcards and choose how strong the recall felt.`;
     if (countLabelEl) countLabelEl.textContent = "Cards Due";
     if (latestLabelEl) latestLabelEl.textContent = "Current Deck";
     if (sectionTitleEl) sectionTitleEl.textContent = "Flashcard Review";
@@ -264,6 +264,16 @@ function applyReviewModeLabels() {
 
 function getFlashcardAnswer(item) {
   return item?.correctAnswer || "Review the original activity for the full answer.";
+}
+
+function getFlashcardQualityMessage(quality) {
+  if (quality === "easy") {
+    return "Strong recall. We'll push this card farther out in the memory schedule.";
+  }
+  if (quality === "hard") {
+    return "You remembered it, but it still felt effortful. We'll bring it back on the next normal interval.";
+  }
+  return "Keep reviewing this concept. It will stay available until the memory feels stronger.";
 }
 
 async function hydrateFlashcardItem(item) {
@@ -374,11 +384,13 @@ async function renderFlashcardDeck(items) {
         <strong>Correct Answer</strong>
         <div class="flashcard-answer-text">${escapeHtml(getFlashcardAnswer(item))}</div>
         <div class="flashcard-rationale">${escapeHtml(item.rationale || "Open the source activity to revisit the full explanation.")}</div>
+        <div class="flashcard-quality-note" id="flashcardQualityNote">Choose the recall button that best matches what happened in your head.</div>
       </div>
       <div class="flashcard-actions">
         <button class="flashcard-btn primary" id="flashcardRevealBtn" type="button">Flip Card</button>
         <button class="flashcard-btn warning flashcard-hidden" id="flashcardAgainBtn" type="button">Need Again</button>
-        <button class="flashcard-btn secondary flashcard-hidden" id="flashcardRememberedBtn" type="button">I Remember It</button>
+        <button class="flashcard-btn secondary flashcard-hidden" id="flashcardHardBtn" type="button">Hard Recall</button>
+        <button class="flashcard-btn success flashcard-hidden" id="flashcardEasyBtn" type="button">Easy Recall</button>
         <button class="flashcard-btn flashcard-hidden" id="flashcardSourceBtn" type="button">Open Source</button>
       </div>
     </article>
@@ -387,18 +399,24 @@ async function renderFlashcardDeck(items) {
   const backFace = document.getElementById("flashcardBackFace");
   const revealBtn = document.getElementById("flashcardRevealBtn");
   const againBtn = document.getElementById("flashcardAgainBtn");
-  const rememberedBtn = document.getElementById("flashcardRememberedBtn");
+  const hardBtn = document.getElementById("flashcardHardBtn");
+  const easyBtn = document.getElementById("flashcardEasyBtn");
   const sourceBtn = document.getElementById("flashcardSourceBtn");
+  const qualityNote = document.getElementById("flashcardQualityNote");
 
   revealBtn?.addEventListener("click", () => {
     backFace?.classList.remove("flashcard-hidden");
     revealBtn.classList.add("flashcard-hidden");
     againBtn?.classList.remove("flashcard-hidden");
-    rememberedBtn?.classList.remove("flashcard-hidden");
+    hardBtn?.classList.remove("flashcard-hidden");
+    easyBtn?.classList.remove("flashcard-hidden");
     sourceBtn?.classList.remove("flashcard-hidden");
   });
 
   againBtn?.addEventListener("click", () => {
+    if (qualityNote) {
+      qualityNote.textContent = getFlashcardQualityMessage("again");
+    }
     const advanceDeck = () => {
       flashcardIndex = Math.min(flashcardIndex + 1, Math.max(0, flashcardItems.length - 1));
       renderFlashcardDeck(flashcardItems);
@@ -412,11 +430,17 @@ async function renderFlashcardDeck(items) {
     advanceDeck();
   });
 
-  rememberedBtn?.addEventListener("click", async () => {
+  async function handleRecallResolved(recallQuality) {
+    if (qualityNote) {
+      qualityNote.textContent = getFlashcardQualityMessage(recallQuality);
+    }
     flashcardItems = await resolveRetentionReview({
       db,
       user: currentUser,
-      payload: item
+      payload: {
+        ...item,
+        recallQuality
+      }
     });
     reviewItems = flashcardItems;
     const visibleItems = getVisibleReviewItems(flashcardItems);
@@ -425,6 +449,14 @@ async function renderFlashcardDeck(items) {
     }
     renderStats(visibleItems);
     renderFlashcardDeck(visibleItems);
+  }
+
+  hardBtn?.addEventListener("click", async () => {
+    await handleRecallResolved("hard");
+  });
+
+  easyBtn?.addEventListener("click", async () => {
+    await handleRecallResolved("easy");
   });
 
   sourceBtn?.addEventListener("click", () => {

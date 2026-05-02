@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles/settings.css?v=20260414a">
+  <link rel="stylesheet" href="styles/settings.css?v=20260430b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -170,6 +170,50 @@
           </div>
         </div>
 
+        <!-- MEMORY REVIEW SCHEDULE -->
+        <div class="card settings-card">
+          <h3>&#129504; Memory Review Schedule</h3>
+          <p class="settings-section-note">
+            Adjust when weak-memory flashcards should come back. These schedule controls affect retention reviews on this device.
+          </p>
+
+          <div class="setting-row">
+            <div>
+              <strong>Immediate First Flashcard</strong>
+              <p>Show a new weak-memory flashcard right away after a wrong or low-confidence answer.</p>
+            </div>
+
+            <label class="switch">
+              <input type="checkbox" id="retentionImmediateToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="retention-schedule-grid">
+            <label>
+              <span>Stage 2 Delay (days)</span>
+              <input type="number" id="retentionInterval1" min="0" step="1">
+            </label>
+            <label>
+              <span>Stage 3 Delay (days)</span>
+              <input type="number" id="retentionInterval2" min="0" step="1">
+            </label>
+            <label>
+              <span>Stage 4 Delay (days)</span>
+              <input type="number" id="retentionInterval3" min="0" step="1">
+            </label>
+            <label>
+              <span>Stage 5 Delay (days)</span>
+              <input type="number" id="retentionInterval4" min="0" step="1">
+            </label>
+          </div>
+
+          <div class="retention-actions">
+            <button type="button" class="action-btn" id="saveRetentionScheduleBtn">Save Schedule</button>
+            <button type="button" class="action-btn secondary-action-btn" id="resetRetentionScheduleBtn">Reset Default</button>
+          </div>
+        </div>
+
         <!-- PROGRESS -->
         <div class="card settings-card">
           <h3>&#128202; Progress</h3>
@@ -255,7 +299,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/settings.js?v=20260421a"></script>
+  <script type="module" src="scripts/settings.js?v=20260430b"></script>
   <script src="scripts/loading.js?v=20260414a" defer></script>
 </body>
 </html>

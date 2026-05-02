@@ -28,6 +28,8 @@ let currentUser = null;
 let currentIsGuest = false;
 let certificateSearchTerm = "";
 let certificateStatusFilter = "all";
+let certificateSubjectFilter = "all";
+let certificateSortOrder = "latest";
 let latestCertificates = [];
 
 function updateUserUI(name, photo) {
@@ -209,6 +211,7 @@ function buildCertificates(name, states) {
   const certificates = [
     {
       key: "hardware",
+      subjectKey: "hardware",
       icon: "\uD83D\uDDA5",
       title: "Computer Hardware Certificate",
       description: "Awarded after completing the full Computer Hardware path.",
@@ -221,6 +224,7 @@ function buildCertificates(name, states) {
     },
     {
       key: "electrical",
+      subjectKey: "electrical",
       icon: "\u26A1",
       title: "Electrical Wiring Certificate",
       description: "Awarded after completing the full Electrical Wiring and Electronics path.",
@@ -233,6 +237,7 @@ function buildCertificates(name, states) {
     },
     {
       key: "dual",
+      subjectKey: "dual",
       icon: "\uD83C\uDF93",
       title: "Dual Subject Completion Certificate",
       description: "Awarded after completing both core subjects in Code Recall.",
@@ -254,9 +259,99 @@ function buildCertificates(name, states) {
   }));
 }
 
+function getFilteredCertificates(certificates) {
+  const normalizedSearch = certificateSearchTerm.trim().toLowerCase();
+
+  return certificates
+    .filter((item) => {
+      const matchesStatus =
+        certificateStatusFilter === "all" ||
+        (certificateStatusFilter === "unlocked" && item.unlocked) ||
+        (certificateStatusFilter === "locked" && !item.unlocked);
+      const matchesSubject =
+        certificateSubjectFilter === "all" ||
+        item.subjectKey === certificateSubjectFilter;
+      const searchable = [
+        item.title,
+        item.description,
+        item.subjectKey,
+        item.certificateId,
+        item.issuedLabel,
+        item.unlocked ? "unlocked" : "locked",
+        item.nextRequirement
+      ].join(" ").toLowerCase();
+
+      return matchesStatus && matchesSubject && (!normalizedSearch || searchable.includes(normalizedSearch));
+    })
+    .sort((left, right) => {
+      if (certificateSortOrder === "title") {
+        return left.title.localeCompare(right.title);
+      }
+
+      if (certificateSortOrder === "progress") {
+        return Number(right.progressPercent || 0) - Number(left.progressPercent || 0);
+      }
+
+      const leftTime = left.completedAt ? new Date(left.completedAt).getTime() : 0;
+      const rightTime = right.completedAt ? new Date(right.completedAt).getTime() : 0;
+
+      if (certificateSortOrder === "oldest") {
+        return leftTime - rightTime;
+      }
+
+      return rightTime - leftTime;
+    });
+}
+
+function renderVaultSummary(totalCertificates, visibleCertificates) {
+  const summary = document.getElementById("certificateVaultSummary");
+  if (!summary) return;
+
+  if (!totalCertificates.length) {
+    summary.textContent = "No certificates are available yet.";
+    return;
+  }
+
+  const unlockedVisible = visibleCertificates.filter((item) => item.unlocked).length;
+  summary.textContent = `Showing ${visibleCertificates.length} of ${totalCertificates.length} certificate${totalCertificates.length === 1 ? "" : "s"}${visibleCertificates.length ? `, with ${unlockedVisible} unlocked in view.` : "."}`;
+}
+
+function renderIssuedHistory(certificates) {
+  const historyList = document.getElementById("certificateHistoryList");
+  if (!historyList) return;
+
+  const issued = certificates
+    .filter((item) => item.unlocked && item.completedAt)
+    .sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime());
+
+  if (!issued.length) {
+    historyList.innerHTML = `
+      <div class="certificate-history-empty">
+        <h4>No issued certificates yet</h4>
+        <p>Finish a full subject path and your certificate history will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  historyList.innerHTML = issued.map((item, index) => `
+    <article class="certificate-history-card">
+      <div class="certificate-history-index">${String(index + 1).padStart(2, "0")}</div>
+      <div class="certificate-history-copy">
+        <h4>${escapeHtml(item.title)}</h4>
+        <p>${escapeHtml(item.description)}</p>
+      </div>
+      <div class="certificate-history-meta">
+        <span>${escapeHtml(item.issuedLabel)}</span>
+        <strong>${escapeHtml(item.certificateId)}</strong>
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderOverview(certificates) {
   const earned = certificates.filter((item) => item.unlocked).length;
-  const ready = certificates.filter((item) => item.unlocked).length;
+  const ready = certificates.filter((item) => !item.unlocked).length;
   const latest = getLatestDate(certificates.filter((item) => item.unlocked).map((item) => item.completedAt));
   document.getElementById("certificatesEarnedCount").textContent = String(earned);
   document.getElementById("certificatesReadyCount").textContent = String(ready);
@@ -267,23 +362,8 @@ function renderCertificates(certificates) {
   const grid = document.getElementById("certificateVaultGrid");
   if (!grid) return;
 
-  const normalizedSearch = certificateSearchTerm.trim().toLowerCase();
-  const filteredCertificates = certificates.filter((item) => {
-    const matchesStatus =
-      certificateStatusFilter === "all" ||
-      (certificateStatusFilter === "unlocked" && item.unlocked) ||
-      (certificateStatusFilter === "locked" && !item.unlocked);
-    const searchable = [
-      item.title,
-      item.description,
-      item.certificateId,
-      item.issuedLabel,
-      item.unlocked ? "unlocked" : "locked",
-      item.nextRequirement
-    ].join(" ").toLowerCase();
-
-    return matchesStatus && (!normalizedSearch || searchable.includes(normalizedSearch));
-  });
+  const filteredCertificates = getFilteredCertificates(certificates);
+  renderVaultSummary(certificates, filteredCertificates);
 
   if (!certificates.length) {
     grid.innerHTML = `
@@ -359,15 +439,27 @@ function renderCertificates(certificates) {
 
 function bindCertificateVaultControls() {
   const search = document.getElementById("certificateSearch");
+  const subjectFilter = document.getElementById("certificateSubjectFilter");
   const filter = document.getElementById("certificateStatusFilter");
+  const sortOrder = document.getElementById("certificateSortOrder");
 
   search?.addEventListener("input", () => {
     certificateSearchTerm = search.value || "";
     renderCertificates(latestCertificates);
   });
 
+  subjectFilter?.addEventListener("change", () => {
+    certificateSubjectFilter = subjectFilter.value || "all";
+    renderCertificates(latestCertificates);
+  });
+
   filter?.addEventListener("change", () => {
     certificateStatusFilter = filter.value || "all";
+    renderCertificates(latestCertificates);
+  });
+
+  sortOrder?.addEventListener("change", () => {
+    certificateSortOrder = sortOrder.value || "latest";
     renderCertificates(latestCertificates);
   });
 }
@@ -404,6 +496,7 @@ async function loadCertificatesPage() {
   latestCertificates = certificates;
   renderOverview(certificates);
   renderCertificates(certificates);
+  renderIssuedHistory(certificates);
 }
 
 function hasGuestProgress() {
@@ -467,7 +560,20 @@ function clearGuestSession() {
     "guest_xpWeekly",
     "guest_streak",
     "guest_last_active_date",
-    "guest_pending_save"
+    "guest_pending_save",
+    "wrong_answer_review_items",
+    "retention_queue_items",
+    "study_history_items",
+    "recent_module_completion",
+    "resume_activity",
+    "hardware_pretest",
+    "hardware_modules",
+    "hardware_quiz",
+    "hardware_posttest",
+    "electrical_pretest",
+    "electrical_modules",
+    "electrical_quiz",
+    "electrical_posttest"
   ].forEach((key) => localStorage.removeItem(key));
 }
 

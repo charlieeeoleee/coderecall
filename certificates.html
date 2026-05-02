@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/dashboard.css?v=20260420b">
-  <link rel="stylesheet" href="styles/certificates.css?v=20260423a">
+  <link rel="stylesheet" href="styles/certificates.css?v=20260502b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -48,7 +48,7 @@
           </button>
           <div>
             <h2 class="page-title">My Certificates</h2>
-            <p class="page-subtitle">View every certificate you’ve earned across the whole system.</p>
+            <p class="page-subtitle">View every certificate you've earned across the whole system.</p>
           </div>
         </div>
         <div class="user-top">
@@ -63,7 +63,7 @@
           <p id="certificatesEarnedCount">0</p>
         </div>
         <div class="card">
-          <h3>Ready to Claim</h3>
+          <h3>Still Locked</h3>
           <p id="certificatesReadyCount">0</p>
         </div>
         <div class="card">
@@ -76,13 +76,22 @@
         <div class="section-head">
           <div>
             <h3>Certificate Vault</h3>
-            <span class="section-note">Open, download, or print the certificates you’ve unlocked.</span>
+            <span class="section-note">Open, download, or print the certificates you've unlocked.</span>
           </div>
         </div>
         <div class="certificate-vault-toolbar">
           <label class="certificate-vault-search">
             <span>Search Certificates</span>
             <input id="certificateSearch" type="search" placeholder="Search by subject, status, or certificate ID">
+          </label>
+          <label class="certificate-vault-filter">
+            <span>Subject</span>
+            <select id="certificateSubjectFilter">
+              <option value="all">All Subjects</option>
+              <option value="hardware">Computer Hardware</option>
+              <option value="electrical">Electrical</option>
+              <option value="dual">Dual Completion</option>
+            </select>
           </label>
           <label class="certificate-vault-filter">
             <span>Show</span>
@@ -92,8 +101,28 @@
               <option value="locked">Locked Only</option>
             </select>
           </label>
+          <label class="certificate-vault-filter">
+            <span>Sort</span>
+            <select id="certificateSortOrder">
+              <option value="latest">Latest Issued First</option>
+              <option value="oldest">Oldest Issued First</option>
+              <option value="title">Title A-Z</option>
+              <option value="progress">Highest Progress First</option>
+            </select>
+          </label>
         </div>
+        <div id="certificateVaultSummary" class="certificate-vault-summary">Showing all certificates.</div>
         <div id="certificateVaultGrid" class="certificate-vault-grid"></div>
+      </div>
+
+      <div class="card section certificate-history-section">
+        <div class="section-head">
+          <div>
+            <h3>Issued History</h3>
+            <span class="section-note">A timeline of certificates you already unlocked.</span>
+          </div>
+        </div>
+        <div id="certificateHistoryList" class="certificate-history-list"></div>
       </div>
     </div>
   </div>
@@ -116,7 +145,7 @@
     </div>
   </div>
 
-  <script type="module" src="scripts/certificates.js?v=20260423a"></script>
+  <script type="module" src="scripts/certificates.js?v=20260502b"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

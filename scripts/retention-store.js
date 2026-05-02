@@ -1,8 +1,12 @@
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const RETENTION_QUEUE_KEY = "retention_queue_items";
+const RETENTION_CONFIG_KEY = "retention_schedule_config";
 const MAX_RETENTION_ITEMS = 80;
-const RETENTION_INTERVAL_DAYS = [1, 3, 7, 14];
+const DEFAULT_RETENTION_CONFIG = {
+  immediateOnSeed: true,
+  intervals: [1, 3, 7, 14]
+};
 
 function safeParseItems(raw) {
   try {
@@ -19,6 +23,43 @@ function readLocalRetentionQueue() {
 
 function writeLocalRetentionQueue(items) {
   localStorage.setItem(RETENTION_QUEUE_KEY, JSON.stringify(items.slice(0, MAX_RETENTION_ITEMS)));
+}
+
+function normalizeRetentionConfig(config = {}) {
+  const rawIntervals = Array.isArray(config?.intervals) ? config.intervals : DEFAULT_RETENTION_CONFIG.intervals;
+  const nextIntervals = rawIntervals
+    .map((value) => Math.max(0, Math.floor(Number(value || 0))))
+    .slice(0, DEFAULT_RETENTION_CONFIG.intervals.length);
+
+  while (nextIntervals.length < DEFAULT_RETENTION_CONFIG.intervals.length) {
+    nextIntervals.push(DEFAULT_RETENTION_CONFIG.intervals[nextIntervals.length]);
+  }
+
+  for (let index = 1; index < nextIntervals.length; index += 1) {
+    if (nextIntervals[index] < nextIntervals[index - 1]) {
+      nextIntervals[index] = nextIntervals[index - 1];
+    }
+  }
+
+  return {
+    immediateOnSeed: config?.immediateOnSeed !== false,
+    intervals: nextIntervals
+  };
+}
+
+export function getRetentionScheduleConfig() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RETENTION_CONFIG_KEY) || "null");
+    return normalizeRetentionConfig(parsed || DEFAULT_RETENTION_CONFIG);
+  } catch {
+    return normalizeRetentionConfig(DEFAULT_RETENTION_CONFIG);
+  }
+}
+
+export function saveRetentionScheduleConfig(config = {}) {
+  const normalized = normalizeRetentionConfig(config);
+  localStorage.setItem(RETENTION_CONFIG_KEY, JSON.stringify(normalized));
+  return normalized;
 }
 
 function getQuestionIdentity(payload = {}) {
@@ -55,16 +96,18 @@ function getImmediateDueIso() {
 }
 
 function getInitialDueAt(payload = {}, stageIndex = 0) {
-  if (payload?.seedReason === "wrong_answer" || payload?.seedReason === "low_confidence_correct") {
+  const scheduleConfig = getRetentionScheduleConfig();
+  if (scheduleConfig.immediateOnSeed && (payload?.seedReason === "wrong_answer" || payload?.seedReason === "low_confidence_correct")) {
     return getImmediateDueIso();
   }
 
-  return String(payload.dueAt || payload.retryAvailableAt || addDaysIso(RETENTION_INTERVAL_DAYS[stageIndex]));
+  return String(payload.dueAt || payload.retryAvailableAt || addDaysIso(scheduleConfig.intervals[stageIndex]));
 }
 
 function normalizeRetentionEntry(payload = {}) {
   const timestamp = new Date().toISOString();
   const stageIndex = Math.max(0, Number(payload.stageIndex || 0));
+  const scheduleConfig = getRetentionScheduleConfig();
   const seedReason = String(payload.seedReason || "wrong_answer");
   const confidence = String(payload.confidence || "");
   const dueAt = getInitialDueAt(payload, stageIndex);
@@ -89,12 +132,13 @@ function normalizeRetentionEntry(payload = {}) {
     confidence,
     seedReason,
     stageIndex,
-    intervalDays: RETENTION_INTERVAL_DAYS[stageIndex] || RETENTION_INTERVAL_DAYS[RETENTION_INTERVAL_DAYS.length - 1],
+    intervalDays: scheduleConfig.intervals[stageIndex] || scheduleConfig.intervals[scheduleConfig.intervals.length - 1],
     dueAt,
     retryAvailableAt: dueAt,
     completedCycles: Math.max(0, Number(payload.completedCycles || 0)),
     wrongCount: Math.max(0, Number(payload.wrongCount || (seedReason === "low_confidence_correct" ? 0 : 1))),
     lowConfidenceCount: Math.max(0, Number(payload.lowConfidenceCount || (seedReason === "low_confidence_correct" ? 1 : 0))),
+    lastRecallQuality: String(payload.lastRecallQuality || ""),
     createdAt: String(payload.createdAt || timestamp),
     lastQueuedAt: String(payload.lastQueuedAt || timestamp),
     lastCompletedAt: String(payload.lastCompletedAt || ""),
@@ -119,6 +163,7 @@ function upsertRetentionItem(items, payload = {}) {
     return items;
   }
 
+  const scheduleConfig = getRetentionScheduleConfig();
   const entry = normalizeRetentionEntry(payload);
   const existing = items.find((item) => item.key === entry.key);
   const isLowConfidenceSeed = entry.seedReason === "low_confidence_correct";
@@ -131,8 +176,8 @@ function upsertRetentionItem(items, payload = {}) {
               ...entry,
               stageIndex: isLowConfidenceSeed ? Number(item.stageIndex || 0) : 0,
               intervalDays: isLowConfidenceSeed
-                ? Number(item.intervalDays || RETENTION_INTERVAL_DAYS[Math.max(0, Number(item.stageIndex || 0))] || RETENTION_INTERVAL_DAYS[0])
-                : RETENTION_INTERVAL_DAYS[0],
+                ? Number(item.intervalDays || scheduleConfig.intervals[Math.max(0, Number(item.stageIndex || 0))] || scheduleConfig.intervals[0])
+                : scheduleConfig.intervals[0],
               dueAt: isLowConfidenceSeed ? String(item.dueAt || entry.dueAt) : entry.dueAt,
               retryAvailableAt: isLowConfidenceSeed ? String(item.retryAvailableAt || entry.dueAt) : entry.dueAt,
               wrongCount: isLowConfidenceSeed
@@ -154,28 +199,32 @@ function upsertRetentionItem(items, payload = {}) {
 }
 
 function advanceRetentionItem(items, payload = {}) {
+  const scheduleConfig = getRetentionScheduleConfig();
   const key = buildRetentionKey(payload);
   const target = items.find((item) => item.key === key);
   if (!target) return items;
 
   const timestamp = new Date().toISOString();
-  const nextStageIndex = Number(target.stageIndex || 0) + 1;
+  const recallQuality = String(payload.recallQuality || "hard").toLowerCase();
+  const stageJump = recallQuality === "easy" ? 2 : 1;
+  const nextStageIndex = Number(target.stageIndex || 0) + stageJump;
 
-  if (nextStageIndex >= RETENTION_INTERVAL_DAYS.length) {
+  if (nextStageIndex >= scheduleConfig.intervals.length) {
     return items.filter((item) => item.key !== key);
   }
 
-  const nextDueAt = addDaysIso(RETENTION_INTERVAL_DAYS[nextStageIndex]);
+  const nextDueAt = addDaysIso(scheduleConfig.intervals[nextStageIndex]);
   return items
     .map((item) =>
       item.key === key
         ? {
             ...item,
             stageIndex: nextStageIndex,
-            intervalDays: RETENTION_INTERVAL_DAYS[nextStageIndex],
+            intervalDays: scheduleConfig.intervals[nextStageIndex],
             dueAt: nextDueAt,
             retryAvailableAt: nextDueAt,
             completedCycles: Math.max(0, Number(item.completedCycles || 0)) + 1,
+            lastRecallQuality: recallQuality,
             lastCompletedAt: timestamp,
             updatedAt: timestamp
           }

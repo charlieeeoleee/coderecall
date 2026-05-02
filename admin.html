@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260427c">
+  <link rel="stylesheet" href="styles/admin.css?v=20260430a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -65,6 +65,8 @@
         <div class="overview-card"><h3>Average Post-Test</h3><p id="adminAveragePosttest">0%</p><small id="adminAveragePosttestDetail">0 recorded tests</small></div>
         <div class="overview-card"><h3>Hardware Completion</h3><p id="adminHardwareCompletion">0%</p><small id="adminHardwareCompletionDetail">0 of 0 learners</small></div>
         <div class="overview-card"><h3>Electrical Completion</h3><p id="adminElectricalCompletion">0%</p><small id="adminElectricalCompletionDetail">0 of 0 learners</small></div>
+        <div class="overview-card"><h3>Due Memory Cards</h3><p id="adminDueRetentionCards">0</p><small id="adminDueRetentionCardsDetail">No due flashcards right now</small></div>
+        <div class="overview-card"><h3>Learners With Due Cards</h3><p id="adminLearnersWithDueRetention">0</p><small id="adminLearnersWithDueRetentionDetail">0 learner(s) need memory review</small></div>
       </div>
 
       <section class="panel-card wide inbox-shortcut-card">
@@ -97,6 +99,16 @@
             <strong id="adminActiveThisWeek">0</strong>
             <p id="adminActiveThisWeekDetail">No recent study activity recorded yet.</p>
           </article>
+          <article class="insight-admin-card">
+            <span>Low-confidence cards</span>
+            <strong id="adminLowConfidenceRetention">0</strong>
+            <p id="adminLowConfidenceRetentionDetail">No low-confidence cards recorded yet.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Retention recoveries</span>
+            <strong id="adminRetentionRecoveries">0</strong>
+            <p id="adminRetentionRecoveriesDetail">No flashcard recoveries recorded yet.</p>
+          </article>
         </div>
         <div class="insights-admin-columns">
           <section class="insight-list-wrap">
@@ -106,6 +118,14 @@
           <section class="insight-list-wrap">
             <h4>Largest Review Queues</h4>
             <div id="adminReviewQueues" class="review-list"></div>
+          </section>
+          <section class="insight-list-wrap">
+            <h4>Highest Due Flashcard Load</h4>
+            <div id="adminRetentionLoads" class="review-list"></div>
+          </section>
+          <section class="insight-list-wrap">
+            <h4>Lowest Retention Recovery</h4>
+            <div id="adminLowestRetentionRecovery" class="review-list"></div>
           </section>
           <section class="insight-list-wrap">
             <h4>Most Missed Topics</h4>
@@ -269,7 +289,7 @@
   </div>
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
-  <script type="module" src="scripts/admin.js?v=20260428b"></script>
+  <script type="module" src="scripts/admin.js?v=20260430a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

@@ -530,6 +530,24 @@ body{
   margin: 0 0 20px;
 }
 
+.result-recovery-summary{
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(53, 224, 200, 0.12);
+  border: 1px solid rgba(53, 224, 200, 0.22);
+  color: #9bfff3;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+body.light-mode .result-recovery-summary{
+  background: rgba(53, 224, 200, 0.12);
+  border-color: rgba(0, 124, 166, 0.18);
+  color: #0a84ae;
+}
+
 .result-bar-card{
   padding: 14px 16px;
   border-radius: 16px;

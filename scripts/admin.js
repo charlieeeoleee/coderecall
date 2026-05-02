@@ -229,6 +229,7 @@ function renderOverview(learners) {
   const posttestAverage = summarizeAssessmentAverage(learners, "posttest");
   const hardwareCompletion = summarizeSubjectCompletion(learners, "hardware");
   const electricalCompletion = summarizeSubjectCompletion(learners, "electrical");
+  const retentionSummary = summarizeRetentionInsights(learners);
 
   setText("adminTotalLearners", learners.length);
   setText("adminNeedsHelp", needsHelp);
@@ -242,6 +243,18 @@ function renderOverview(learners) {
   setText("adminHardwareCompletionDetail", `${hardwareCompletion.completed} of ${hardwareCompletion.total} learners`);
   setText("adminElectricalCompletion", `${electricalCompletion.percent}%`);
   setText("adminElectricalCompletionDetail", `${electricalCompletion.completed} of ${electricalCompletion.total} learners`);
+  setText("adminDueRetentionCards", retentionSummary.dueCards);
+  setText(
+    "adminDueRetentionCardsDetail",
+    retentionSummary.dueCards
+      ? `${retentionSummary.dueCards} flashcard review item(s) are already due.`
+      : "No due flashcards right now"
+  );
+  setText("adminLearnersWithDueRetention", retentionSummary.learnersWithDue);
+  setText(
+    "adminLearnersWithDueRetentionDetail",
+    `${retentionSummary.learnersWithDue} learner(s) need memory review`
+  );
 }
 
 function summarizeAssessmentAverage(learners, stage) {
@@ -308,9 +321,82 @@ function summarizeSubjectStatusBuckets(learners, subject) {
   }, { notStarted: 0, inProgress: 0, completed: 0 });
 }
 
+function getLearnerRetentionItems(learner) {
+  return Array.isArray(learner?.retentionQueue) ? learner.retentionQueue : [];
+}
+
+function isDueRetentionItem(item) {
+  const dueAt = new Date(item?.dueAt || 0).getTime();
+  return Number.isFinite(dueAt) && dueAt <= Date.now();
+}
+
+function summarizeRetentionInsights(learners) {
+  return learners.reduce((summary, learner) => {
+    const items = getLearnerRetentionItems(learner);
+    const dueCount = items.filter(isDueRetentionItem).length;
+
+    summary.totalCards += items.length;
+    summary.dueCards += dueCount;
+    summary.lowConfidenceCards += items.reduce((sum, item) => sum + Math.max(0, Number(item?.lowConfidenceCount || 0)), 0);
+    summary.recoveries += items.reduce((sum, item) => sum + Math.max(0, Number(item?.completedCycles || 0)), 0);
+
+    if (dueCount > 0) {
+      summary.learnersWithDue += 1;
+    }
+
+    return summary;
+  }, {
+    totalCards: 0,
+    dueCards: 0,
+    lowConfidenceCards: 0,
+    recoveries: 0,
+    learnersWithDue: 0
+  });
+}
+
+function summarizeHighestRetentionLoads(learners, limit = 5) {
+  return [...learners]
+    .map((learner) => {
+      const items = getLearnerRetentionItems(learner);
+      const dueCount = items.filter(isDueRetentionItem).length;
+      return {
+        title: learner.name || learner.email || "Learner",
+        metric: dueCount,
+        detail: `${items.length} total card(s) • ${learner.email || "No email"}`
+      };
+    })
+    .filter((item) => item.metric > 0)
+    .sort((a, b) => b.metric - a.metric || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
+function summarizeLowestRetentionRecovery(learners, limit = 5) {
+  return [...learners]
+    .map((learner) => {
+      const items = getLearnerRetentionItems(learner);
+      const totalCards = items.length;
+      const recoveredCards = items.filter((item) => Number(item?.completedCycles || 0) > 0).length;
+      const dueCards = items.filter(isDueRetentionItem).length;
+      const recoveryPercent = totalCards ? Math.round((recoveredCards / totalCards) * 100) : 0;
+
+      return {
+        title: learner.name || learner.email || "Learner",
+        metric: `${recoveryPercent}%`,
+        detail: `${recoveredCards}/${totalCards} recovered • ${dueCards} due • ${learner.email || "No email"}`,
+        totalCards,
+        sortPercent: recoveryPercent,
+        sortDue: dueCards
+      };
+    })
+    .filter((item) => item.totalCards > 0)
+    .sort((a, b) => a.sortPercent - b.sortPercent || b.sortDue - a.sortDue || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
 function renderLearningInsights(learners) {
   const reviewBacklog = learners.reduce((sum, learner) => sum + (Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview.length : 0), 0);
   const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  const retentionSummary = summarizeRetentionInsights(learners);
   const activeThisWeek = learners.filter((learner) =>
     Array.isArray(learner.studyHistory) && learner.studyHistory.some((item) => new Date(item?.timestamp || 0).getTime() >= sevenDaysAgo)
   );
@@ -328,6 +414,20 @@ function renderLearningInsights(learners) {
     activeThisWeek.length
       ? `${activeThisWeek.length} learner(s) opened at least one module, quiz, or test in the last 7 days.`
       : "No recent study activity recorded yet."
+  );
+  setText("adminLowConfidenceRetention", retentionSummary.lowConfidenceCards);
+  setText(
+    "adminLowConfidenceRetentionDetail",
+    retentionSummary.lowConfidenceCards
+      ? `${retentionSummary.lowConfidenceCards} low-confidence memory card(s) are still being tracked in learner queues.`
+      : "No low-confidence cards recorded yet."
+  );
+  setText("adminRetentionRecoveries", retentionSummary.recoveries);
+  setText(
+    "adminRetentionRecoveriesDetail",
+    retentionSummary.recoveries
+      ? `${retentionSummary.recoveries} successful recovery cycle(s) have already been recorded across learner flashcards.`
+      : "No flashcard recoveries recorded yet."
   );
 
   renderInsightList(
@@ -356,6 +456,16 @@ function renderLearningInsights(learners) {
       .sort((a, b) => b.metric - a.metric)
       .slice(0, 5),
     "No learner currently has a review queue."
+  );
+  renderInsightList(
+    "adminRetentionLoads",
+    summarizeHighestRetentionLoads(learners, 5),
+    "No due flashcards are waiting right now."
+  );
+  renderInsightList(
+    "adminLowestRetentionRecovery",
+    summarizeLowestRetentionRecovery(learners, 5),
+    "No learner has entered the retention queue yet."
   );
 
   renderMissedTopicList("adminMostMissedTopics", summarizeMostMissedTopics(learners, 5));
@@ -836,6 +946,8 @@ async function openStudentProfile(learner) {
   const weakTopics = summarizeLearnerWeakTopics(learner);
   const studyHistory = summarizeLearnerStudyHistory(learner);
   const assessmentBars = buildLearnerAssessmentBars(learner);
+  const retentionSnapshot = summarizeLearnerRetentionSnapshot(learner);
+  const dueRetentionItems = summarizeLearnerDueRetentionItems(learner);
 
   if (body) {
     body.innerHTML = `
@@ -876,6 +988,20 @@ async function openStudentProfile(learner) {
           <h4>Recent Activity History</h4>
           <div class="review-list">
             ${buildStudyHistoryRows(studyHistory)}
+          </div>
+        </section>
+      </div>
+      <div class="profile-columns">
+        <section class="profile-section">
+          <h4>Retention Snapshot</h4>
+          <div class="profile-list">
+            ${buildLearnerRetentionSnapshotRows(retentionSnapshot)}
+          </div>
+        </section>
+        <section class="profile-section">
+          <h4>Due Memory Queue</h4>
+          <div class="review-list">
+            ${buildLearnerDueRetentionRows(dueRetentionItems)}
           </div>
         </section>
       </div>
@@ -1046,6 +1172,60 @@ function buildWeakTopicRows(items) {
         <span class="meta-pill">${item.misses} miss(es)</span>
       </div>
       <p>${escapeHtml(item.latestQuestion)}</p>
+    </article>
+  `).join("");
+}
+
+function summarizeLearnerRetentionSnapshot(learner) {
+  const items = getLearnerRetentionItems(learner);
+  const dueItems = items.filter(isDueRetentionItem);
+  const lowConfidenceCards = items.reduce((sum, item) => sum + Math.max(0, Number(item?.lowConfidenceCount || 0)), 0);
+  const recoveries = items.reduce((sum, item) => sum + Math.max(0, Number(item?.completedCycles || 0)), 0);
+  const nextDueItem = [...items]
+    .filter((item) => item?.dueAt)
+    .sort((a, b) => new Date(a.dueAt || 0).getTime() - new Date(b.dueAt || 0).getTime())[0];
+
+  return {
+    totalCards: items.length,
+    dueCards: dueItems.length,
+    lowConfidenceCards,
+    recoveries,
+    nextDueLabel: nextDueItem?.dueAt ? formatHistoryTimestamp(nextDueItem.dueAt) : "No upcoming due date"
+  };
+}
+
+function buildLearnerRetentionSnapshotRows(snapshot) {
+  return [
+    { label: "Retention cards", value: snapshot.totalCards },
+    { label: "Due now", value: snapshot.dueCards },
+    { label: "Low-confidence cards", value: snapshot.lowConfidenceCards },
+    { label: "Recovery cycles", value: snapshot.recoveries },
+    { label: "Next due", value: snapshot.nextDueLabel }
+  ].map((item) => `<div class="profile-row"><span>${escapeHtml(item.label)}</span><span>${escapeHtml(String(item.value))}</span></div>`).join("");
+}
+
+function summarizeLearnerDueRetentionItems(learner) {
+  return getLearnerRetentionItems(learner)
+    .filter(isDueRetentionItem)
+    .sort((a, b) => new Date(a.dueAt || 0).getTime() - new Date(b.dueAt || 0).getTime())
+    .slice(0, 6);
+}
+
+function buildLearnerDueRetentionRows(items) {
+  if (!items.length) {
+    return `<div class="review-item"><p>No flashcards are due for this learner right now.</p></div>`;
+  }
+
+  return items.map((item) => `
+    <article class="review-item">
+      <h5>${escapeHtml(item.title || item.question || "Memory Card")}</h5>
+      <div class="review-meta">
+        <span class="meta-pill">${escapeHtml(item.subject || "general")}</span>
+        <span class="meta-pill">Stage ${Number(item.stageIndex || 0) + 1}</span>
+        <span class="meta-pill">${escapeHtml(item.seedReason === "low_confidence_correct" ? "Low confidence" : "Wrong answer")}</span>
+      </div>
+      <p>${escapeHtml(item.question || "No question text saved.")}</p>
+      <p>Due ${escapeHtml(formatHistoryTimestamp(item.dueAt))}</p>
     </article>
   `).join("");
 }

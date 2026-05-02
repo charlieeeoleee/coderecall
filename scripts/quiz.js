@@ -21,7 +21,7 @@ import {
   handleMusicToggle
 } from "./sound.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
-import { saveWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
+import { saveWrongAnswerReview, resolveWrongAnswerReview, loadWrongAnswerReview } from "./review-store.js";
 import { saveRetentionReview, resolveRetentionReview, loadRetentionQueue } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
@@ -64,6 +64,8 @@ let pendingStudyHistorySavePromise = null;
 let awardedQuestionIds = new Set();
 let correctQuestionIdsThisRun = new Set();
 let lastEarnedXP = 0;
+let wrongAnswerReviewKeys = new Set();
+let recoveredMistakesThisRun = 0;
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
 const RESUME_ACTIVITY_KEY = "resume_activity";
@@ -118,6 +120,35 @@ function getQuestionIdentifier(question, fallbackIndex = currentIndex) {
     .slice(0, 80);
 
   return fallbackText || `question_${fallbackIndex + 1}`;
+}
+
+function buildReviewTrackingKey(payload = {}) {
+  const questionIdentity = payload.level != null && payload.sub != null
+    ? `${payload.level}.${payload.sub}`
+    : String(payload.question || "unknown")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 80) || "unknown";
+
+  return [
+    payload.source || "quiz",
+    payload.subject || "subject",
+    payload.quizType || payload.difficulty || "default",
+    payload.quizLevel || payload.level || "na",
+    questionIdentity
+  ].join("|");
+}
+
+async function syncWrongAnswerReviewKeys() {
+  const items = await withTimeout(
+    loadWrongAnswerReview({
+      db,
+      user: currentUser
+    }),
+    []
+  );
+  wrongAnswerReviewKeys = new Set((items || []).map((item) => String(item?.key || "").trim()).filter(Boolean));
 }
 
 function getSubjectDisplayName() {
@@ -1057,6 +1088,16 @@ function showResult() {
   document.getElementById("resultScoreFill").style.width = `${percent}%`;
   document.getElementById("resultXpFill").style.width = `${xpPercent}%`;
   document.getElementById("resultMessage").textContent = `You scored ${score} out of ${total}.`;
+  const recoverySummary = document.getElementById("resultRecoverySummary");
+  if (recoverySummary) {
+    if (recoveredMistakesThisRun > 0) {
+      recoverySummary.hidden = false;
+      recoverySummary.textContent = `Recovery win: you fixed ${recoveredMistakesThisRun} previously missed question${recoveredMistakesThisRun === 1 ? "" : "s"} in this attempt.`;
+    } else {
+      recoverySummary.hidden = true;
+      recoverySummary.textContent = "";
+    }
+  }
   document.getElementById("resultModal").classList.add("active");
 }
 
@@ -1249,6 +1290,7 @@ async function finishAttempt() {
   await clearQuizResumeState();
   correctQuestionIdsThisRun = new Set();
   showResult();
+  recoveredMistakesThisRun = 0;
 }
 
 function continueToNext() {
@@ -1271,10 +1313,15 @@ window.handleNext = function () {
   const currentQuestion = quizQuestions[currentIndex];
   const isCorrect = selectedChoice === currentQuestion.answer;
   const reviewPayload = buildWrongAnswerReviewPayload(currentQuestion, selectedChoice);
+  const reviewTrackingKey = buildReviewTrackingKey(reviewPayload);
   const lowConfidence = isLowConfidenceAnswer(selectedConfidence);
 
   if (isCorrect) {
     correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion, currentIndex));
+    if (wrongAnswerReviewKeys.has(reviewTrackingKey)) {
+      recoveredMistakesThisRun += 1;
+      wrongAnswerReviewKeys.delete(reviewTrackingKey);
+    }
     resolveWrongAnswerReview({
       db,
       user: currentUser,
@@ -1330,6 +1377,7 @@ window.handleNext = function () {
   }).catch((error) => {
     console.warn("Unable to save wrong-answer review item.", error);
   });
+  wrongAnswerReviewKeys.add(reviewTrackingKey);
   saveRetentionReview({
     db,
     user: currentUser,
@@ -1408,7 +1456,7 @@ if (isPretestAlreadyTaken()) {
   showPretestLockModal("You already took the pre-test.");
 } else {
   Promise.resolve()
-    .then(() => syncAwardedQuestionIds())
+    .then(() => Promise.all([syncAwardedQuestionIds(), syncWrongAnswerReviewKeys()]))
     .then(() => {
       prepareQuestions();
       loadTheme();
@@ -1427,6 +1475,9 @@ onAuthStateChanged(auth, (user) => {
   currentIsGuest = !user && localStorage.getItem("guest") === "true";
   syncAwardedQuestionIds().catch((error) => {
     console.warn("Unable to refresh awarded question XP state.", error);
+  });
+  syncWrongAnswerReviewKeys().catch((error) => {
+    console.warn("Unable to refresh wrong-answer review tracking state.", error);
   });
 
   if (!authReadyResolved) {

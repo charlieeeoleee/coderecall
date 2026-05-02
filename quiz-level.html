@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz-level.css?v=20260428b">
+  <link rel="stylesheet" href="styles/quiz-level.css?v=20260430f">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -98,6 +98,7 @@
     <div class="level-modal-box">
       <h3>Level Complete</h3>
       <p id="resultMessage">You finished this level.</p>
+      <p id="resultRecoverySummary" class="result-recovery-summary" hidden></p>
       <button class="level-btn primary-btn" onclick="finishLevelFlow()" id="finishLevelBtn">Next Level</button>
     </div>
   </div>
@@ -130,7 +131,7 @@
       window.location.href = `quiz-levels.html?subject=${subject}&difficulty=${difficulty}`;
     };
   </script>
-  <script type="module" src="scripts/quiz-level.js?v=20260428c"></script>
+  <script type="module" src="scripts/quiz-level.js?v=20260430f"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

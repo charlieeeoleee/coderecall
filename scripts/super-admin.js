@@ -130,6 +130,7 @@ async function loadSuperAdminDashboard() {
   renderOverview(users);
   renderAccessGrantList(grants);
   renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
+  renderRetentionOversight(users);
   renderSubjectCompletionBreakdown(users);
   renderMostMissedTopics(users);
   renderUserTable(users);
@@ -265,6 +266,7 @@ function renderOverview(users) {
   const posttestAverage = summarizeAssessmentAverage(learners, "posttest");
   const hardwareCompletion = summarizeSubjectCompletion(learners, "hardware");
   const electricalCompletion = summarizeSubjectCompletion(learners, "electrical");
+  const retentionSummary = summarizeRetentionInsights(learners);
 
   setText("superTotalUsers", totalUsers);
   setText("superAdminCount", totalAdmins);
@@ -278,6 +280,15 @@ function renderOverview(users) {
   setText("superHardwareCompletionDetail", `${hardwareCompletion.completed} of ${hardwareCompletion.total} learners`);
   setText("superElectricalCompletion", `${electricalCompletion.percent}%`);
   setText("superElectricalCompletionDetail", `${electricalCompletion.completed} of ${electricalCompletion.total} learners`);
+  setText("superDueRetentionCards", retentionSummary.dueCards);
+  setText(
+    "superDueRetentionCardsDetail",
+    retentionSummary.dueCards
+      ? `${retentionSummary.dueCards} flashcard review item(s) are already due.`
+      : "No due flashcards right now"
+  );
+  setText("superLearnersWithDueRetention", retentionSummary.learnersWithDue);
+  setText("superLearnersWithDueRetentionDetail", `${retentionSummary.learnersWithDue} learner(s) need memory review`);
 }
 
 function summarizeAssessmentAverage(learners, stage) {
@@ -344,6 +355,73 @@ function summarizeSubjectStatusBuckets(learners, subject) {
   }, { notStarted: 0, inProgress: 0, completed: 0 });
 }
 
+function getLearnerRetentionItems(learner) {
+  return Array.isArray(learner?.retentionQueue) ? learner.retentionQueue : [];
+}
+
+function isDueRetentionItem(item) {
+  const dueAt = new Date(item?.dueAt || 0).getTime();
+  return Number.isFinite(dueAt) && dueAt <= Date.now();
+}
+
+function summarizeRetentionInsights(learners) {
+  return learners.reduce((summary, learner) => {
+    const items = getLearnerRetentionItems(learner);
+    const dueCount = items.filter(isDueRetentionItem).length;
+
+    summary.dueCards += dueCount;
+    summary.learnersWithDue += dueCount > 0 ? 1 : 0;
+    summary.lowConfidenceCards += items.reduce((sum, item) => sum + Math.max(0, Number(item?.lowConfidenceCount || 0)), 0);
+    summary.recoveries += items.reduce((sum, item) => sum + Math.max(0, Number(item?.completedCycles || 0)), 0);
+
+    return summary;
+  }, {
+    dueCards: 0,
+    learnersWithDue: 0,
+    lowConfidenceCards: 0,
+    recoveries: 0
+  });
+}
+
+function summarizeHighestRetentionLoads(learners, limit = 5) {
+  return [...learners]
+    .map((learner) => {
+      const items = getLearnerRetentionItems(learner);
+      const dueCount = items.filter(isDueRetentionItem).length;
+      return {
+        title: learner.name || learner.email || "Learner",
+        metric: dueCount,
+        detail: `${items.length} total card(s) • ${learner.email || "No email"}`
+      };
+    })
+    .filter((item) => item.metric > 0)
+    .sort((a, b) => b.metric - a.metric || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
+function summarizeLowestRetentionRecovery(learners, limit = 5) {
+  return [...learners]
+    .map((learner) => {
+      const items = getLearnerRetentionItems(learner);
+      const totalCards = items.length;
+      const recoveredCards = items.filter((item) => Number(item?.completedCycles || 0) > 0).length;
+      const dueCards = items.filter(isDueRetentionItem).length;
+      const recoveryPercent = totalCards ? Math.round((recoveredCards / totalCards) * 100) : 0;
+
+      return {
+        title: learner.name || learner.email || "Learner",
+        metric: `${recoveryPercent}%`,
+        detail: `${recoveredCards}/${totalCards} recovered • ${dueCards} due • ${learner.email || "No email"}`,
+        totalCards,
+        sortPercent: recoveryPercent,
+        sortDue: dueCards
+      };
+    })
+    .filter((item) => item.totalCards > 0)
+    .sort((a, b) => a.sortPercent - b.sortPercent || b.sortDue - a.sortDue || a.title.localeCompare(b.title))
+    .slice(0, limit);
+}
+
 function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes) {
   const grid = document.getElementById("systemHealthGrid");
   if (!grid) return;
@@ -371,6 +449,37 @@ function renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDraft
       <p>${card.detail}</p>
     </article>
   `).join("");
+}
+
+function renderRetentionOversight(users) {
+  const learners = users.filter((user) => getRoleFromUserData(user) === "user");
+  const summary = summarizeRetentionInsights(learners);
+
+  setText("superLowConfidenceRetention", summary.lowConfidenceCards);
+  setText(
+    "superLowConfidenceRetentionDetail",
+    summary.lowConfidenceCards
+      ? `${summary.lowConfidenceCards} low-confidence memory card(s) are still being tracked in learner queues.`
+      : "No low-confidence cards recorded yet."
+  );
+  setText("superRetentionRecoveries", summary.recoveries);
+  setText(
+    "superRetentionRecoveriesDetail",
+    summary.recoveries
+      ? `${summary.recoveries} successful recovery cycle(s) have already been recorded across learner flashcards.`
+      : "No flashcard recoveries recorded yet."
+  );
+
+  renderInsightList(
+    "superRetentionLoads",
+    summarizeHighestRetentionLoads(learners, 5),
+    "No due flashcards are waiting right now."
+  );
+  renderInsightList(
+    "superLowestRetentionRecovery",
+    summarizeLowestRetentionRecovery(learners, 5),
+    "No learner has entered the retention queue yet."
+  );
 }
 
 function renderMostMissedTopics(users) {
@@ -505,6 +614,26 @@ function openMissedTopicModal(item) {
   }
 
   document.getElementById("missedTopicModal")?.classList.add("active");
+}
+
+function renderInsightList(targetId, items, emptyMessage) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  if (!items.length) {
+    target.innerHTML = `<div class="review-item"><p>${escapeHtml(emptyMessage)}</p></div>`;
+    return;
+  }
+
+  target.innerHTML = items.map((item) => `
+    <article class="review-item insight-review-item">
+      <div>
+        <h5>${escapeHtml(item.title)}</h5>
+        <p>${escapeHtml(item.detail)}</p>
+      </div>
+      <strong>${item.metric}</strong>
+    </article>
+  `).join("");
 }
 
 function renderPublishingQueue(moduleDrafts, quizDrafts) {

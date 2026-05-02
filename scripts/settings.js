@@ -23,6 +23,10 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import {
+  getRetentionScheduleConfig,
+  saveRetentionScheduleConfig
+} from "./retention-store.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -49,6 +53,10 @@ let currentLoginType = "Unknown";
 let currentVerificationState = "Unknown";
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
+const DEFAULT_RETENTION_SCHEDULE = {
+  immediateOnSeed: true,
+  intervals: [1, 3, 7, 14]
+};
 
 function getAssessmentXP(type, result = null) {
   if (type === "pretest" || type === "posttest") {
@@ -321,6 +329,83 @@ function loadPreferences() {
     musicToggle.checked = musicEnabled !== "false";
     musicToggle.addEventListener("change", (e) => {
       handleMusicToggle(e.target.checked);
+    });
+  }
+
+  loadRetentionScheduleSettings();
+}
+
+function loadRetentionScheduleSettings() {
+  const schedule = getRetentionScheduleConfig();
+  const immediateToggle = document.getElementById("retentionImmediateToggle");
+  const intervalInputs = [
+    document.getElementById("retentionInterval1"),
+    document.getElementById("retentionInterval2"),
+    document.getElementById("retentionInterval3"),
+    document.getElementById("retentionInterval4")
+  ];
+
+  if (immediateToggle) {
+    immediateToggle.checked = schedule.immediateOnSeed !== false;
+  }
+
+  intervalInputs.forEach((input, index) => {
+    if (!input) return;
+    input.value = String(schedule.intervals[index] ?? DEFAULT_RETENTION_SCHEDULE.intervals[index]);
+  });
+}
+
+function readRetentionScheduleForm() {
+  const immediateToggle = document.getElementById("retentionImmediateToggle");
+  const intervalInputs = [
+    document.getElementById("retentionInterval1"),
+    document.getElementById("retentionInterval2"),
+    document.getElementById("retentionInterval3"),
+    document.getElementById("retentionInterval4")
+  ];
+
+  const intervals = intervalInputs.map((input, index) => {
+    const fallback = DEFAULT_RETENTION_SCHEDULE.intervals[index];
+    return Math.max(0, Math.floor(Number(input?.value || fallback)));
+  });
+
+  for (let index = 1; index < intervals.length; index += 1) {
+    if (intervals[index] < intervals[index - 1]) {
+      throw new Error("Each next stage must be equal to or later than the previous stage.");
+    }
+  }
+
+  return {
+    immediateOnSeed: immediateToggle?.checked !== false,
+    intervals
+  };
+}
+
+function wireRetentionScheduleControls() {
+  const saveBtn = document.getElementById("saveRetentionScheduleBtn");
+  const resetBtn = document.getElementById("resetRetentionScheduleBtn");
+
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      try {
+        const nextConfig = readRetentionScheduleForm();
+        const saved = saveRetentionScheduleConfig(nextConfig);
+        loadRetentionScheduleSettings();
+        showInfoPopup(
+          "Memory Review Schedule Saved",
+          `Flashcards will now follow this device schedule: ${saved.intervals.join(" days, ")} days${saved.immediateOnSeed ? ", with immediate first review enabled." : "."}`
+        );
+      } catch (error) {
+        showInfoPopup("Invalid Schedule", error?.message || "Please check the retention schedule values and try again.");
+      }
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      saveRetentionScheduleConfig(DEFAULT_RETENTION_SCHEDULE);
+      loadRetentionScheduleSettings();
+      showInfoPopup("Memory Review Schedule Reset", "The retention schedule is back to the default 1, 3, 7, and 14 day flow.");
     });
   }
 }
@@ -1036,6 +1121,7 @@ function updateIcon() {
 ========================= */
 loadTheme();
 wireProfileEditor();
+wireRetentionScheduleControls();
 initSounds();
 initGlobalClickSound();
 tryStartMusic();

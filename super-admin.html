@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260427c">
+  <link rel="stylesheet" href="styles/admin.css?v=20260430a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -61,7 +61,40 @@
         <div class="overview-card"><h3>Average Post-Test</h3><p id="superAveragePosttest">0%</p><small id="superAveragePosttestDetail">0 recorded tests</small></div>
         <div class="overview-card"><h3>Hardware Completion</h3><p id="superHardwareCompletion">0%</p><small id="superHardwareCompletionDetail">0 of 0 learners</small></div>
         <div class="overview-card"><h3>Electrical Completion</h3><p id="superElectricalCompletion">0%</p><small id="superElectricalCompletionDetail">0 of 0 learners</small></div>
+        <div class="overview-card"><h3>Due Memory Cards</h3><p id="superDueRetentionCards">0</p><small id="superDueRetentionCardsDetail">No due flashcards right now</small></div>
+        <div class="overview-card"><h3>Learners With Due Cards</h3><p id="superLearnersWithDueRetention">0</p><small id="superLearnersWithDueRetentionDetail">0 learner(s) need memory review</small></div>
       </div>
+
+      <section class="panel-card wide">
+        <div class="panel-header">
+          <div>
+            <h3>Retention Oversight</h3>
+            <p>Track memory-review pressure, recovery progress, and which learners are carrying the heaviest flashcard load.</p>
+          </div>
+        </div>
+        <div class="insights-admin-grid">
+          <article class="insight-admin-card">
+            <span>Low-confidence cards</span>
+            <strong id="superLowConfidenceRetention">0</strong>
+            <p id="superLowConfidenceRetentionDetail">No low-confidence cards recorded yet.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Retention recoveries</span>
+            <strong id="superRetentionRecoveries">0</strong>
+            <p id="superRetentionRecoveriesDetail">No flashcard recoveries recorded yet.</p>
+          </article>
+        </div>
+        <div class="insights-admin-columns">
+          <section class="insight-list-wrap">
+            <h4>Highest Due Flashcard Load</h4>
+            <div id="superRetentionLoads" class="review-list"></div>
+          </section>
+          <section class="insight-list-wrap">
+            <h4>Lowest Retention Recovery</h4>
+            <div id="superLowestRetentionRecovery" class="review-list"></div>
+          </section>
+        </div>
+      </section>
 
       <section class="panel-card wide inbox-shortcut-card">
         <div class="panel-header">
@@ -251,7 +284,7 @@
   </div>
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
-  <script type="module" src="scripts/super-admin.js?v=20260427c"></script>
+  <script type="module" src="scripts/super-admin.js?v=20260430a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

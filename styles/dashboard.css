@@ -1468,6 +1468,12 @@ body.light-mode .view-full-btn{
   opacity:0.9;
 }
 
+.flashcard-quality-note{
+  font-size:13px;
+  line-height:1.55;
+  opacity:0.78;
+}
+
 .flashcard-hidden{
   display:none;
 }
@@ -1504,6 +1510,11 @@ body.light-mode .view-full-btn{
 .flashcard-btn.secondary{
   background:linear-gradient(135deg,#6d5dfc,#9d4edd);
   color:#fff;
+}
+
+.flashcard-btn.success{
+  background:linear-gradient(135deg,#35e0c8,#00d4ff);
+  color:#04111d;
 }
 
 .flashcard-btn.warning{
