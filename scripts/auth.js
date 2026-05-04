@@ -19,6 +19,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import { isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 
 /* FIREBASE CONFIG */
 const firebaseConfig = {
@@ -38,6 +39,9 @@ let isHandlingAuthFlow = false;
 async function getLandingPageForUser(user) {
   const role = await resolveUserRole(db, user);
   await syncUserRole(db, user, role);
+  if (role === "super_admin" && !isSuperAdminMfaVerified(user.uid)) {
+    return "super-admin-mfa.html";
+  }
   return "dashboard.html";
 }
 
@@ -100,6 +104,7 @@ window.login = async function(){
 
     isHandlingAuthFlow = true;
     const cred = await signInWithEmailAndPassword(auth, email, password);
+    clearSuperAdminMfaSession();
 
     if (!cred.user.emailVerified) {
       await signOut(auth);
@@ -260,6 +265,7 @@ window.googleLogin = async function(){
     isHandlingAuthFlow = true;
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
+    clearSuperAdminMfaSession();
 
     const userRef = doc(db, "users", user.uid);
     const docSnap = await getDoc(userRef);

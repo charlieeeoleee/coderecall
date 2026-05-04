@@ -1,0 +1,256 @@
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:'Poppins',sans-serif;
+  background:linear-gradient(135deg,#0b0f2a,#2b1e5a);
+  color:#fff;
+}
+
+.mfa-shell{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:32px 18px;
+}
+
+.mfa-card{
+  width:min(760px,100%);
+  background:rgba(26,17,64,0.9);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:28px;
+  box-shadow:0 24px 64px rgba(5,8,25,0.35);
+  backdrop-filter:blur(14px);
+  padding:30px 28px;
+}
+
+.brand-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:22px;
+}
+
+.logo{
+  font-family:'Press Start 2P',cursive;
+  font-size:18px;
+  color:#ff8a2a;
+  text-shadow:0 0 8px rgba(255,138,42,0.55),0 0 16px rgba(255,46,151,0.35);
+}
+
+.role-pill{
+  padding:10px 14px;
+  border-radius:999px;
+  background:rgba(0,229,255,0.14);
+  color:#72f0ff;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.04em;
+}
+
+.mfa-copy h1{
+  margin:0 0 8px;
+  font-size:38px;
+  line-height:1.05;
+}
+
+.mfa-copy p{
+  margin:0 0 24px;
+  color:rgba(255,255,255,0.78);
+  font-size:16px;
+}
+
+.panel-block{
+  margin-bottom:24px;
+  padding:22px;
+  border-radius:22px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.panel-block h2{
+  margin:0 0 12px;
+  font-size:24px;
+}
+
+.step-list{
+  margin:0 0 18px 18px;
+  padding:0;
+  color:rgba(255,255,255,0.82);
+}
+
+.step-list li + li{
+  margin-top:8px;
+}
+
+.secret-box{
+  margin-top:16px;
+  padding:18px;
+  border-radius:18px;
+  background:rgba(15,11,37,0.42);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.secret-box label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:#7ff7e0;
+  margin-bottom:10px;
+}
+
+.qr-setup-row{
+  display:grid;
+  grid-template-columns:minmax(220px,260px) 1fr;
+  gap:16px;
+  align-items:stretch;
+}
+
+.qr-box{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  text-align:center;
+}
+
+.mfa-qr-image{
+  width:220px;
+  height:220px;
+  object-fit:contain;
+  border-radius:18px;
+  background:#fff;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+.secret-value-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px;
+}
+
+.secret-value-row code{
+  font-size:18px;
+  font-weight:700;
+  word-break:break-word;
+}
+
+.ghost-btn,
+.secondary-btn,
+.primary-btn,
+.link-btn{
+  border:none;
+  border-radius:14px;
+  padding:12px 18px;
+  font-family:inherit;
+  font-size:15px;
+  font-weight:700;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.primary-btn{
+  background:linear-gradient(135deg,#ff2e97,#00d4ff);
+  color:#fff;
+  box-shadow:0 16px 34px rgba(0,212,255,0.18);
+}
+
+.secondary-btn,
+.ghost-btn,
+.link-btn{
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.mfa-form{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.mfa-form label{
+  font-size:14px;
+  font-weight:600;
+}
+
+.mfa-form input{
+  width:100%;
+  padding:16px 18px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(7,9,26,0.4);
+  color:#fff;
+  font-size:18px;
+  box-sizing:border-box;
+}
+
+.mfa-form input::placeholder{
+  color:rgba(255,255,255,0.36);
+}
+
+.action-row{
+  margin-top:18px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.status-text{
+  min-height:24px;
+  margin:18px 0 0;
+  color:#8ef7cf;
+  font-weight:600;
+}
+
+.hint-text{
+  color:rgba(255,255,255,0.72);
+  font-size:14px;
+  margin:10px 0 0;
+}
+
+.backup-code-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:10px;
+}
+
+.backup-code-chip{
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(255,255,255,0.08);
+  text-align:center;
+  font-weight:700;
+  letter-spacing:0.06em;
+}
+
+.verify-help-actions{
+  margin-top:14px;
+}
+
+@media(max-width:640px){
+  .mfa-card{
+    padding:22px 18px;
+  }
+
+  .qr-setup-row{
+    grid-template-columns:1fr;
+  }
+
+  .brand-row{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+
+  .mfa-copy h1{
+    font-size:30px;
+  }
+}

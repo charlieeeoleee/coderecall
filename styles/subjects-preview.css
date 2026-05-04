@@ -50,6 +50,30 @@ body{
   gap:22px;
 }
 
+.nav-toggle{
+  display:none;
+  width:46px;
+  height:46px;
+  border:none;
+  border-radius:14px;
+  background:rgba(255,255,255,0.08);
+  cursor:pointer;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:5px;
+  padding:0;
+}
+
+.nav-toggle span{
+  width:20px;
+  height:2px;
+  background:#fff;
+  border-radius:999px;
+  display:block;
+  transition:transform 0.25s ease, opacity 0.25s ease;
+}
+
 .nav-links a{
   color:white;
   text-decoration:none;
@@ -79,6 +103,18 @@ body{
 
 .login-btn:hover{
   transform:translateY(-2px) scale(1.03);
+}
+
+.navbar.mobile-open .nav-toggle span:nth-child(1){
+  transform:translateY(7px) rotate(45deg);
+}
+
+.navbar.mobile-open .nav-toggle span:nth-child(2){
+  opacity:0;
+}
+
+.navbar.mobile-open .nav-toggle span:nth-child(3){
+  transform:translateY(-7px) rotate(-45deg);
 }
 
 /* PAGE */
@@ -381,6 +417,14 @@ body.light-mode .logo-recall{
   text-shadow:none;
 }
 
+body.light-mode .nav-toggle{
+  background:rgba(108,76,255,0.12);
+}
+
+body.light-mode .nav-toggle span{
+  background:#26215f;
+}
+
 /* RESPONSIVE */
 @media(max-width:950px){
   .subjects-grid-section,
@@ -389,14 +433,73 @@ body.light-mode .logo-recall{
   }
 
   .navbar{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:16px;
+    position:relative;
+    align-items:center;
+    gap:14px;
+  }
+
+  .logo{
+    font-size:15px;
+    flex:1;
+    min-width:0;
+  }
+
+  .nav-toggle{
+    display:inline-flex;
+    flex-shrink:0;
   }
 
   .nav-links{
-    flex-wrap:wrap;
-    gap:14px;
+    position:absolute;
+    top:calc(100% + 10px);
+    left:18px;
+    right:18px;
+    display:none;
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+    padding:16px;
+    border-radius:20px;
+    background:rgba(26,17,64,0.96);
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 16px 40px rgba(4, 7, 22, 0.28);
+    backdrop-filter:blur(14px);
+  }
+
+  .navbar.mobile-open{
+    overflow:visible;
+  }
+
+  .navbar.mobile-open .nav-links{
+    display:flex;
+  }
+
+  .nav-links a{
+    display:block;
+    width:100%;
+    padding:10px 4px;
+    font-size:15px;
+  }
+
+  .login-btn{
+    width:100%;
+    margin-top:4px;
+    padding:13px 18px;
+    border-radius:14px;
+  }
+
+  body.light-mode .nav-links{
+    background:rgba(255,255,255,0.97);
+    border-color:rgba(108,76,255,0.12);
+  }
+
+  body.light-mode .nav-links a{
+    color:#222;
+  }
+
+  body.light-mode .nav-links a:hover,
+  body.light-mode .nav-links a.active-link{
+    color:#00a9c7;
   }
 }
 

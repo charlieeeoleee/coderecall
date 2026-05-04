@@ -105,6 +105,10 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /securityProfiles/{userId} {
+      allow read, create, update: if isOwner(userId);
+    }
+
     match /pendingUsers/{pendingUserId} {
       allow read, create, update, delete: if isAdmin();
     }

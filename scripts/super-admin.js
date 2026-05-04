@@ -27,6 +27,7 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
+import { isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import {
   fetchModuleDrafts,
   fetchQuizDrafts
@@ -90,6 +91,11 @@ onAuthStateChanged(auth, async (user) => {
 
   if (role !== "super_admin") {
     window.location.href = "dashboard.html";
+    return;
+  }
+
+  if (!isSuperAdminMfaVerified(user.uid)) {
+    window.location.href = "super-admin-mfa.html";
     return;
   }
 
@@ -841,24 +847,29 @@ function wireAccessGrantForm() {
       return;
     }
 
-    await setDoc(doc(db, "accessRoles", encodeURIComponent(email)), {
-      email,
-      role,
-      updatedAt: serverTimestamp(),
-      updatedBy: currentUser.email || ""
-    });
+    try {
+      await setDoc(doc(db, "accessRoles", encodeURIComponent(email)), {
+        email,
+        role,
+        updatedAt: serverTimestamp(),
+        updatedBy: currentUser.email || ""
+      });
 
-    const syncedUsers = await syncGrantedRoleToExistingUsers(email, role);
+      const syncedUsers = await syncGrantedRoleToExistingUsers(email, role);
 
-    await writeAuditLog("email_access_saved", `Granted ${role} access to ${email}`);
+      await writeAuditLog("email_access_saved", `Granted ${role} access to ${email}`);
 
-    form.reset();
-    setGrantStatus(
-      syncedUsers
-        ? `Email access saved. Updated ${syncedUsers} existing user record(s) immediately.`
-        : "Email access saved successfully."
-    );
-    await loadSuperAdminDashboard();
+      form.reset();
+      setGrantStatus(
+        syncedUsers
+          ? `Email access saved. Updated ${syncedUsers} existing user record(s) immediately.`
+          : "Email access saved successfully."
+      );
+      await loadSuperAdminDashboard();
+    } catch (error) {
+      console.error("Unable to save email access.", error);
+      setGrantStatus("Unable to save email access right now. Check your current role and try again.");
+    }
   });
 }
 
@@ -935,9 +946,13 @@ function renderAccessGrantList(grants) {
     button.addEventListener("click", async () => {
       const grantId = button.getAttribute("data-remove-grant");
       if (!grantId) return;
+      const grant = grants.find((entry) => entry.id === grantId);
+      const removingCurrentAccount = (grant?.email || "").toLowerCase() === (currentUser?.email || "").toLowerCase();
       openSystemPopup(
         "Remove Email Access",
-        "Remove this email access grant?",
+        removingCurrentAccount
+          ? "You are removing access from the account you are currently using. If you continue, your current super-admin access may be removed and you may be redirected to the dashboard."
+          : "You are removing granted email access for this account. The assigned admin or super-admin role will be removed for matching users, and the change will apply immediately to synced records and on the next login.",
         async () => {
           await deleteDoc(doc(db, "accessRoles", grantId));
           const syncedUsers = await clearGrantedRoleFromExistingUsers(grant.email || "");
@@ -948,7 +963,22 @@ function renderAccessGrantList(grants) {
               : "Email access removed."
           );
           closeSystemPopup();
+          if (removingCurrentAccount) {
+            const nextRole = await resolveUserRole(db, currentUser);
+            await syncUserRole(db, currentUser, nextRole);
+            if (nextRole !== "super_admin") {
+              setGrantStatus("Your current account no longer has super admin access. Redirecting to dashboard...");
+              applyRoleNavigation(nextRole, "dashboard.html");
+              window.setTimeout(() => {
+                window.location.href = "dashboard.html";
+              }, 900);
+              return;
+            }
+          }
           await loadSuperAdminDashboard();
+        },
+        {
+          confirmLabel: removingCurrentAccount ? "Remove My Current Access" : "Remove"
         }
       );
     });
@@ -995,6 +1025,11 @@ function setGrantStatus(message) {
   if (el) el.textContent = message;
 }
 
+function setMfaStatus(message) {
+  const el = document.getElementById("superAdminMfaStatus");
+  if (el) el.textContent = message;
+}
+
 function updateUserUI(user) {
   setText("username", user.displayName || user.email || "Super Admin");
   const photo = document.getElementById("userPhoto");
@@ -1014,7 +1049,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function openSystemPopup(title, message, confirmAction) {
+function openSystemPopup(title, message, confirmAction, options = {}) {
   const popup = document.getElementById("systemPopup");
   const titleEl = document.getElementById("systemPopupTitle");
   const messageEl = document.getElementById("systemPopupMessage");
@@ -1026,7 +1061,7 @@ function openSystemPopup(title, message, confirmAction) {
   titleEl.textContent = title;
   messageEl.textContent = message;
   confirmBtn.disabled = false;
-  confirmBtn.textContent = "Confirm";
+  confirmBtn.textContent = options.confirmLabel || "Confirm";
   popup.classList.add("active");
 }
 
@@ -1093,10 +1128,39 @@ function initializeSystemPopup() {
 window.logout = async function() {
   closeMobileSidebar();
   stopContactInboxSubscription();
+  clearSuperAdminMfaSession();
   if (auth.currentUser) {
     await signOut(auth);
   }
   window.location.href = "auth.html";
+};
+
+window.resetMySuperAdminMfa = function() {
+  if (!currentUser) return;
+  openSystemPopup(
+    "Reset Super Admin 2FA",
+    "This will remove the current authenticator secret and backup codes for the account you are using now. You will need to enroll again on the next super-admin login.",
+    async () => {
+      await setDoc(doc(db, "securityProfiles", currentUser.uid), {
+        uid: currentUser.uid,
+        email: currentUser.email || "",
+        totpEnabled: false,
+        totpSecret: "",
+        backupCodeHashes: [],
+        resetAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      clearSuperAdminMfaSession();
+      setMfaStatus("Super-admin 2FA was reset. Redirecting you to re-enroll...");
+      closeSystemPopup();
+      window.setTimeout(() => {
+        window.location.href = "super-admin-mfa.html";
+      }, 700);
+    },
+    {
+      confirmLabel: "Reset My 2FA"
+    }
+  );
 };
 
 function loadTheme() {

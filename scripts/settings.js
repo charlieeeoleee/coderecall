@@ -52,6 +52,7 @@ applyRoleNavigation("guest", "settings.html");
 
 let currentUser = null;
 let currentIsGuest = false;
+let currentRole = "guest";
 let pendingProfilePhotoDataUrl = "";
 let currentLoginType = "Unknown";
 let currentVerificationState = "Unknown";
@@ -160,13 +161,15 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     currentIsGuest = false;
-    applyRoleNavigation(await resolveUserRole(db, user), "settings.html");
+    currentRole = await resolveUserRole(db, user);
+    applyRoleNavigation(currentRole, "settings.html");
     await loadUserSettings();
     loadPreferences();
     loadProgress();
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
+    currentRole = "guest";
     applyRoleNavigation("guest", "settings.html");
     loadGuestSettings();
     loadPreferences();
@@ -175,6 +178,13 @@ onAuthStateChanged(auth, async (user) => {
     window.location.href = "auth.html";
   }
 });
+
+function getRoleLabel(role) {
+  if (role === "super_admin") return "Super Admin";
+  if (role === "admin") return "Admin";
+  if (role === "user") return "User";
+  return "Guest";
+}
 
 /* =========================
    LOAD REAL USER
@@ -863,6 +873,212 @@ window.resetSubjectProgress = function(subject) {
       window.location.reload();
     }
   );
+};
+
+window.clearMemoryReview = function() {
+  openSystemPopup(
+    "Clear Memory Review",
+    "Clear all flashcard retention items without changing your subject progress, scores, or XP?",
+    async () => {
+      await clearRetentionQueue({
+        db,
+        user: currentUser
+      });
+
+      closeSystemPopup();
+      showInfoPopup("Memory Review Cleared", "All retention flashcards were cleared successfully.");
+      window.location.reload();
+    }
+  );
+};
+
+window.clearWrongAnswerReviewQueue = function() {
+  openSystemPopup(
+    "Clear Wrong-Answer Review",
+    "Clear the wrong-answer review backlog without changing your subject progress, scores, or XP?",
+    async () => {
+      await clearWrongAnswerReview({
+        db,
+        user: currentUser
+      });
+
+      closeSystemPopup();
+      showInfoPopup("Wrong-Answer Review Cleared", "The wrong-answer review queue was cleared successfully.");
+      window.location.reload();
+    }
+  );
+};
+
+function collectLocalSubjectState(prefix) {
+  return Object.fromEntries(
+    Object.keys(localStorage)
+      .filter((key) =>
+        key.startsWith(`${prefix}_`)
+        || key.startsWith(`resume_module_state_${prefix}_`)
+        || key.startsWith(`resume_quiz_state_${prefix}_`)
+      )
+      .map((key) => [key, localStorage.getItem(key)])
+  );
+}
+
+function downloadTextFile(filename, content, mimeType = "application/json") {
+  const blob = new Blob([content], { type: mimeType });
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
+function escapeCsvValue(value) {
+  const normalized = value == null ? "" : String(value);
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function rowsToCsv(rows = []) {
+  return rows
+    .map((row) => row.map((value) => escapeCsvValue(value)).join(","))
+    .join("\n");
+}
+
+function flattenObjectToRows(section, objectValue = {}, parentKey = "") {
+  const rows = [];
+
+  Object.entries(objectValue || {}).forEach(([key, value]) => {
+    const nextKey = parentKey ? `${parentKey}.${key}` : key;
+
+    if (Array.isArray(value)) {
+      rows.push([section, nextKey, JSON.stringify(value)]);
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      rows.push(...flattenObjectToRows(section, value, nextKey));
+      return;
+    }
+
+    rows.push([section, nextKey, value]);
+  });
+
+  return rows;
+}
+
+window.exportProgressSnapshot = async function() {
+  try {
+    const generatedAt = new Date().toISOString();
+    const summary = {
+      generatedAt,
+      role: currentRole,
+      roleLabel: getRoleLabel(currentRole),
+      loginType: currentLoginType,
+      verificationState: currentVerificationState,
+      theme: localStorage.getItem("theme") || "dark",
+      totalXP: parseInt(document.getElementById("totalXP")?.textContent || "0", 10) || 0,
+      level: parseInt(document.getElementById("levelValue")?.textContent || "1", 10) || 1,
+      completedSubjects: parseInt(document.getElementById("completedSubjects")?.textContent || "0", 10) || 0
+    };
+
+    const csvRows = [
+      ["Section", "Key", "Value"]
+    ];
+
+    csvRows.push(...flattenObjectToRows("Summary", summary));
+    csvRows.push(...flattenObjectToRows("Retention Schedule", getRetentionScheduleConfig()));
+
+    if (currentUser) {
+      const userRef = doc(db, "users", currentUser.uid);
+      const docSnap = await getDoc(userRef);
+      const data = docSnap.exists() ? (docSnap.data() || {}) : {};
+
+      const userInfo = {
+        uid: currentUser.uid,
+        email: currentUser.email || "",
+        displayName: data.name || currentUser.displayName || currentUser.email || "User"
+      };
+
+      const remoteSummary = {
+        xp: Number(data.xp || 0),
+        xpWeekly: Number(data.xpWeekly || 0),
+        wrongAnswerReviewCount: Array.isArray(data.wrongAnswerReview) ? data.wrongAnswerReview.length : 0,
+        retentionQueueCount: Array.isArray(data.retentionQueue) ? data.retentionQueue.length : 0,
+        studyHistoryCount: Array.isArray(data.studyHistory) ? data.studyHistory.length : 0
+      };
+
+      csvRows.push(...flattenObjectToRows("User", userInfo));
+      csvRows.push(...flattenObjectToRows("Remote Summary", remoteSummary));
+      csvRows.push(...flattenObjectToRows("Progress", data.progress || {}));
+      csvRows.push(...flattenObjectToRows("Results", data.results || {}));
+      csvRows.push(...flattenObjectToRows("Resume Activity", data.resumeActivity || {}));
+    } else {
+      const localSummary = {
+        guest: currentIsGuest,
+        guestXP: parseInt(localStorage.getItem("guest_xp") || "0", 10) || 0,
+        guestXPWeekly: parseInt(localStorage.getItem("guest_xpWeekly") || "0", 10) || 0,
+        wrongAnswerReviewCount: (() => {
+          try {
+            const items = JSON.parse(localStorage.getItem("wrong_answer_review_items") || "[]");
+            return Array.isArray(items) ? items.length : 0;
+          } catch {
+            return 0;
+          }
+        })()
+      };
+
+      csvRows.push(...flattenObjectToRows("User", { guest: currentIsGuest }));
+      csvRows.push(...flattenObjectToRows("Local Summary", localSummary));
+      csvRows.push(...flattenObjectToRows("Hardware Local State", collectLocalSubjectState("hardware")));
+      csvRows.push(...flattenObjectToRows("Electrical Local State", collectLocalSubjectState("electrical")));
+    }
+
+    const safeName = currentUser?.uid || (currentIsGuest ? "guest" : "local");
+    downloadTextFile(
+      `code-recall-progress-report-${safeName}-${generatedAt.slice(0, 10)}.csv`,
+      rowsToCsv(csvRows),
+      "text/csv;charset=utf-8"
+    );
+    showInfoPopup("Progress Report Exported", "Your CSV progress report was downloaded successfully.");
+  } catch (error) {
+    console.error("Unable to export progress snapshot.", error);
+    showInfoPopup("Export Failed", "Unable to export the CSV progress report right now.");
+  }
+};
+
+window.resetContactAlerts = function() {
+  openSystemPopup(
+    "Reset Contact Alerts",
+    "Clear local contact reply alerts and seen-reply markers on this device without deleting the actual support messages?",
+    () => {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith("contact_reply_seen"))
+        .forEach((key) => localStorage.removeItem(key));
+
+      closeSystemPopup();
+      showInfoPopup("Contact Alerts Reset", "Local contact reply alerts were reset. Your support messages were not deleted.");
+    }
+  );
+};
+
+window.refreshRoleAccess = async function() {
+  try {
+    if (!currentUser) {
+      currentRole = "guest";
+      applyRoleNavigation("guest", "settings.html");
+      showInfoPopup("Role Access Refreshed", "Guest navigation was refreshed for this session.");
+      return;
+    }
+
+    const resolvedRole = await resolveUserRole(db, currentUser);
+    await syncUserRole(db, currentUser, resolvedRole);
+    currentRole = resolvedRole;
+    applyRoleNavigation(resolvedRole, "settings.html");
+    showInfoPopup("Role Access Refreshed", `Your access was refreshed as ${getRoleLabel(resolvedRole)}.`);
+  } catch (error) {
+    console.error("Unable to refresh role access.", error);
+    showInfoPopup("Role Refresh Failed", "Unable to refresh role access right now.");
+  }
 };
 
 /* =========================

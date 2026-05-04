@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Admin Verification - Code Recall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/super-admin-mfa.css?v=20260504a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <main class="mfa-shell">
+    <section class="mfa-card">
+      <div class="brand-row">
+        <div class="logo">CODE:RECALL!</div>
+        <span class="role-pill">SUPER ADMIN 2FA</span>
+      </div>
+
+      <div class="mfa-copy">
+        <h1 id="mfaTitle">Verify Super Admin Access</h1>
+        <p id="mfaSubtitle">This extra step protects the highest-level controls in the platform.</p>
+      </div>
+
+      <div id="setupPanel" class="panel-block" hidden>
+        <h2>Set Up Your Authenticator App</h2>
+        <ol class="step-list">
+          <li>Open Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.</li>
+          <li>Scan the QR code below, or add a new account manually using the setup key.</li>
+          <li>Your authenticator app will generate the 6-digit code. Enter that code here to finish enrollment.</li>
+        </ol>
+
+        <div class="qr-setup-row">
+          <div class="secret-box qr-box">
+            <label>Scan This QR Code</label>
+            <img id="mfaQrImage" class="mfa-qr-image" alt="Authenticator QR setup code" />
+            <p class="hint-text">If the scan does not work, use the manual setup key instead.</p>
+          </div>
+
+          <div class="secret-box">
+            <label>Manual Setup Key</label>
+            <div class="secret-value-row">
+              <code id="mfaSecretValue">Loading...</code>
+              <button type="button" class="ghost-btn" onclick="copyMfaSecret()">Copy Key</button>
+              <button type="button" class="ghost-btn" onclick="copyMfaSetupLink()">Copy Setup Link</button>
+            </div>
+            <p class="hint-text">Account label: <strong id="mfaAccountLabel">Code Recall</strong></p>
+          </div>
+        </div>
+
+        <div class="secret-box">
+          <label>Backup Codes</label>
+          <div id="backupCodeList" class="backup-code-list"></div>
+          <button type="button" class="ghost-btn" onclick="copyBackupCodes()">Copy Backup Codes</button>
+          <p class="hint-text">Save these codes somewhere safe. Each code works once if you lose access to your authenticator app.</p>
+        </div>
+      </div>
+
+      <div id="verifyPanel" class="panel-block" hidden>
+        <h2>Enter Verification Code</h2>
+        <p class="hint-text">Open your authenticator app to get the current 6-digit code, or use one backup code to continue.</p>
+        <div class="verify-help-actions">
+          <button type="button" class="ghost-btn" onclick="resetCurrentMfaEnrollment()">Reset and Re-Enroll 2FA</button>
+        </div>
+      </div>
+
+      <form id="mfaForm" class="mfa-form">
+        <label for="mfaCodeInput">Authenticator Code or Backup Code</label>
+        <input id="mfaCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter 6-digit code or backup code" maxlength="12" required />
+        <button id="mfaSubmitBtn" type="submit" class="primary-btn">Verify and Continue</button>
+      </form>
+
+      <div class="action-row">
+        <button type="button" class="ghost-btn" onclick="resetCurrentMfaEnrollment()">Reset and Re-Enroll 2FA</button>
+        <button type="button" class="secondary-btn" onclick="logoutMfa()">Logout</button>
+        <a href="dashboard.html" class="link-btn">Back to Dashboard</a>
+      </div>
+
+      <p id="mfaStatus" class="status-text"></p>
+    </section>
+  </main>
+
+  <script type="module" src="scripts/super-admin-mfa.js?v=20260504a"></script>
+</body>
+</html>
