@@ -165,6 +165,19 @@
           <div class="analytics-grid" id="adminCompletionBreakdown"></div>
         </section>
 
+        <section class="panel-card" id="adminMfaPanel" hidden>
+          <div class="panel-header">
+            <div>
+              <h3>Admin 2FA</h3>
+              <p>Reset and re-enroll your own admin verification if you change devices or lose access to your authenticator app.</p>
+            </div>
+          </div>
+          <div class="shortcut-actions">
+            <button type="button" class="danger-action" onclick="resetMyAdminMfa()">Reset My Admin 2FA</button>
+          </div>
+          <p id="adminMfaStatus" class="form-status"></p>
+        </section>
+
         <section class="panel-card wide">
           <div class="panel-header">
             <div>
@@ -289,7 +302,7 @@
   </div>
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
-  <script type="module" src="scripts/admin.js?v=20260430a"></script>
+  <script type="module" src="scripts/admin.js?v=20260505b"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

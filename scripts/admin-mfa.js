@@ -12,7 +12,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
-import { markSuperAdminMfaVerified, isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
+import { markAdminMfaVerified, isAdminMfaVerified, clearAdminMfaSession } from "./admin-mfa-session.js";
 import { renderQrSvgDataUri } from "./local-qr.js";
 import {
   buildOtpAuthUri,
@@ -33,7 +33,7 @@ const firebaseConfig = {
   appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
 };
 
-const SETUP_STORAGE_KEY = "super_admin_mfa_pending_setup_v1";
+const SETUP_STORAGE_KEY = "admin_mfa_pending_setup_v1";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -79,10 +79,10 @@ function clearPendingSetup() {
 function renderSetupUi(email) {
   document.getElementById("setupPanel").hidden = false;
   document.getElementById("verifyPanel").hidden = true;
-  document.getElementById("mfaTitle").textContent = "Set Up Super Admin 2FA";
-  document.getElementById("mfaSubtitle").textContent = "Before you can use the super-admin controls, connect an authenticator app and verify one code.";
+  document.getElementById("mfaTitle").textContent = "Set Up Admin 2FA";
+  document.getElementById("mfaSubtitle").textContent = "Before you can use the admin controls, connect an authenticator app and verify one code.";
   document.getElementById("mfaSecretValue").textContent = formatSecret(pendingSetup.secret);
-  document.getElementById("mfaAccountLabel").textContent = `Code Recall (${email || "super-admin"})`;
+  document.getElementById("mfaAccountLabel").textContent = `Code Recall (${email || "admin"})`;
   const qrImage = document.getElementById("mfaQrImage");
   if (qrImage) {
     qrImage.src = renderQrSvgDataUri(pendingSetup.otpAuthUri, 220);
@@ -101,7 +101,7 @@ function renderSetupUi(email) {
 function renderVerifyUi() {
   document.getElementById("setupPanel").hidden = true;
   document.getElementById("verifyPanel").hidden = false;
-  document.getElementById("mfaTitle").textContent = "Verify Super Admin Access";
+  document.getElementById("mfaTitle").textContent = "Verify Admin Access";
   document.getElementById("mfaSubtitle").textContent = "Enter the 6-digit code from your authenticator app or one backup code to continue.";
   updateRecoveryNotice({
     enrolled: Boolean(activeProfile?.totpEnabled),
@@ -169,17 +169,17 @@ async function completeSetup(code) {
     backupCodeHashes: pendingSetup.backupCodeHashes,
     enrolledAt: serverTimestamp(),
     lastVerifiedAt: serverTimestamp(),
-    lastVerifiedRole: "super_admin",
+    lastVerifiedRole: "admin",
     lastVerificationMethod: "authenticator_app",
     backupCodeUseCount: 0,
     updatedAt: serverTimestamp()
   }, { merge: true });
 
   clearPendingSetup();
-  markSuperAdminMfaVerified(currentUser.uid);
-  setStatus("Super-admin 2FA is now enabled. Redirecting...");
+  markAdminMfaVerified(currentUser.uid);
+  setStatus("Admin 2FA is now enabled. Redirecting...");
   window.setTimeout(() => {
-    window.location.replace("super-admin.html");
+    window.location.replace("admin.html");
   }, 700);
 }
 
@@ -191,14 +191,14 @@ async function verifyExistingProfile(code) {
   if (totpOk) {
     await setDoc(getSecurityProfileRef(currentUser.uid), {
       lastVerifiedAt: serverTimestamp(),
-      lastVerifiedRole: "super_admin",
+      lastVerifiedRole: "admin",
       lastVerificationMethod: "authenticator_app",
       updatedAt: serverTimestamp()
     }, { merge: true });
-    markSuperAdminMfaVerified(currentUser.uid);
+    markAdminMfaVerified(currentUser.uid);
     setStatus("Verification successful. Redirecting...");
     window.setTimeout(() => {
-      window.location.replace("super-admin.html");
+      window.location.replace("admin.html");
     }, 500);
     return;
   }
@@ -210,15 +210,15 @@ async function verifyExistingProfile(code) {
     await setDoc(getSecurityProfileRef(currentUser.uid), {
       backupCodeHashes: nextHashes,
       lastVerifiedAt: serverTimestamp(),
-      lastVerifiedRole: "super_admin",
+      lastVerifiedRole: "admin",
       lastVerificationMethod: "backup_code",
       backupCodeUseCount: Math.max(0, Number(activeProfile?.backupCodeUseCount || 0)) + 1,
       updatedAt: serverTimestamp()
     }, { merge: true });
-    markSuperAdminMfaVerified(currentUser.uid);
+    markAdminMfaVerified(currentUser.uid);
     setStatus("Backup code accepted. Redirecting...");
     window.setTimeout(() => {
-      window.location.replace("super-admin.html");
+      window.location.replace("admin.html");
     }, 500);
     return;
   }
@@ -249,11 +249,11 @@ document.getElementById("mfaForm")?.addEventListener("submit", async (event) => 
       await verifyExistingProfile(code);
     }
   } catch (error) {
-    console.error("Super-admin MFA failed.", error);
+    console.error("Admin MFA failed.", error);
     setStatus(
       isPermissionDenied(error)
-        ? "Unable to complete super-admin verification because Firestore is still blocking securityProfiles access. Deploy the latest Firestore rules, then try again."
-        : "Unable to complete super-admin verification right now. Please try again.",
+        ? "Unable to complete admin verification because Firestore is still blocking securityProfiles access. Deploy the latest Firestore rules, then try again."
+        : "Unable to complete admin verification right now. Please try again.",
       true
     );
   } finally {
@@ -279,8 +279,8 @@ window.copyBackupCodes = async function() {
 window.downloadBackupCodes = function() {
   if (!pendingSetup?.backupCodes?.length) return;
   const lines = [
-    "Code Recall Super Admin Backup Codes",
-    `Account: ${currentUser?.email || "super-admin"}`,
+    "Code Recall Admin Backup Codes",
+    `Account: ${currentUser?.email || "admin"}`,
     "",
     ...pendingSetup.backupCodes,
     "",
@@ -291,7 +291,7 @@ window.downloadBackupCodes = function() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `code-recall-super-admin-backup-codes-${(currentUser?.email || "account").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.txt`;
+  anchor.download = `code-recall-admin-backup-codes-${(currentUser?.email || "account").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.txt`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -321,21 +321,21 @@ window.resetCurrentMfaEnrollment = async function() {
       totpSecret: "",
       backupCodeHashes: [],
       lastResetReason: "self_service_reenroll",
-      lastResetRole: "super_admin",
+      lastResetRole: "admin",
       resetAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }, { merge: true });
 
-    clearSuperAdminMfaSession();
+    clearAdminMfaSession();
     activeProfile = null;
     pendingSetup = null;
     clearPendingSetup();
     await ensurePendingSetup(currentUser);
     renderSetupUi(currentUser.email || "");
     document.getElementById("mfaCodeInput").value = "";
-    setStatus("Super-admin 2FA was reset. Scan the QR code or use the new setup key below.");
+    setStatus("Admin 2FA was reset. Scan the QR code or use the new setup key below.");
   } catch (error) {
-    console.error("Unable to reset super-admin MFA enrollment.", error);
+    console.error("Unable to reset admin MFA enrollment.", error);
     setStatus(
       isPermissionDenied(error)
         ? "Unable to reset 2FA because Firestore is still blocking securityProfiles access. Deploy the latest Firestore rules, then try again."
@@ -346,7 +346,7 @@ window.resetCurrentMfaEnrollment = async function() {
 };
 
 window.logoutMfa = async function() {
-  clearSuperAdminMfaSession();
+  clearAdminMfaSession();
   clearPendingSetup();
   await signOut(auth);
   window.location.replace("auth.html");
@@ -362,13 +362,13 @@ onAuthStateChanged(auth, async (user) => {
   const role = await resolveUserRole(db, user);
   await syncUserRole(db, user, role);
 
-  if (role !== "super_admin") {
+  if (role !== "admin") {
     window.location.replace("dashboard.html");
     return;
   }
 
-  if (isSuperAdminMfaVerified(user.uid)) {
-    window.location.replace("super-admin.html");
+  if (isAdminMfaVerified(user.uid)) {
+    window.location.replace("admin.html");
     return;
   }
 

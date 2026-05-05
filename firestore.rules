@@ -106,7 +106,8 @@ service cloud.firestore {
     }
 
     match /securityProfiles/{userId} {
-      allow read, create, update: if isOwner(userId);
+      allow read: if isOwner(userId) || isSuperAdmin();
+      allow create, update: if isOwner(userId);
     }
 
     match /pendingUsers/{pendingUserId} {

@@ -8,7 +8,7 @@ This manual is for admins such as:
 - facilitators
 - school staff assigned to monitor learners
 
-It explains how to use the admin side of Code Recall to monitor progress, review support messages, and identify learners who need intervention.
+It explains how to use the admin side of Code Recall to review learner progress, retention, support messages, and protected admin access.
 
 ---
 
@@ -17,13 +17,44 @@ It explains how to use the admin side of Code Recall to monitor progress, review
 Admins are responsible for:
 
 - monitoring learner progress
-- reading concerns and feedback
-- replying to user messages
-- checking weak areas and retention load
+- reviewing support and contact messages
+- identifying weak learners and weak topics
+- tracking memory-retention load
+- replying to learner concerns
 
-Admins do not only monitor scores. They also monitor whether learners are remembering content over time.
+Admins monitor not only scores, but also whether learners are retaining knowledge over time.
 
-## 2. Admin Dashboard
+---
+
+## 2. Admin 2FA Access Protection
+
+Admins now use authenticator-based 2FA before they can enter the admin dashboard.
+
+The setup flow includes:
+
+- QR code enrollment
+- manual setup key
+- `Open in Authenticator`
+- backup codes
+- verification before admin access
+
+Recovery options:
+
+- use a backup code if the authenticator app is unavailable
+- use `Reset My Admin 2FA` from the admin page to re-enroll later if needed
+
+Important practice:
+
+- download or copy backup codes during setup
+- keep them offline and private
+- use backup codes only for recovery
+
+**Suggested image to insert here**
+- `admin-01-admin-mfa-setup.png`
+
+---
+
+## 3. Admin Dashboard
 
 The admin dashboard provides summary visibility into learner performance.
 
@@ -31,48 +62,62 @@ It can include:
 
 - average pre-test score
 - average post-test score
-- completion rates per subject
+- hardware completion
+- electrical completion
 - most-missed topics
 - learner tables
-- retention indicators
+- assessment and retention indicators
 
 **Suggested image to insert here**
-- Screenshot of the admin dashboard
+- `admin-02-dashboard-overview.png`
 
-## 3. Learner Analytics
+---
 
-Admins can inspect individual learners and view:
+## 4. Learner Analytics
 
-- activity history
+Admins can inspect individual learners through the learner profile modal.
+
+The modal can show:
+
+- assessment performance
+- subject progress status
 - weak topics
-- subject status
-- assessment performance bars
+- recent activity history
 - retention snapshot
 - due memory queue
 
-This makes it easier to identify:
+This helps identify:
 
-- learners who are progressing
-- learners who are struggling
-- learners who need intervention
+- learners who are progressing well
+- learners who are behind
+- learners who need intervention on a specific topic
 
 **Suggested image to insert here**
-- Screenshot of learner profile modal in admin page
+- `admin-03-learner-modal.png`
 
-## 4. Assessment Performance
+---
 
-Inside learner analytics, admins can review subject performance through:
+## 5. Assessment Performance
+
+Inside learner analytics, admins can review:
 
 - pre-test score
 - quiz-track score
 - post-test score
+- score bars
 - XP earned from first-correct answers
 
-This helps admins compare readiness, practice performance, and final mastery.
+This helps compare:
 
-## 5. Retention Analytics
+- starting readiness
+- practice performance
+- final subject mastery
 
-Admins can track retention-related indicators such as:
+---
+
+## 6. Retention Analytics
+
+Admins can review retention-related indicators such as:
 
 - due memory cards
 - learners with due cards
@@ -81,83 +126,133 @@ Admins can track retention-related indicators such as:
 - highest due flashcard load
 - lowest retention recovery
 
-These metrics help determine whether learners are retaining knowledge and using review tools properly.
+These indicators help admins judge whether learners are actually remembering the material over time.
 
-## 6. Weak Topics and Recovery
+---
 
-The system can highlight:
+## 7. Weak Topics and Recovery
+
+The admin side can highlight:
 
 - most-missed topics
-- learners repeatedly struggling on the same concepts
-- learners who are improving through recovery feedback
+- repeated weak areas
+- due memory queue pressure
+- recovery improvement from retakes
 
-Admins should pay close attention to learners who:
+Admins should pay attention to learners who:
 
 - accumulate many due flashcards
-- continue missing the same topic
-- finish content without strong recovery over time
+- continue missing the same concepts
+- complete activities but show weak recovery later
 
-## 7. Contact Inbox
+---
 
-Admins can review learner messages in the contact area.
+## 8. Contact Inbox
 
-They can:
+Admins can review learner messages through the contact inbox.
 
-- view learner concerns
-- read learner conversation threads
-- reply to messages
-- monitor support requests related to learning and system issues
+Admins can:
+
+- open learner messages
+- read conversation history
+- reply directly
+- monitor support requests related to learning or system use
+
+Privacy reminder:
+
+- learner threads are intended to stay private between the learner and the authorized admin side
 
 **Suggested image to insert here**
-- Screenshot of admin contact inbox
+- `admin-04-contact-inbox.png`
 
-## 8. Privacy Expectations
-
-Learner conversation history is intended to remain private per learner.
-
-Admins can access submitted learner messages only through the authorized admin contact view. Regular learners should not see other learners' message histories.
+---
 
 ## 9. Suggested Admin Routine
 
-A suggested daily or weekly admin routine may be:
+A useful daily or weekly routine may be:
 
 1. Review Contact Us inbox
-2. Check most-missed topics
-3. Check completion rates
-4. Review due memory-card load
-5. Open learner profiles with weak progress
-6. Reply to learner concerns
+2. Check learners with high due-card load
+3. Check most-missed topics
+4. Review completion rates
+5. Open learner analytics for struggling users
+6. Reply to urgent learner concerns
 
-## 10. Troubleshooting for Admins
+---
+
+## 10. Interpreting Common Situations
 
 ### A learner says they earned no XP
 
 Check whether:
 
 - the learner already answered those questions correctly before
-- the XP anti-farming rule is doing its job
+- the first-correct-only XP rule is preventing XP farming
 
 ### A learner says flashcards appear too often
 
 Check:
 
-- confidence answers used
-- frequency of wrong answers
-- retention schedule settings
+- repeated wrong answers
+- low-confidence correct answers
+- whether the learner already had due cards from earlier work
+- memory review schedule settings
 
-### A learner cannot send contact messages
-
-Check:
-
-- Firestore rules
-- authenticated status
-- role-based page access
-
-### Dashboard numbers look strange
+### A learner says a message cannot be sent
 
 Check:
 
-- whether learner data is synced
-- whether recent results were saved
-- whether the learner is in guest mode or registered mode
+- authentication state
+- Firestore permissions
+- whether the learner is properly logged in
 
+### A learner says the dashboard or progress looks wrong
+
+Check:
+
+- whether progress saved successfully
+- whether the learner is using guest mode
+- whether recent quiz or review data synced correctly
+
+---
+
+## 11. Troubleshooting for Admins
+
+### An admin cannot enter the dashboard
+
+Check:
+
+- whether admin 2FA enrollment was completed
+- whether the authenticator app is generating the current 6-digit code
+- whether the `Open in Authenticator` option was used if QR scanning failed
+- whether a backup code is still available
+- whether the admin needs to use `Reset My Admin 2FA`
+
+### Dashboard numbers look unusual
+
+Check:
+
+- whether learner result records were saved
+- whether retention queues have synced
+- whether analytics are reading current learner data
+
+### Contact threads look incomplete
+
+Check:
+
+- whether the learner account actually sent the message
+- whether the admin is on the authorized inbox view
+- whether the reply was saved successfully
+
+---
+
+## 12. Screenshot Checklist for This Manual
+
+Use these screenshots when finalizing the admin document:
+
+1. Admin 2FA setup page
+2. Admin dashboard overview
+3. Learner analytics modal
+4. Retention indicators or due-card area
+5. Contact inbox
+6. Admin 2FA reset section

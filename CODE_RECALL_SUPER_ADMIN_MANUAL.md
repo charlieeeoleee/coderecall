@@ -8,7 +8,7 @@ This manual is for super admins such as:
 - system managers
 - lead maintainers
 
-It explains the higher-level monitoring and system-management side of Code Recall, including retention oversight, analytics interpretation, and operational checks.
+It explains the higher-level monitoring, security, and operational side of Code Recall, including 2FA oversight, retention oversight, privileged-role monitoring, and developer checks.
 
 ---
 
@@ -19,135 +19,243 @@ Super admins have broader authority than admins.
 They are responsible for:
 
 - system oversight
-- developer-level review of learner trends
-- contact workflow supervision
+- security monitoring
+- privileged-role management
 - retention and performance monitoring
+- contact workflow supervision
 - validating that the platform is functioning correctly
+
+---
 
 ## 2. Current System Architecture
 
 The current Code Recall system is primarily a multi-page web application built with:
 
-- plain HTML pages
-- CSS stylesheets
+- plain HTML
+- CSS
 - vanilla JavaScript modules and page scripts
-- Firebase Firestore rules and cloud-backed data
+- Firebase Authentication
+- Firestore-backed data and rules
 
-It is not currently built on a full frontend framework such as React, Vue, Angular, or Next.js.
+It is not currently built on a large frontend framework such as React, Vue, Angular, or Next.js.
 
-This means:
+Why this still works well:
 
-- the system is lightweight and direct
-- pages are script-driven per route
-- maintenance is simpler in small-to-mid scale usage
-- future scaling may benefit from a framework, but one is not required right now
+- the project is page-based and script-driven
+- features are modular by page
+- Firebase handles auth and data persistence
+- the system remains lightweight and practical for its current scale
+
+Framework migration is not required right now.
+
+---
 
 ## 3. Super Admin Dashboard
 
-The super admin dashboard is used to monitor system-wide health and performance.
+The super admin dashboard is used for system-wide oversight.
 
-It may include:
+It can include:
 
-- all admin-level metrics
-- broader retention oversight
-- high-risk learner identification
-- contact support visibility
-- recovery trends
+- admin-level analytics
+- privileged-role controls
+- retention oversight
+- email access control
+- support visibility
+- learner-risk monitoring
 
 **Suggested image to insert here**
-- Screenshot of super admin dashboard
+- `superadmin-01-dashboard-overview.png`
 
-## 4. Retention Oversight
+---
+
+## 4. Super Admin 2FA
+
+Super admins now use authenticator-based 2FA before they can enter the super-admin dashboard.
+
+The setup flow includes:
+
+- QR code enrollment
+- manual setup key
+- `Open in Authenticator`
+- backup codes
+- verification before super-admin access
+
+The QR is now generated locally inside the project, so the setup flow no longer depends on an external QR image service.
+
+Recovery options:
+
+- backup codes
+- `Reset My Super Admin 2FA`
+- reset and re-enroll when the current device changes
+
+**Suggested image to insert here**
+- `superadmin-02-super-admin-mfa-setup.png`
+
+---
+
+## 5. 2FA Oversight
+
+The super-admin dashboard now includes a `2FA Oversight` section for privileged accounts.
+
+It helps track:
+
+- privileged accounts
+- enrolled vs pending 2FA
+- verified today
+- low backup reserves
+- backup-code sign-ins
+- recovery risk accounts
+- recent privileged verification activity
+
+This turns 2FA into a manageable operational control instead of a hidden login-only feature.
+
+**Suggested image to insert here**
+- `superadmin-03-2fa-oversight.png`
+
+---
+
+## 6. 2FA Recovery Policy
+
+Super admins should treat backup codes as emergency recovery only.
+
+Best practice:
+
+- save backup codes during enrollment
+- store them offline in a secure place
+- use authenticator codes for normal access
+- reset and re-enroll before backup reserves become too low
+
+Watch for:
+
+- accounts with few backup codes left
+- accounts using backup-code sign-ins too often
+- accounts still pending enrollment
+
+---
+
+## 7. Email Access Control
+
+Super admins can grant privileged access by email without editing project files.
+
+This area allows:
+
+- granting `admin` access
+- granting `super_admin` access
+- removing granted email access
+
+Safety behavior:
+
+- removing any granted email now uses a strong warning
+- removing the currently logged-in super-admin grant uses an extra-strong self-removal warning
+
+Use this carefully because it affects real access and role syncing.
+
+**Suggested image to insert here**
+- `superadmin-04-email-access-control.png`
+
+---
+
+## 8. Retention Oversight
 
 Super admins should monitor:
 
-- whether retention queue behavior is too aggressive or too weak
-- whether flashcard recovery is actually happening
-- whether low-confidence answers are becoming retention cards properly
-- whether due-card counts are becoming unmanageable
+- whether the retention queue is too aggressive
+- whether due-card load is becoming too heavy
+- whether low-confidence answers are creating review items properly
+- whether learners are actually recovering through flashcards and retakes
 
-This is important because retention is one of the core educational strengths of the platform.
+Retention is one of the main educational strengths of Code Recall, so this area should be monitored regularly.
 
-## 5. System Configuration Review
+---
 
-Super admins and developers should be aware of:
+## 9. System Configuration Review
 
-- retention schedule controls in Settings
-- XP anti-farming rules
+Super admins and developers should be familiar with:
+
+- memory review schedule controls
+- first-correct-only XP rules
 - certificate unlock conditions
+- contact privacy rules
 - role-based navigation
-- contact visibility rules
+- local vs remote learner state
 
-## 6. Developer Checks
+---
 
-Recommended developer or super admin checks:
+## 10. Developer and Release Checks
 
-1. Verify quiz flows after code updates
-2. Verify certificate generation after subject completion
-3. Verify flashcard creation after wrong and low-confidence answers
-4. Verify admin and super admin analytics after database updates
-5. Verify private conversation history remains private
+A recommended release or verification checklist:
 
-## 7. Developer Troubleshooting Notes
+1. Verify quiz and quiz-level flows
+2. Verify confidence capture
+3. Verify wrong-answer review and memory flashcards
+4. Verify CSV export in Settings
+5. Verify certificates unlock and render correctly
+6. Verify admin analytics and learner modal analytics
+7. Verify super-admin 2FA oversight and email access control
+8. Verify private conversation history remains private
 
-### If dashboard data looks delayed
+---
 
-Check:
+## 11. Troubleshooting for Super Admins
 
-- Firestore writes
-- local cache values
-- merge behavior between local and remote state
-
-### If flashcards do not appear correctly
-
-Check:
-
-- retention queue payload
-- confidence capture
-- source question metadata
-- image hydration fallback for image-based questions
-
-### If certificates are incorrect
+### 2FA enrollment or verification fails
 
 Check:
 
-- completion flags
-- result records
-- certificate ID generation
-- dual-completion condition logic
+- whether Firestore rules were redeployed after `securityProfiles` changes
+- whether the current setup QR or manual key is being used
+- whether the authenticator app is generating the current code
+- whether backup codes have already been consumed
 
-## 8. Do We Need a Framework?
+### 2FA oversight looks incomplete
 
-Right now, a framework is not required for the system to work.
+Check:
 
-Why the current approach is acceptable:
+- whether `securityProfiles` reads are allowed for super admins
+- whether the browser is using updated files
+- whether privileged users actually completed enrollment
+- whether `lastVerifiedAt` and `lastVerificationMethod` are updating
 
-- the project is already organized as page-based HTML, CSS, and JavaScript
-- most features are already working on top of that structure
-- Firebase-backed logic and local progress flows are already integrated
-- moving to a framework now would add refactor cost without immediate learning-value gain
+### Email access actions fail
 
-A framework may become useful later if you want:
+Check:
 
-- reusable UI components across many more pages
-- more complex shared state management
-- stronger routing patterns
-- larger team collaboration on frontend code
-- easier long-term scaling of the admin and analytics interfaces
+- whether the current account still has `super_admin` rights
+- whether the current user removed their own active access
+- whether Firestore permissions still allow privileged writes
 
-Recommended decision:
+### Retention or analytics look wrong
 
-- keep the current no-framework structure for now
-- only consider a framework later if the project grows much larger or becomes harder to maintain
+Check:
 
-## 9. Suggested Documentation Expansion for Super Admins
+- learner retention queue payloads
+- low-confidence capture
+- result data writes
+- wrong-answer review records
+- admin and super-admin aggregation logic
 
-A future technical manual may also include:
+---
 
-- Firebase structure
+## 12. Suggested Future Technical Documentation
+
+A future deeper technical manual may include:
+
+- Firebase collection structure
 - Firestore rules explanation
-- localStorage keys used by the system
-- page-by-page script ownership
+- local storage keys and session flags
+- page-to-script ownership map
 - deployment and rollback workflow
-- test checklist before release
+- release smoke-test checklist
 
+---
+
+## 13. Screenshot Checklist for This Manual
+
+Use these screenshots when finalizing the super-admin document:
+
+1. Super-admin dashboard overview
+2. Super-admin 2FA setup page
+3. 2FA Oversight section
+4. Email Access Control section
+5. Recovery risk or backup reserve area
+6. Super-admin 2FA reset area

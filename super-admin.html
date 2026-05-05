@@ -96,6 +96,61 @@
         </div>
       </section>
 
+      <section class="panel-card wide">
+        <div class="panel-header">
+          <div>
+            <h3>2FA Oversight</h3>
+            <p>Track which privileged accounts are already protected, which still need enrollment, and when each account last verified access.</p>
+          </div>
+        </div>
+        <div class="insights-admin-grid">
+          <article class="insight-admin-card">
+            <span>Privileged accounts</span>
+            <strong id="superMfaPrivilegedCount">0</strong>
+            <p id="superMfaPrivilegedCountDetail">No admin or super-admin records found yet.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>2FA enrolled</span>
+            <strong id="superMfaEnrolledCount">0</strong>
+            <p id="superMfaEnrolledCountDetail">No privileged accounts are enrolled yet.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Pending enrollment</span>
+            <strong id="superMfaPendingCount">0</strong>
+            <p id="superMfaPendingCountDetail">No enrollment gaps found.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Verified today</span>
+            <strong id="superMfaVerifiedTodayCount">0</strong>
+            <p id="superMfaVerifiedTodayCountDetail">No privileged verifications recorded today.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Low backup reserves</span>
+            <strong id="superMfaLowBackupCount">0</strong>
+            <p id="superMfaLowBackupCountDetail">No privileged account is running low on backup codes.</p>
+          </article>
+          <article class="insight-admin-card">
+            <span>Backup-code sign-ins</span>
+            <strong id="superMfaBackupUseCount">0</strong>
+            <p id="superMfaBackupUseCountDetail">No backup-code recovery has been used yet.</p>
+          </article>
+        </div>
+        <div class="insights-admin-columns">
+          <section class="insight-list-wrap">
+            <h4>2FA Enrollment Status</h4>
+            <div id="superMfaEnrollmentList" class="review-list"></div>
+          </section>
+          <section class="insight-list-wrap">
+            <h4>Recently Verified Privileged Accounts</h4>
+            <div id="superMfaRecentVerificationList" class="review-list"></div>
+          </section>
+          <section class="insight-list-wrap">
+            <h4>Recovery Risk Accounts</h4>
+            <div id="superMfaRecoveryRiskList" class="review-list"></div>
+          </section>
+        </div>
+      </section>
+
       <section class="panel-card wide inbox-shortcut-card">
         <div class="panel-header">
           <div>
@@ -297,7 +352,7 @@
   </div>
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
-  <script type="module" src="scripts/super-admin.js?v=20260430a"></script>
+  <script type="module" src="scripts/super-admin.js?v=20260505b"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

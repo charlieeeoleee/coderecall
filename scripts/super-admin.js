@@ -107,6 +107,7 @@ onAuthStateChanged(auth, async (user) => {
 async function loadSuperAdminDashboard() {
   const [
     usersSnap,
+    securityProfilesSnap,
     grantsSnap,
     pendingUsersSnap,
     moduleDrafts,
@@ -116,6 +117,7 @@ async function loadSuperAdminDashboard() {
     contactMessagesSnap
   ] = await Promise.all([
     safeGetDocs("users", collection(db, "users")),
+    safeGetDocs("securityProfiles", collection(db, "securityProfiles")),
     safeGetDocs("accessRoles", collection(db, "accessRoles")),
     safeGetDocs("pendingUsers", collection(db, "pendingUsers")),
     safeSupabaseRead("module drafts", fetchModuleDrafts),
@@ -126,6 +128,7 @@ async function loadSuperAdminDashboard() {
   ]);
 
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  const securityProfiles = securityProfilesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const grants = grantsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
@@ -137,6 +140,7 @@ async function loadSuperAdminDashboard() {
   renderAccessGrantList(grants);
   renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
   renderRetentionOversight(users);
+  renderTwoFactorOversight(users, securityProfiles);
   renderSubjectCompletionBreakdown(users);
   renderMostMissedTopics(users);
   renderUserTable(users);
@@ -389,6 +393,74 @@ function summarizeRetentionInsights(learners) {
   });
 }
 
+function summarizeTwoFactorOversight(users, profiles) {
+  const privilegedUsers = users.filter((user) => ["admin", "super_admin"].includes(getRoleFromUserData(user)));
+  const profileMap = new Map(
+    profiles.map((profile) => [profile.uid || profile.id, profile])
+  );
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startMs = startOfToday.getTime();
+
+  const rows = privilegedUsers.map((user) => {
+    const role = getRoleFromUserData(user);
+    const profile = profileMap.get(user.id) || null;
+    const enrolled = Boolean(profile?.totpEnabled && profile?.totpSecret);
+    const backupCodesRemaining = Array.isArray(profile?.backupCodeHashes) ? profile.backupCodeHashes.length : 0;
+    const lastVerifiedMs = toTimestampMs(profile?.lastVerifiedAt);
+    const enrolledMs = toTimestampMs(profile?.enrolledAt);
+
+    return {
+      id: user.id,
+      name: user.name || user.email || "Privileged User",
+      email: user.email || "No email",
+      role,
+      enrolled,
+      backupCodesRemaining,
+      backupCodeUseCount: Math.max(0, Number(profile?.backupCodeUseCount || 0)),
+      lastVerificationMethod: String(profile?.lastVerificationMethod || ""),
+      lastVerifiedMs,
+      lastVerifiedLabel: lastVerifiedMs ? formatAdminDateTime(lastVerifiedMs) : "Not verified yet",
+      enrolledLabel: enrolledMs ? formatAdminDateTime(enrolledMs) : "Not enrolled yet",
+      verifiedToday: lastVerifiedMs >= startMs
+    };
+  });
+
+  return {
+    privilegedCount: rows.length,
+    enrolledCount: rows.filter((row) => row.enrolled).length,
+    pendingCount: rows.filter((row) => !row.enrolled).length,
+    verifiedTodayCount: rows.filter((row) => row.verifiedToday).length,
+    lowBackupCount: rows.filter((row) => row.enrolled && row.backupCodesRemaining <= 2).length,
+    backupUseCount: rows.reduce((sum, row) => sum + row.backupCodeUseCount, 0),
+    rows
+  };
+}
+
+function toTimestampMs(value) {
+  if (!value) return 0;
+  if (typeof value?.toDate === "function") {
+    return value.toDate().getTime();
+  }
+  if (typeof value?.seconds === "number") {
+    return (value.seconds * 1000) + Math.round(Number(value.nanoseconds || 0) / 1000000);
+  }
+  const parsed = new Date(value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatAdminDateTime(value) {
+  const ms = toTimestampMs(value);
+  if (!ms) return "Unknown time";
+  return new Date(ms).toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
 function summarizeHighestRetentionLoads(learners, limit = 5) {
   return [...learners]
     .map((learner) => {
@@ -485,6 +557,102 @@ function renderRetentionOversight(users) {
     "superLowestRetentionRecovery",
     summarizeLowestRetentionRecovery(learners, 5),
     "No learner has entered the retention queue yet."
+  );
+}
+
+function renderTwoFactorOversight(users, profiles) {
+  const summary = summarizeTwoFactorOversight(users, profiles);
+
+  setText("superMfaPrivilegedCount", summary.privilegedCount);
+  setText(
+    "superMfaPrivilegedCountDetail",
+    summary.privilegedCount
+      ? `${summary.privilegedCount} admin or super-admin account(s) are being monitored for privileged access.`
+      : "No admin or super-admin records found yet."
+  );
+  setText("superMfaEnrolledCount", summary.enrolledCount);
+  setText(
+    "superMfaEnrolledCountDetail",
+    summary.enrolledCount
+      ? `${summary.enrolledCount} privileged account(s) already have authenticator-based 2FA enabled.`
+      : "No privileged accounts are enrolled yet."
+  );
+  setText("superMfaPendingCount", summary.pendingCount);
+  setText(
+    "superMfaPendingCountDetail",
+    summary.pendingCount
+      ? `${summary.pendingCount} privileged account(s) still need to finish 2FA enrollment.`
+      : "No enrollment gaps found."
+  );
+  setText("superMfaVerifiedTodayCount", summary.verifiedTodayCount);
+  setText(
+    "superMfaVerifiedTodayCountDetail",
+    summary.verifiedTodayCount
+      ? `${summary.verifiedTodayCount} privileged account(s) completed a 2FA check today.`
+      : "No privileged verifications recorded today."
+  );
+  setText("superMfaLowBackupCount", summary.lowBackupCount);
+  setText(
+    "superMfaLowBackupCountDetail",
+    summary.lowBackupCount
+      ? `${summary.lowBackupCount} privileged account(s) should re-enroll soon because only 2 or fewer backup codes remain.`
+      : "No privileged account is running low on backup codes."
+  );
+  setText("superMfaBackupUseCount", summary.backupUseCount);
+  setText(
+    "superMfaBackupUseCountDetail",
+    summary.backupUseCount
+      ? `${summary.backupUseCount} backup-code recovery sign-in(s) have been used so far.`
+      : "No backup-code recovery has been used yet."
+  );
+
+  const enrollmentRows = summary.rows
+    .slice()
+    .sort((a, b) => {
+      if (a.enrolled !== b.enrolled) return a.enrolled ? 1 : -1;
+      if (a.role !== b.role) return a.role.localeCompare(b.role);
+      return a.name.localeCompare(b.name);
+    })
+    .map((row) => ({
+      title: row.name,
+      metric: row.enrolled ? "Enrolled" : "Pending",
+      detail: `${row.role} • ${row.email} • Backup codes left: ${row.backupCodesRemaining} • Last verified: ${row.lastVerifiedLabel}`
+    }));
+
+  const recentRows = summary.rows
+    .filter((row) => row.lastVerifiedMs > 0)
+    .sort((a, b) => b.lastVerifiedMs - a.lastVerifiedMs)
+    .slice(0, 6)
+    .map((row) => ({
+      title: row.name,
+      metric: row.lastVerifiedLabel,
+      detail: `${row.role} • ${row.email} • Method: ${row.lastVerificationMethod || "unknown"} • Enrolled: ${row.enrolledLabel}`
+    }));
+
+  const recoveryRiskRows = summary.rows
+    .filter((row) => row.enrolled)
+    .sort((a, b) => a.backupCodesRemaining - b.backupCodesRemaining || b.backupCodeUseCount - a.backupCodeUseCount || a.name.localeCompare(b.name))
+    .slice(0, 6)
+    .map((row) => ({
+      title: row.name,
+      metric: `${row.backupCodesRemaining} codes`,
+      detail: `${row.role} • ${row.email} • Backup recoveries used: ${row.backupCodeUseCount} • Last verified: ${row.lastVerifiedLabel}`
+    }));
+
+  renderInsightList(
+    "superMfaEnrollmentList",
+    enrollmentRows,
+    "No privileged accounts are available to audit yet."
+  );
+  renderInsightList(
+    "superMfaRecentVerificationList",
+    recentRows,
+    "No privileged account has completed 2FA verification yet."
+  );
+  renderInsightList(
+    "superMfaRecoveryRiskList",
+    recoveryRiskRows,
+    "No privileged account has enrolled in 2FA yet."
   );
 }
 
@@ -1147,6 +1315,8 @@ window.resetMySuperAdminMfa = function() {
         totpEnabled: false,
         totpSecret: "",
         backupCodeHashes: [],
+        lastResetReason: "self_service_dashboard_reset",
+        lastResetRole: "super_admin",
         resetAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }, { merge: true });

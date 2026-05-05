@@ -232,6 +232,27 @@ body{
   letter-spacing:0.06em;
 }
 
+.backup-code-actions{
+  margin-top:14px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.recovery-box{
+  margin-top:18px;
+}
+
+.recovery-list{
+  margin:0;
+  padding-left:18px;
+  color:rgba(255,255,255,0.78);
+}
+
+.recovery-list li + li{
+  margin-top:8px;
+}
+
 .verify-help-actions{
   margin-top:14px;
 }

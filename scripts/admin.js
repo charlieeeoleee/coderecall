@@ -9,7 +9,9 @@ import {
   collection,
   getDocs,
   addDoc,
+  doc,
   query,
+  setDoc,
   where,
   onSnapshot,
   serverTimestamp
@@ -29,6 +31,8 @@ import {
   reviewModuleDraft,
   reviewQuizDraft
 } from "./supabase-content.js";
+import { isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
+import { isAdminMfaVerified, clearAdminMfaSession } from "./admin-mfa-session.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
@@ -91,7 +95,18 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
+  if (currentRole === "super_admin" && !isSuperAdminMfaVerified(user.uid)) {
+    window.location.href = "super-admin-mfa.html";
+    return;
+  }
+
+  if (currentRole === "admin" && !isAdminMfaVerified(user.uid)) {
+    window.location.href = "admin-mfa.html";
+    return;
+  }
+
   updateUserUI(user);
+  setAdminMfaPanelVisibility(currentRole);
   await loadAdminDashboard();
   startContactInboxSubscription();
 });
@@ -1388,6 +1403,12 @@ function updateUserUI(user) {
   }
 }
 
+function setAdminMfaPanelVisibility(role) {
+  const panel = document.getElementById("adminMfaPanel");
+  if (!panel) return;
+  panel.hidden = role !== "admin";
+}
+
 function setText(id, value) {
   const element = document.getElementById(id);
   if (element) element.textContent = value;
@@ -1402,10 +1423,50 @@ function escapeHtml(text) {
 window.logout = async function() {
   closeMobileSidebar();
   stopContactInboxSubscription();
+  clearAdminMfaSession();
+   clearSuperAdminMfaSession();
   if (auth.currentUser) {
     await signOut(auth);
   }
   window.location.href = "auth.html";
+};
+
+function setMfaStatus(message) {
+  const el = document.getElementById("adminMfaStatus");
+  if (el) el.textContent = message;
+}
+
+window.resetMyAdminMfa = function() {
+  if (!currentUser) return;
+  setMfaStatus("");
+  const confirmed = window.confirm(
+    "This will remove the current authenticator secret and backup codes for the account you are using now. You will need to enroll again before opening the admin page."
+  );
+
+  if (!confirmed) return;
+
+  setDoc(doc(db, "securityProfiles", currentUser.uid), {
+    uid: currentUser.uid,
+    email: currentUser.email || "",
+    totpEnabled: false,
+    totpSecret: "",
+    backupCodeHashes: [],
+    lastResetReason: "self_service_dashboard_reset",
+    lastResetRole: "admin",
+    resetAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }, { merge: true })
+    .then(() => {
+      clearAdminMfaSession();
+      setMfaStatus("Admin 2FA was reset. Redirecting you to re-enroll...");
+      window.setTimeout(() => {
+        window.location.href = "admin-mfa.html";
+      }, 700);
+    })
+    .catch((error) => {
+      console.error("Unable to reset admin 2FA.", error);
+      setMfaStatus("Unable to reset admin 2FA right now. Please try again.");
+    });
 };
 
 function loadTheme() {
