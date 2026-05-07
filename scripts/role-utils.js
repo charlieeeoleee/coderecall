@@ -37,6 +37,11 @@ function getRoleFromClaims(claims = {}) {
   return "user";
 }
 
+function isPermissionDenied(error) {
+  const code = String(error?.code || "");
+  return code.includes("permission-denied") || code.includes("insufficient-permissions");
+}
+
 function logRoleWarning(message, error) {
   if (!ROLE_DEBUG_ENABLED) return;
   console.warn(message, error);
@@ -65,10 +70,31 @@ export async function resolveUserRole(db, user) {
   try {
     const snap = await getDoc(doc(db, "users", user.uid));
     if (snap.exists()) {
-      return getRoleFromUserData(snap.data() || {});
+      const storedRole = getRoleFromUserData(snap.data() || {});
+      if (storedRole === "super_admin" || storedRole === "admin" || storedRole === "user") {
+        return storedRole;
+      }
     }
   } catch (error) {
-    logRoleWarning("Unable to read stored user role.", error);
+    if (!isPermissionDenied(error)) {
+      logRoleWarning("Unable to read stored user role.", error);
+    }
+  }
+
+  try {
+    if (normalizedEmail) {
+      const accessKey = encodeURIComponent(normalizedEmail);
+      const accessSnap = await getDoc(doc(db, "accessRoles", accessKey));
+      const accessData = accessSnap.exists() ? accessSnap.data() || {} : {};
+
+      if (accessData.role === "super_admin" || accessData.role === "admin" || accessData.role === "user") {
+        return accessData.role;
+      }
+    }
+  } catch (error) {
+    if (!isPermissionDenied(error)) {
+      logRoleWarning("Unable to resolve user role from email grants.", error);
+    }
   }
 
   return "user";
@@ -79,7 +105,6 @@ export async function syncUserRole(db, user, resolvedRole) {
 
   const normalizedRole = normalizeRole(resolvedRole);
   if (normalizedRole === "guest") return;
-  if (normalizedRole !== "user") return;
 
   try {
     const userRef = doc(db, "users", user.uid);
