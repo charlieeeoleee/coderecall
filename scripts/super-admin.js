@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -27,23 +27,14 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
-import { isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
+import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import {
   fetchModuleDrafts,
   fetchQuizDrafts
 } from "./supabase-content.js";
 import { SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -94,12 +85,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  if (!isSuperAdminMfaVerified(user.uid)) {
-    window.location.href = "super-admin-mfa.html";
-    return;
-  }
-
-  updateUserUI(user);
+  await updateUserUI(user);
   await loadSuperAdminDashboard();
   startContactInboxSubscription();
 });
@@ -1198,11 +1184,19 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
-function updateUserUI(user) {
-  setText("username", user.displayName || user.email || "Super Admin");
+async function updateUserUI(user) {
+  let profile = {};
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    profile = snap.exists() ? (snap.data() || {}) : {};
+  } catch (error) {
+    console.warn("Unable to load super-admin profile header.", error);
+  }
+
+  setText("username", profile.name || user.displayName || user.email || "Super Admin");
   const photo = document.getElementById("userPhoto");
   if (photo) {
-    photo.src = user.photoURL || "https://i.pravatar.cc/40?img=12";
+    photo.src = profile.photo || user.photoURL || "https://i.pravatar.cc/40?img=12";
   }
 }
 
@@ -1306,29 +1300,15 @@ window.logout = async function() {
 window.resetMySuperAdminMfa = function() {
   if (!currentUser) return;
   openSystemPopup(
-    "Reset Super Admin 2FA",
-    "This will remove the current authenticator secret and backup codes for the account you are using now. You will need to enroll again on the next super-admin login.",
+    "Legacy 2FA Retired",
+    "App-level authenticator secrets are no longer stored in Firestore. Use Firebase Auth multi-factor enrollment for privileged accounts.",
     async () => {
-      await setDoc(doc(db, "securityProfiles", currentUser.uid), {
-        uid: currentUser.uid,
-        email: currentUser.email || "",
-        totpEnabled: false,
-        totpSecret: "",
-        backupCodeHashes: [],
-        lastResetReason: "self_service_dashboard_reset",
-        lastResetRole: "super_admin",
-        resetAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }, { merge: true });
       clearSuperAdminMfaSession();
-      setMfaStatus("Super-admin 2FA was reset. Redirecting you to re-enroll...");
+      setMfaStatus("Legacy app-level 2FA session was cleared. Manage MFA through Firebase Auth.");
       closeSystemPopup();
-      window.setTimeout(() => {
-        window.location.href = "super-admin-mfa.html";
-      }, 700);
     },
     {
-      confirmLabel: "Reset My 2FA"
+      confirmLabel: "Clear Legacy Session"
     }
   );
 };

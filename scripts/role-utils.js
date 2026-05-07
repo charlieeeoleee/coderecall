@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
+import { getIdTokenResult } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { ADMIN_EMAILS, SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
 
 const ROLE_ORDER = {
   guest: 0,
@@ -17,13 +18,23 @@ export function normalizeRole(role) {
   return "user";
 }
 
+function getConfiguredRoleFromEmail(email = "") {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (SUPER_ADMIN_EMAILS.includes(normalizedEmail)) return "super_admin";
+  if (ADMIN_EMAILS.includes(normalizedEmail)) return "admin";
+  return "user";
+}
+
 export function getRoleFromUserData(data = {}) {
+  const configuredRole = getConfiguredRoleFromEmail(data.email || "");
+  if (configuredRole !== "user") return configuredRole;
   return normalizeRole(data.role || data.progress?.role || "user");
 }
 
-function isPermissionDenied(error) {
-  const code = String(error?.code || "");
-  return code.includes("permission-denied") || code.includes("insufficient-permissions");
+function getRoleFromClaims(claims = {}) {
+  if (claims.role === "super_admin" || claims.super_admin === true) return "super_admin";
+  if (claims.role === "admin" || claims.admin === true) return "admin";
+  return "user";
 }
 
 function logRoleWarning(message, error) {
@@ -35,36 +46,29 @@ export async function resolveUserRole(db, user) {
   if (!user) return "guest";
   const normalizedEmail = (user.email || "").trim().toLowerCase();
 
-  if (SUPER_ADMIN_EMAILS.includes(normalizedEmail)) return "super_admin";
-
   try {
-    const userSnap = await getDoc(doc(db, "users", user.uid));
-    const userData = userSnap.exists() ? userSnap.data() || {} : {};
-    const storedRole = getRoleFromUserData(userData);
-
-    if (storedRole === "super_admin" || storedRole === "admin" || storedRole === "user") {
-      return storedRole;
+    const token = await getIdTokenResult(user, true);
+    const claimRole = getRoleFromClaims(token.claims || {});
+    if (claimRole === "super_admin" || claimRole === "admin") {
+      return claimRole;
     }
   } catch (error) {
-    if (!isPermissionDenied(error)) {
-      logRoleWarning("Unable to read stored user role.", error);
-    }
+    logRoleWarning("Unable to read user role claims.", error);
+  }
+
+  const configuredRole = getConfiguredRoleFromEmail(normalizedEmail);
+  if (configuredRole !== "user") {
+    logRoleWarning("Using temporary configured admin email fallback. Replace this with Firebase Auth custom claims before public release.");
+    return configuredRole;
   }
 
   try {
-    if (normalizedEmail) {
-      const accessKey = encodeURIComponent(normalizedEmail);
-      const accessSnap = await getDoc(doc(db, "accessRoles", accessKey));
-      const accessData = accessSnap.exists() ? accessSnap.data() || {} : {};
-
-      if (accessData.role === "super_admin" || accessData.role === "admin" || accessData.role === "user") {
-        return accessData.role;
-      }
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+      return getRoleFromUserData(snap.data() || {});
     }
   } catch (error) {
-    if (!isPermissionDenied(error)) {
-      logRoleWarning("Unable to resolve user role from email grants.", error);
-    }
+    logRoleWarning("Unable to read stored user role.", error);
   }
 
   return "user";
@@ -75,6 +79,7 @@ export async function syncUserRole(db, user, resolvedRole) {
 
   const normalizedRole = normalizeRole(resolvedRole);
   if (normalizedRole === "guest") return;
+  if (normalizedRole !== "user") return;
 
   try {
     const userRef = doc(db, "users", user.uid);

@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -25,16 +25,7 @@ import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 /* =========================
    FIREBASE CONFIG
 ========================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -248,7 +239,7 @@ function buildBadges(xp, progressObj, isGuest) {
   return [
     {
       name: "First Step",
-      icon: "🥇",
+      icon: "??",
       description: "Earn your first 10 XP and begin your learning adventure.",
       requirement: "Reach 10 XP",
       rewardText: "10 XP milestone",
@@ -258,7 +249,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Rookie",
-      icon: "🎯",
+      icon: "??",
       description: "You are gaining momentum and starting to level up your skills.",
       requirement: "Reach 50 XP",
       rewardText: "50 XP milestone",
@@ -268,7 +259,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Learner",
-      icon: "📘",
+      icon: "??",
       description: "You reached 100 XP and proved that your learning is consistent.",
       requirement: "Reach 100 XP",
       rewardText: "100 XP milestone",
@@ -278,7 +269,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Intermediate",
-      icon: "⚡",
+      icon: "?",
       description: "Your progress is becoming stronger and more stable.",
       requirement: "Reach 200 XP",
       rewardText: "200 XP milestone",
@@ -288,7 +279,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Pro",
-      icon: "🔥",
+      icon: "??",
       description: "A serious learner with strong momentum and commitment.",
       requirement: "Reach 300 XP",
       rewardText: "300 XP milestone",
@@ -298,7 +289,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Master",
-      icon: "👑",
+      icon: "??",
       description: "Top-tier mastery unlocked through dedication and progress.",
       requirement: "Reach 500 XP",
       rewardText: "500 XP milestone",
@@ -308,7 +299,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Grandmaster",
-      icon: "✨",
+      icon: "?",
       description: "Your progress now feels elite. You are deep into the full learning journey.",
       requirement: "Reach 750 XP",
       rewardText: "750 XP milestone",
@@ -318,7 +309,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Legend",
-      icon: "🌟",
+      icon: "??",
       description: "Reach the pilot cap and prove complete mastery of the prototype system.",
       requirement: "Reach 1000 XP",
       rewardText: "1000 XP milestone",
@@ -328,7 +319,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "First Checkpoint",
-      icon: "🏁",
+      icon: "??",
       description: "Complete your first quiz or test-related activity.",
       requirement: "Finish your first quiz or test",
       rewardText: "First completion badge",
@@ -338,7 +329,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Module Reader",
-      icon: "📖",
+      icon: "??",
       description: "Read and complete your first learning module.",
       requirement: "Complete one module",
       rewardText: "Module milestone",
@@ -348,7 +339,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Module Scout",
-      icon: "🧭",
+      icon: "??",
       description: "Build confidence by clearing your first set of lessons across the system.",
       requirement: "Complete 6 modules",
       rewardText: "Module progress badge",
@@ -358,7 +349,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Module Vanguard",
-      icon: "🛡️",
+      icon: "???",
       description: "You are no longer sampling lessons. You are moving through the curriculum with intent.",
       requirement: "Complete 12 modules",
       rewardText: "Advanced module badge",
@@ -368,7 +359,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Module Legend",
-      icon: "📚",
+      icon: "??",
       description: "Finish every module in both subjects and turn reading into mastery.",
       requirement: "Complete all 18 modules",
       rewardText: "Full module completion",
@@ -378,7 +369,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Electrical Explorer",
-      icon: "⚡",
+      icon: "?",
       description: "Step into the electrical side and begin building your circuit knowledge.",
       requirement: "Complete any Electrical activity",
       rewardText: "Electrical journey badge",
@@ -388,7 +379,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Hardware Explorer",
-      icon: "🖥️",
+      icon: "???",
       description: "Step into the hardware side and begin building your computer servicing knowledge.",
       requirement: "Complete any Hardware activity",
       rewardText: "Hardware journey badge",
@@ -398,7 +389,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Explorer",
-      icon: "🌍",
+      icon: "??",
       description: "Try both subjects and explore the learning system fully.",
       requirement: "Explore both subjects",
       rewardText: "Exploration badge",
@@ -411,7 +402,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Pathfinder",
-      icon: "🗺️",
+      icon: "???",
       description: "Push beyond one subject flow and start covering the core stages of the whole system.",
       requirement: "Complete 4 major stage milestones",
       rewardText: "Core path badge",
@@ -421,7 +412,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Dual Path",
-      icon: "🔀",
+      icon: "??",
       description: "Clear the full quiz track for both subjects and prove balanced growth.",
       requirement: "Complete both subject quiz tracks",
       rewardText: "Dual quiz completion",
@@ -431,7 +422,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Electrical Graduate",
-      icon: "🔌",
+      icon: "??",
       description: "Finish the full Electrical subject from pre-test to post-test.",
       requirement: "Complete Electrical post-test",
       rewardText: "Electrical subject complete",
@@ -441,7 +432,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Hardware Graduate",
-      icon: "💻",
+      icon: "??",
       description: "Finish the full Hardware subject from pre-test to post-test.",
       requirement: "Complete Hardware post-test",
       rewardText: "Hardware subject complete",
@@ -451,7 +442,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
       {
         name: "Completionist",
-        icon: "🏆",
+        icon: "??",
         description: "Reach the full XP cap of the entire system and prove complete dedication.",
         requirement: "Reach 1164 XP",
         rewardText: "Full-system XP completion",
@@ -461,7 +452,7 @@ function buildBadges(xp, progressObj, isGuest) {
       },
     {
       name: "Review Warrior",
-      icon: "🧠",
+      icon: "??",
       description: "Use the wrong-answer review tool and turn mistakes into progress.",
       requirement: "Open Wrong-Answer Review",
       rewardText: "Review feature badge",
@@ -471,7 +462,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "History Keeper",
-      icon: "🕒",
+      icon: "??",
       description: "Track your learning journey by opening the study history page.",
       requirement: "Open Study History",
       rewardText: "History feature badge",
@@ -481,7 +472,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Dual Reader",
-      icon: "📗",
+      icon: "??",
       description: "Complete at least one module in both Hardware and Electrical.",
       requirement: "Finish one module in each subject",
       rewardText: "Balanced module badge",
@@ -491,7 +482,7 @@ function buildBadges(xp, progressObj, isGuest) {
     },
     {
       name: "Quiz Climber",
-      icon: "🪜",
+      icon: "??",
       description: "Build momentum by clearing ten quiz levels across the system.",
       requirement: "Complete 10 quiz levels",
       rewardText: "Quiz progression badge",
@@ -971,7 +962,7 @@ function loadTheme() {
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "??" : "??";
 }
 
 /* =========================
@@ -1022,7 +1013,7 @@ function showAchievementPopup(title, desc) {
   const popup = document.createElement("div");
   popup.className = "achievement-popup";
   popup.innerHTML = `
-    <div class="popup-icon">🏆</div>
+    <div class="popup-icon">??</div>
     <div class="popup-text">
       <strong>${title}</strong>
       <p>${desc}</p>

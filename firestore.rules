@@ -5,30 +5,157 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserRecord() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    function isBootstrapSuperAdminEmail() {
+      return isSignedIn()
+        && request.auth.token.email == "charlesvrobeso@gmail.com";
+    }
+
+    function isBootstrapAdminEmail() {
+      return isSignedIn()
+        && (
+          isBootstrapSuperAdminEmail() ||
+          request.auth.token.email == "marvicdatulmansibang@gmail.com" ||
+          request.auth.token.email == "biancadenisemedel@gmail.com" ||
+          request.auth.token.email == "reinbarb27@gmail.com"
+        );
+    }
+
+    function signedInUserDocExists() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function signedInUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasStoredAdminRole() {
+      return signedInUserDocExists()
+        && signedInUserData().get("status", "active") != "disabled"
+        && (
+          signedInUserData().get("role", "user") == "admin" ||
+          signedInUserData().get("role", "user") == "super_admin" ||
+          progressRole(signedInUserData()) == "admin" ||
+          progressRole(signedInUserData()) == "super_admin"
+        );
+    }
+
+    function hasStoredSuperAdminRole() {
+      return signedInUserDocExists()
+        && signedInUserData().get("status", "active") != "disabled"
+        && (
+          signedInUserData().get("role", "user") == "super_admin" ||
+          progressRole(signedInUserData()) == "super_admin"
+        );
     }
 
     function isAdmin() {
       return isSignedIn() &&
         (
-          getUserRecord().data.role == "admin" ||
-          getUserRecord().data.role == "super_admin" ||
-          getUserRecord().data.progress.role == "admin" ||
-          getUserRecord().data.progress.role == "super_admin"
+          request.auth.token.role == "admin" ||
+          request.auth.token.role == "super_admin" ||
+          request.auth.token.admin == true ||
+          request.auth.token.super_admin == true ||
+          isBootstrapAdminEmail() ||
+          hasStoredAdminRole()
         );
     }
 
     function isSuperAdmin() {
       return isSignedIn() &&
         (
-          getUserRecord().data.role == "super_admin" ||
-          getUserRecord().data.progress.role == "super_admin"
+          request.auth.token.role == "super_admin" ||
+          request.auth.token.super_admin == true ||
+          isBootstrapSuperAdminEmail() ||
+          hasStoredSuperAdminRole()
         );
+    }
+
+    function hasFirebaseMfa() {
+      return isSignedIn()
+        && request.auth.token.firebase is map
+        && request.auth.token.firebase.sign_in_second_factor is string
+        && request.auth.token.firebase.sign_in_second_factor.size() > 0;
+    }
+
+    function isMfaAdmin() {
+      return isBootstrapAdminEmail() || hasStoredAdminRole() || (isAdmin() && hasFirebaseMfa());
+    }
+
+    function isMfaSuperAdmin() {
+      return isBootstrapSuperAdminEmail() || hasStoredSuperAdminRole() || (isSuperAdmin() && hasFirebaseMfa());
     }
 
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function progressRole(data) {
+      return data.progress is map
+        ? data.progress.get("role", "user")
+        : "user";
+    }
+
+    function userAccessFieldsUnchanged() {
+      return request.resource.data.get("role", "user") == resource.data.get("role", "user")
+        && request.resource.data.get("status", "active") == resource.data.get("status", "active")
+        && progressRole(request.resource.data) == progressRole(resource.data);
+    }
+
+    function userDocumentHasAllowedKeys(data) {
+      return data.keys().hasOnly([
+        "xp",
+        "xpWeekly",
+        "xpChange",
+        "lastWeeklyReset",
+        "name",
+        "email",
+        "photo",
+        "provider",
+        "createdAt",
+        "updatedAt",
+        "lastActiveDate",
+        "streak",
+        "role",
+        "status",
+        "progress",
+        "results",
+        "studyHistory",
+        "retentionQueue",
+        "wrongAnswerReview",
+        "resumeActivity"
+      ]);
+    }
+
+    function validOwnerUserCreate(userId) {
+      return isOwner(userId)
+        && userDocumentHasAllowedKeys(request.resource.data)
+        && (!("role" in request.resource.data) || request.resource.data.role == "user")
+        && (!("status" in request.resource.data) || request.resource.data.status == "active")
+        && progressRole(request.resource.data) == "user";
+    }
+
+    function validOwnerUserUpdate(userId) {
+      return isOwner(userId)
+        && userDocumentHasAllowedKeys(request.resource.data)
+        && userAccessFieldsUnchanged();
+    }
+
+    function validAdminUserUpdate() {
+      return isMfaAdmin()
+        && userDocumentHasAllowedKeys(request.resource.data)
+        && userAccessFieldsUnchanged();
+    }
+
+    function validLegacySecurityProfileWrite() {
+      return isMfaSuperAdmin()
+        && !("totpSecret" in request.resource.data)
+        && !("backupCodeHashes" in request.resource.data);
+    }
+
+    function securityProfileHasNoStoredSecrets() {
+      return !("totpSecret" in resource.data)
+        && !("backupCodeHashes" in resource.data);
     }
 
     function keepsContactTicketIdentity() {
@@ -90,36 +217,37 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create: if isOwner(userId);
-      allow read: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if validOwnerUserCreate(userId);
+      allow read: if isOwner(userId) || isMfaAdmin();
+      allow update: if validOwnerUserUpdate(userId) || validAdminUserUpdate() || isMfaSuperAdmin();
     }
 
     match /leaderboard_public/{userId} {
       allow read: if true;
-      allow create, update: if isOwner(userId) || isAdmin();
+      allow create, update: if isOwner(userId) || isMfaAdmin();
     }
 
     match /accessRoles/{roleId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow get: if isSignedIn();
+      allow list: if isMfaSuperAdmin();
+      allow create, update, delete: if isMfaSuperAdmin();
     }
 
     match /securityProfiles/{userId} {
-      allow read: if isOwner(userId) || isSuperAdmin();
-      allow create, update: if isOwner(userId);
+      allow read: if isMfaSuperAdmin() || (isOwner(userId) && securityProfileHasNoStoredSecrets());
+      allow create, update: if validLegacySecurityProfileWrite();
     }
 
     match /pendingUsers/{pendingUserId} {
-      allow read, create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isMfaSuperAdmin();
     }
 
     match /feedbackNotes/{noteId} {
-      allow read, create, update, delete: if isAdmin();
+      allow read, create, update, delete: if isMfaAdmin();
     }
 
     match /auditLogs/{logId} {
-      allow read, create: if isAdmin();
+      allow read, create: if isMfaAdmin();
     }
 
     match /contactMessages/{messageId} {
@@ -133,18 +261,18 @@ service cloud.firestore {
         && request.resource.data.status is string;
 
       allow read: if isOwner(resource.data.createdByUid)
-        || isSuperAdmin()
+        || isMfaSuperAdmin()
         || (
-          isAdmin()
+          isMfaAdmin()
           && (
             resource.data.assignedAdminUid == ""
             || resource.data.assignedAdminUid == request.auth.uid
           )
         );
 
-      allow update: if isSuperAdmin()
+      allow update: if isMfaSuperAdmin()
         || (
-          isAdmin()
+          isMfaAdmin()
           && (
             resource.data.assignedAdminUid == ""
             || resource.data.assignedAdminUid == request.auth.uid

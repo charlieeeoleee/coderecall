@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "firebase": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase",
+    "firebase:version": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase --version",
+    "firebase:deploy:rules": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only firestore:rules",
+    "firebase:deploy:hosting": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only hosting",
+    "roles:set": "node scripts/manage-role-claims.mjs",
+    "roles:audit-mfa": "node scripts/audit-privileged-mfa.mjs",
+    "roles:audit-fallbacks": "node scripts/audit-role-fallbacks.mjs",
+    "security:audit-firebase-config": "node scripts/audit-firebase-public-config.mjs"
+  },
+  "devDependencies": {
+    "firebase-admin": "^13.8.0",
+    "firebase-tools": "^15.17.0"
+  }
+}

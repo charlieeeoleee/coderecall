@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   onAuthStateChanged
@@ -18,16 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, roleMeetsMinimum } from "./role-utils.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -42,6 +33,8 @@ let currentAdminSearchTerm = "";
 let currentMyMessagesSort = "newest";
 let currentAdminSort = "newest";
 let lastRenderedContactMessages = [];
+let myContactMessagesCache = [];
+let adminContactMessagesCache = [];
 
 function goHome() {
   window.location.href = "index.html";
@@ -779,7 +772,8 @@ async function fetchContactMessagesForCurrentRole() {
   }
 
   if (currentRole === "admin") {
-    const sources = getContactMessagesSource();
+    const sources = getAdminContactMessagesSource();
+    if (!Array.isArray(sources)) return [];
     const snapshots = await Promise.all(sources.map((source) => getDocs(source)));
     const messageMap = new Map();
 
@@ -804,6 +798,15 @@ async function fetchContactMessagesForCurrentRole() {
 function getContactMessagesSource() {
   if (!currentUser) return null;
 
+  return query(
+    collection(db, "contactMessages"),
+    where("createdByUid", "==", currentUser.uid)
+  );
+}
+
+function getAdminContactMessagesSource() {
+  if (!currentUser || !roleMeetsMinimum(currentRole, "admin")) return null;
+
   if (currentRole === "super_admin") {
     return collection(db, "contactMessages");
   }
@@ -816,10 +819,7 @@ function getContactMessagesSource() {
     ];
   }
 
-  return query(
-    collection(db, "contactMessages"),
-    where("createdByUid", "==", currentUser.uid)
-  );
+  return null;
 }
 
 function getCurrentUserPrivateMessages(messages) {
@@ -1377,9 +1377,37 @@ function renderContactListsFromMessages(rawMessages) {
   updateContactPageBadges(myMessages, allMessages);
 }
 
-function renderContactLoadError() {
+function mergeContactMessages(...lists) {
+  const merged = new Map();
+  lists.flat().filter(Boolean).forEach((message) => {
+    merged.set(message.id, message);
+  });
+  return sortContactMessages(Array.from(merged.values()));
+}
+
+function renderContactPanels() {
+  const allMessages = mergeContactMessages(myContactMessagesCache, adminContactMessagesCache);
+  lastRenderedContactMessages = allMessages;
+
+  const myMessages = sortContactMessages(myContactMessagesCache);
+  const unseenReplyIds = getUnseenReplyMessageIds(myMessages);
+  renderMyMessages(myMessages, unseenReplyIds);
+  notifyOnNewReplies(myMessages);
+  highlightNewestReply(unseenReplyIds);
+  markRepliesAsSeen(myMessages);
+
+  if (roleMeetsMinimum(currentRole, "admin")) {
+    renderAdminInbox(sortContactMessages(adminContactMessagesCache));
+  }
+
+  updateContactPageBadges(myMessages, allMessages);
+}
+
+function renderContactLoadError(options = {}) {
+  const showMyMessages = options.myMessages ?? true;
+  const showAdminInbox = options.adminInbox ?? roleMeetsMinimum(currentRole, "admin");
   const myMessagesTarget = document.getElementById("myMessagesList");
-  if (myMessagesTarget) {
+  if (showMyMessages && myMessagesTarget) {
     myMessagesTarget.innerHTML = `
       <article class="message-card empty-card">
         <h3>Unable to load your messages</h3>
@@ -1388,7 +1416,7 @@ function renderContactLoadError() {
     `;
   }
 
-  if (roleMeetsMinimum(currentRole, "admin")) {
+  if (showAdminInbox && roleMeetsMinimum(currentRole, "admin")) {
     const adminInboxTarget = document.getElementById("adminInboxList");
     if (adminInboxTarget) {
       adminInboxTarget.innerHTML = `
@@ -1438,31 +1466,50 @@ function stopContactMessagesSubscription() {
     contactMessagesUnsubscribe();
   }
   contactMessagesUnsubscribe = null;
+  myContactMessagesCache = [];
+  adminContactMessagesCache = [];
 }
 
 function startContactMessagesSubscription() {
   stopContactMessagesSubscription();
   if (!currentUser) return;
 
-  const source = getContactMessagesSource();
-  if (!source) return;
+  const mySource = getContactMessagesSource();
+  if (!mySource) return;
 
   renderListLoading("myMessagesList", "Loading messages...", "Fetching your contact history.");
   if (roleMeetsMinimum(currentRole, "admin")) {
     renderListLoading("adminInboxList", "Loading inbox...", "Fetching learner contact messages.");
   }
 
-  if (Array.isArray(source)) {
-    const sourceCaches = source.map(() => new Map());
+  const unsubscribers = [];
+
+  unsubscribers.push(onSnapshot(
+    mySource,
+    (snapshot) => {
+      myContactMessagesCache = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+      renderContactPanels();
+    },
+    (error) => {
+      console.error("Unable to load your contact messages:", error);
+      renderContactLoadError({ myMessages: true, adminInbox: false });
+    }
+  ));
+
+  const adminSource = getAdminContactMessagesSource();
+  if (Array.isArray(adminSource)) {
+    const sourceCaches = adminSource.map(() => new Map());
     const rebuildMessages = () => {
       const merged = new Map();
       sourceCaches.forEach((cache) => {
         cache.forEach((value, key) => merged.set(key, value));
       });
-      renderContactListsFromMessages(Array.from(merged.values()));
+      adminContactMessagesCache = Array.from(merged.values());
+      renderContactPanels();
     };
 
-    const unsubscribers = source.map((entrySource, index) => onSnapshot(
+    adminSource.forEach((entrySource, index) => {
+      unsubscribers.push(onSnapshot(
       entrySource,
       (snapshot) => {
         const nextCache = new Map();
@@ -1473,39 +1520,64 @@ function startContactMessagesSubscription() {
         rebuildMessages();
       },
       (error) => {
-        console.error("Unable to load contact messages:", error);
-        renderContactLoadError();
+        console.error("Unable to load admin contact messages:", error);
+        renderContactLoadError({ myMessages: false, adminInbox: true });
+      }
+      ));
+    });
+  } else if (adminSource) {
+    unsubscribers.push(onSnapshot(
+      adminSource,
+      (snapshot) => {
+        adminContactMessagesCache = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+        renderContactPanels();
+      },
+      (error) => {
+        console.error("Unable to load admin contact messages:", error);
+        renderContactLoadError({ myMessages: false, adminInbox: true });
       }
     ));
-
-    contactMessagesUnsubscribe = () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    };
-    return;
   }
 
-  contactMessagesUnsubscribe = onSnapshot(
-    source,
-    (snapshot) => {
-      const messages = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
-      renderContactListsFromMessages(messages);
-    },
-    (error) => {
-      console.error("Unable to load contact messages:", error);
-      renderContactLoadError();
-    }
-  );
+  contactMessagesUnsubscribe = () => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  };
 }
 
 async function refreshContactLists() {
   if (!currentUser) return;
 
   try {
-    const messages = await fetchContactMessagesForCurrentRole();
-    renderContactListsFromMessages(messages);
+    const mySource = getContactMessagesSource();
+    const mySnapshot = mySource ? await getDocs(mySource) : { docs: [] };
+    myContactMessagesCache = mySnapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+    renderMyMessages(myContactMessagesCache);
   } catch (error) {
-    console.error("Unable to refresh contact messages:", error);
-    renderContactLoadError();
+    console.error("Unable to refresh your contact messages:", error);
+    renderContactLoadError({ myMessages: true, adminInbox: false });
+  }
+
+  try {
+    if (roleMeetsMinimum(currentRole, "admin")) {
+      const adminSource = getAdminContactMessagesSource();
+      if (Array.isArray(adminSource)) {
+        const snapshots = await Promise.all(adminSource.map((source) => getDocs(source)));
+        const messageMap = new Map();
+        snapshots.forEach((snapshot) => {
+          snapshot.docs.forEach((entry) => {
+            messageMap.set(entry.id, { id: entry.id, ...entry.data() });
+          });
+        });
+        adminContactMessagesCache = Array.from(messageMap.values());
+      } else if (adminSource) {
+        const adminSnapshot = await getDocs(adminSource);
+        adminContactMessagesCache = adminSnapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
+      }
+    }
+    renderAdminInbox(adminContactMessagesCache);
+  } catch (error) {
+    console.error("Unable to refresh admin contact messages:", error);
+    renderContactLoadError({ myMessages: false, adminInbox: true });
   }
 }
 

@@ -1,7 +1,7 @@
 /* =========================
    FIREBASE IMPORTS
 ========================= */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -38,16 +38,7 @@ import { MODULE_STRUCTURE } from "../data/module-data.js";
 /* =========================
    FIREBASE CONFIG
 ========================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 

@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -11,7 +11,6 @@ import {
   addDoc,
   doc,
   query,
-  setDoc,
   where,
   onSnapshot,
   serverTimestamp
@@ -31,19 +30,10 @@ import {
   reviewModuleDraft,
   reviewQuizDraft
 } from "./supabase-content.js";
-import { isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { isAdminMfaVerified, clearAdminMfaSession } from "./admin-mfa-session.js";
+import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
+import { clearAdminMfaSession } from "./admin-mfa-session.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const QUIZ_LEVELS_PER_DIFFICULTY = 25;
@@ -95,17 +85,7 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  if (currentRole === "super_admin" && !isSuperAdminMfaVerified(user.uid)) {
-    window.location.href = "super-admin-mfa.html";
-    return;
-  }
-
-  if (currentRole === "admin" && !isAdminMfaVerified(user.uid)) {
-    window.location.href = "admin-mfa.html";
-    return;
-  }
-
-  updateUserUI(user);
+  await updateUserUI(user);
   setAdminMfaPanelVisibility(currentRole);
   await loadAdminDashboard();
   startContactInboxSubscription();
@@ -1395,18 +1375,26 @@ async function writeAuditLog(action, details) {
   });
 }
 
-function updateUserUI(user) {
-  setText("username", user.displayName || user.email || "Admin");
+async function updateUserUI(user) {
+  let profile = {};
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    profile = snap.exists() ? (snap.data() || {}) : {};
+  } catch (error) {
+    console.warn("Unable to load admin profile header.", error);
+  }
+
+  setText("username", profile.name || user.displayName || user.email || "Admin");
   const photo = document.getElementById("userPhoto");
   if (photo) {
-    photo.src = user.photoURL || "https://i.pravatar.cc/40?img=12";
+    photo.src = profile.photo || user.photoURL || "https://i.pravatar.cc/40?img=12";
   }
 }
 
 function setAdminMfaPanelVisibility(role) {
   const panel = document.getElementById("adminMfaPanel");
   if (!panel) return;
-  panel.hidden = role !== "admin";
+  panel.hidden = true;
 }
 
 function setText(id, value) {
@@ -1424,7 +1412,7 @@ window.logout = async function() {
   closeMobileSidebar();
   stopContactInboxSubscription();
   clearAdminMfaSession();
-   clearSuperAdminMfaSession();
+  clearSuperAdminMfaSession();
   if (auth.currentUser) {
     await signOut(auth);
   }
@@ -1437,36 +1425,8 @@ function setMfaStatus(message) {
 }
 
 window.resetMyAdminMfa = function() {
-  if (!currentUser) return;
-  setMfaStatus("");
-  const confirmed = window.confirm(
-    "This will remove the current authenticator secret and backup codes for the account you are using now. You will need to enroll again before opening the admin page."
-  );
-
-  if (!confirmed) return;
-
-  setDoc(doc(db, "securityProfiles", currentUser.uid), {
-    uid: currentUser.uid,
-    email: currentUser.email || "",
-    totpEnabled: false,
-    totpSecret: "",
-    backupCodeHashes: [],
-    lastResetReason: "self_service_dashboard_reset",
-    lastResetRole: "admin",
-    resetAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  }, { merge: true })
-    .then(() => {
-      clearAdminMfaSession();
-      setMfaStatus("Admin 2FA was reset. Redirecting you to re-enroll...");
-      window.setTimeout(() => {
-        window.location.href = "admin-mfa.html";
-      }, 700);
-    })
-    .catch((error) => {
-      console.error("Unable to reset admin 2FA.", error);
-      setMfaStatus("Unable to reset admin 2FA right now. Please try again.");
-    });
+  clearAdminMfaSession();
+  setMfaStatus("Legacy app-level 2FA has been retired. Use Firebase Auth multi-factor enrollment instead.");
 };
 
 function loadTheme() {

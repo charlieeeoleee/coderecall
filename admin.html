@@ -168,12 +168,12 @@
         <section class="panel-card" id="adminMfaPanel" hidden>
           <div class="panel-header">
             <div>
-              <h3>Admin 2FA</h3>
-              <p>Reset and re-enroll your own admin verification if you change devices or lose access to your authenticator app.</p>
+              <h3>Legacy Admin 2FA</h3>
+              <p>App-level authenticator storage has been retired. Use Firebase Auth multi-factor enrollment for privileged accounts.</p>
             </div>
           </div>
           <div class="shortcut-actions">
-            <button type="button" class="danger-action" onclick="resetMyAdminMfa()">Reset My Admin 2FA</button>
+            <button type="button" class="danger-action" onclick="resetMyAdminMfa()">Clear Legacy Session</button>
           </div>
           <p id="adminMfaStatus" class="form-status"></p>
         </section>

@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -24,18 +24,8 @@ import {
   verifyTotpCode
 } from "./mfa-totp.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
-
 const SETUP_STORAGE_KEY = "super_admin_mfa_pending_setup_v1";
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -362,28 +352,10 @@ onAuthStateChanged(auth, async (user) => {
   const role = await resolveUserRole(db, user);
   await syncUserRole(db, user, role);
 
-  if (role !== "super_admin") {
-    window.location.replace("dashboard.html");
-    return;
-  }
-
-  if (isSuperAdminMfaVerified(user.uid)) {
+  if (role === "super_admin") {
     window.location.replace("super-admin.html");
     return;
   }
 
-  const profileSnap = await getDoc(getSecurityProfileRef(user.uid));
-  activeProfile = profileSnap.exists() ? (profileSnap.data() || {}) : null;
-
-  if (activeProfile?.totpEnabled && activeProfile?.totpSecret) {
-    pendingSetup = null;
-    clearPendingSetup();
-    renderVerifyUi();
-    setStatus("Enter your authenticator code to continue.");
-    return;
-  }
-
-  await ensurePendingSetup(user);
-  renderSetupUi(user.email || "");
-  setStatus("Connect your authenticator app, then enter the current 6-digit code.");
+  window.location.replace("dashboard.html");
 });

@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { app } from "./firebase-config.js";
 import {
   getAuth,
   signInWithEmailAndPassword,
@@ -19,18 +19,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
-import { isSuperAdminMfaVerified, clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { isAdminMfaVerified, clearAdminMfaSession } from "./admin-mfa-session.js";
+import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
+import { clearAdminMfaSession } from "./admin-mfa-session.js";
 
-/* FIREBASE CONFIG */
-const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
-};
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -40,12 +32,6 @@ let isHandlingAuthFlow = false;
 async function getLandingPageForUser(user) {
   const role = await resolveUserRole(db, user);
   await syncUserRole(db, user, role);
-  if (role === "super_admin" && !isSuperAdminMfaVerified(user.uid)) {
-    return "super-admin-mfa.html";
-  }
-  if (role === "admin" && !isAdminMfaVerified(user.uid)) {
-    return "admin-mfa.html";
-  }
   return "dashboard.html";
 }
 

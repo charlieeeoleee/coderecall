@@ -1,0 +1,8 @@
+node_modules/
+.firebase-cli-config/
+scripts/firebase-config.local.js
+*.service-account.json
+service-account*.json
+.env
+.env.*
+*.local

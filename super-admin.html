@@ -99,8 +99,8 @@
       <section class="panel-card wide">
         <div class="panel-header">
           <div>
-            <h3>2FA Oversight</h3>
-            <p>Track which privileged accounts are already protected, which still need enrollment, and when each account last verified access.</p>
+            <h3>Legacy 2FA Oversight</h3>
+            <p>Review old app-level verification records while privileged access moves to Firebase Auth multi-factor enrollment.</p>
           </div>
         </div>
         <div class="insights-admin-grid">
@@ -229,12 +229,12 @@
         <section class="panel-card">
           <div class="panel-header">
             <div>
-              <h3>Super Admin 2FA</h3>
-              <p>Reset and re-enroll your own super-admin verification if you change devices or lose access to the authenticator app.</p>
+              <h3>Legacy Super Admin 2FA</h3>
+              <p>App-level authenticator storage has been retired. Use Firebase Auth multi-factor enrollment for privileged accounts.</p>
             </div>
           </div>
           <div class="shortcut-actions">
-            <button type="button" class="danger-action" onclick="resetMySuperAdminMfa()">Reset My Super Admin 2FA</button>
+            <button type="button" class="danger-action" onclick="resetMySuperAdminMfa()">Clear Legacy Session</button>
           </div>
           <p id="superAdminMfaStatus" class="form-status"></p>
         </section>
