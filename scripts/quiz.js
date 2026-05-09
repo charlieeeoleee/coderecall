@@ -820,10 +820,19 @@ function updateProgress() {
 function updateNextButtonState() {
   const nextBtn = document.getElementById("nextBtn");
   if (!nextBtn) return;
-  nextBtn.disabled = !(selectedChoice && selectedConfidence);
+  nextBtn.disabled = !selectedChoice || (requiresConfidenceSelection() && !selectedConfidence);
+}
+
+function isPretestAssessment() {
+  return type === "pretest";
+}
+
+function requiresConfidenceSelection() {
+  return !isPretestAssessment();
 }
 
 function bindConfidenceOptions() {
+  if (!requiresConfidenceSelection()) return;
   const options = Array.from(document.querySelectorAll("#confidenceOptions .confidence-btn"));
   options.forEach((button) => {
     button.addEventListener("click", () => {
@@ -839,6 +848,15 @@ function bindConfidenceOptions() {
 }
 
 function renderConfidenceSelection(restoredConfidence = null) {
+  const panel = document.querySelector(".confidence-panel");
+  if (!requiresConfidenceSelection()) {
+    if (panel) panel.hidden = true;
+    selectedConfidence = "sure";
+    updateNextButtonState();
+    return;
+  }
+
+  if (panel) panel.hidden = false;
   const options = Array.from(document.querySelectorAll("#confidenceOptions .confidence-btn"));
   options.forEach((button) => {
     const isSelected = restoredConfidence && button.dataset.confidence === restoredConfidence;
@@ -869,6 +887,7 @@ function withTimeout(promise, fallbackValue, timeoutMs = 1200) {
 }
 
 async function maybeShowRetentionGate({ trigger = "existing_due" } = {}) {
+  if (isPretestAssessment()) return;
   if (retentionGateShown) return;
 
   await authReadyPromise;
@@ -914,6 +933,7 @@ async function maybeShowRetentionGate({ trigger = "existing_due" } = {}) {
 }
 
 async function promptRetentionGateAfterWeakAnswer() {
+  if (isPretestAssessment()) return;
   retentionGateShown = false;
   await maybeShowRetentionGate({ trigger: "weak_answer" });
 }
@@ -1305,27 +1325,30 @@ function continueToNext() {
 }
 
 window.handleNext = function () {
-  if (!selectedChoice || !selectedConfidence) return;
+  if (!selectedChoice || (requiresConfidenceSelection() && !selectedConfidence)) return;
 
   const currentQuestion = quizQuestions[currentIndex];
   const isCorrect = selectedChoice === currentQuestion.answer;
   const reviewPayload = buildWrongAnswerReviewPayload(currentQuestion, selectedChoice);
   const reviewTrackingKey = buildReviewTrackingKey(reviewPayload);
-  const lowConfidence = isLowConfidenceAnswer(selectedConfidence);
+  const tracksReviewQueues = !isPretestAssessment();
+  const lowConfidence = tracksReviewQueues && isLowConfidenceAnswer(selectedConfidence);
 
   if (isCorrect) {
     correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion, currentIndex));
-    if (wrongAnswerReviewKeys.has(reviewTrackingKey)) {
+    if (tracksReviewQueues && wrongAnswerReviewKeys.has(reviewTrackingKey)) {
       recoveredMistakesThisRun += 1;
       wrongAnswerReviewKeys.delete(reviewTrackingKey);
     }
-    resolveWrongAnswerReview({
-      db,
-      user: currentUser,
-      payload: reviewPayload
-    }).catch((error) => {
-      console.warn("Unable to resolve wrong-answer review item.", error);
-    });
+    if (tracksReviewQueues) {
+      resolveWrongAnswerReview({
+        db,
+        user: currentUser,
+        payload: reviewPayload
+      }).catch((error) => {
+        console.warn("Unable to resolve wrong-answer review item.", error);
+      });
+    }
     if (lowConfidence) {
       saveRetentionReview({
         db,
@@ -1341,7 +1364,7 @@ window.handleNext = function () {
       }).catch((error) => {
         console.warn("Unable to queue low-confidence retention item.", error);
       });
-    } else {
+    } else if (tracksReviewQueues) {
       resolveRetentionReview({
         db,
         user: currentUser,
@@ -1367,28 +1390,30 @@ window.handleNext = function () {
   }
 
   playSound("wrong");
-  saveWrongAnswerReview({
-    db,
-    user: currentUser,
-    payload: reviewPayload
-  }).catch((error) => {
-    console.warn("Unable to save wrong-answer review item.", error);
-  });
-  wrongAnswerReviewKeys.add(reviewTrackingKey);
-  saveRetentionReview({
-    db,
-    user: currentUser,
-    payload: {
-      ...reviewPayload,
-      seedReason: "wrong_answer"
-    }
-  }).then(() => {
-    promptRetentionGateAfterWeakAnswer().catch((error) => {
-      console.warn("Unable to show retention gate after wrong answer.", error);
+  if (tracksReviewQueues) {
+    saveWrongAnswerReview({
+      db,
+      user: currentUser,
+      payload: reviewPayload
+    }).catch((error) => {
+      console.warn("Unable to save wrong-answer review item.", error);
     });
-  }).catch((error) => {
-    console.warn("Unable to queue retention review item.", error);
-  });
+    wrongAnswerReviewKeys.add(reviewTrackingKey);
+    saveRetentionReview({
+      db,
+      user: currentUser,
+      payload: {
+        ...reviewPayload,
+        seedReason: "wrong_answer"
+      }
+    }).then(() => {
+      promptRetentionGateAfterWeakAnswer().catch((error) => {
+        console.warn("Unable to show retention gate after wrong answer.", error);
+      });
+    }).catch((error) => {
+      console.warn("Unable to queue retention review item.", error);
+    });
+  }
   selectedChoice = null;
   selectedConfidence = null;
   saveQuizResumeState().catch((error) => {
