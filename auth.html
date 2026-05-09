@@ -150,6 +150,21 @@
     </div>
   </div>
 
+  <!-- 2FA CHALLENGE POPUP -->
+  <div id="mfaChallengePopup" class="popup">
+    <div class="popup-box">
+      <h3>Two-Factor Verification</h3>
+      <p id="mfaChallengeLabel">Enter the 6-digit code from your authenticator app.</p>
+      <input type="text" id="mfaChallengeCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Authenticator code">
+      <p id="mfaChallengeStatus" class="helper-text"></p>
+
+      <div class="popup-actions">
+        <button id="mfaChallengeBtn" onclick="confirmMfaChallenge()">Verify</button>
+        <button class="secondary-popup-btn" onclick="closeMfaChallenge()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script src="scripts/firebase-config.runtime.js"></script>
   <script type="module" src="scripts/auth.js?v=20260505a"></script>
   <script src="scripts/loading.js" defer></script>

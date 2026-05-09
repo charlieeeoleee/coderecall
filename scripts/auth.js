@@ -8,7 +8,9 @@ import {
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
-  signOut
+  signOut,
+  getMultiFactorResolver,
+  TotpMultiFactorGenerator
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import {
@@ -28,6 +30,8 @@ const db = getFirestore(app);
 
 const pendingGoogleKey = "pendingGoogleRegistration";
 let isHandlingAuthFlow = false;
+let activeMfaResolver = null;
+let activeMfaProvider = "password";
 
 async function getLandingPageForUser(user) {
   const role = await resolveUserRole(db, user);
@@ -120,6 +124,7 @@ window.login = async function(){
     window.location.replace(await getLandingPageForUser(cred.user));
   }catch(error){
     isHandlingAuthFlow = false;
+    if (handleMfaRequired(error, "password")) return;
     showPopup("Login Error", error.message);
   }
 };
@@ -281,9 +286,139 @@ window.googleLogin = async function(){
     showPendingGoogleRegistration(pending);
   }catch(error){
     isHandlingAuthFlow = false;
+    if (handleMfaRequired(error, "google")) return;
     showPopup("Google Login Error", error.message);
   }
 };
+
+function handleMfaRequired(error, provider) {
+  if (error?.code !== "auth/multi-factor-auth-required") return false;
+
+  activeMfaResolver = getMultiFactorResolver(auth, error);
+  activeMfaProvider = provider;
+  const totpHint = getTotpHint(activeMfaResolver);
+  if (!totpHint) {
+    showPopup("2FA Error", "This account uses a second factor that Code Recall cannot verify yet.");
+    return true;
+  }
+
+  const codeInput = document.getElementById("mfaChallengeCode");
+  if (codeInput) codeInput.value = "";
+  const label = document.getElementById("mfaChallengeLabel");
+  if (label) {
+    label.textContent = totpHint.displayName
+      ? `Enter the authenticator code for ${totpHint.displayName}.`
+      : "Enter the 6-digit code from your authenticator app.";
+  }
+  setMfaChallengeStatus("");
+  document.getElementById("mfaChallengePopup")?.classList.add("active");
+  window.setTimeout(() => codeInput?.focus(), 50);
+  return true;
+}
+
+function getTotpHint(resolver) {
+  return resolver?.hints?.find((hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID) || null;
+}
+
+function setMfaChallengeStatus(message, isError = false) {
+  const status = document.getElementById("mfaChallengeStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.style.color = isError ? "#ff97b6" : "#8ef7cf";
+}
+
+window.closeMfaChallenge = function() {
+  activeMfaResolver = null;
+  document.getElementById("mfaChallengePopup")?.classList.remove("active");
+};
+
+window.confirmMfaChallenge = async function() {
+  const code = document.getElementById("mfaChallengeCode")?.value?.trim() || "";
+  const hint = getTotpHint(activeMfaResolver);
+  if (!activeMfaResolver || !hint) {
+    setMfaChallengeStatus("Please sign in again to restart 2FA.", true);
+    return;
+  }
+  if (!code) {
+    setMfaChallengeStatus("Enter your authenticator code first.", true);
+    return;
+  }
+
+  const button = document.getElementById("mfaChallengeBtn");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Verifying...";
+  }
+
+  try {
+    const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, code);
+    const result = await activeMfaResolver.resolveSignIn(assertion);
+    activeMfaResolver = null;
+    document.getElementById("mfaChallengePopup")?.classList.remove("active");
+    clearSuperAdminMfaSession();
+    clearAdminMfaSession();
+
+    if (activeMfaProvider === "google") {
+      await finishGoogleSignIn(result.user);
+    } else {
+      await finishPasswordSignIn(result.user);
+    }
+  } catch (error) {
+    console.error("MFA challenge failed.", error);
+    setMfaChallengeStatus("That authenticator code was not accepted. Try the current code from your app.", true);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Verify";
+    }
+  }
+};
+
+async function finishPasswordSignIn(user) {
+  if (!user.emailVerified) {
+    await signOut(auth);
+    isHandlingAuthFlow = false;
+
+    showPopup(
+      "Verify Your Email 📧",
+      "Your email is not verified yet. Please check your inbox or spam folder before logging in.",
+      {
+        text: "Resend Verification",
+        action: () => {
+          closePopup();
+          openResendPopup();
+        }
+      }
+    );
+    return;
+  }
+
+  await transferGuestProgressIfNeeded(user.uid);
+  window.location.replace(await getLandingPageForUser(user));
+}
+
+async function finishGoogleSignIn(user) {
+  const userRef = doc(db, "users", user.uid);
+  const docSnap = await getDoc(userRef);
+
+  if (docSnap.exists()) {
+    await transferGuestProgressIfNeeded(user.uid);
+    localStorage.removeItem(pendingGoogleKey);
+    window.location.replace(await getLandingPageForUser(user));
+    return;
+  }
+
+  const pending = {
+    uid: user.uid,
+    email: user.email || "",
+    name: user.displayName || "",
+    photo: user.photoURL || ""
+  };
+
+  localStorage.setItem(pendingGoogleKey, JSON.stringify(pending));
+  isHandlingAuthFlow = false;
+  showPendingGoogleRegistration(pending);
+}
 
 function showPendingGoogleRegistration(pending){
   showRegister();
@@ -512,6 +647,13 @@ function updateIcon(){
   }
 }
 
+function showDeferredMfaNotice() {
+  const notice = sessionStorage.getItem("code_recall_mfa_notice");
+  if (!notice) return;
+  sessionStorage.removeItem("code_recall_mfa_notice");
+  showPopup("Two-Factor Verification Required", notice);
+}
+
 window.togglePassword = function(id){
   const input = document.getElementById(id);
   if (!input) return;
@@ -519,4 +661,5 @@ window.togglePassword = function(id){
 };
 
 loadSavedTheme();
+showDeferredMfaNotice();
 

@@ -28,6 +28,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
+import { enforcePrivilegedMfa } from "./firebase-native-mfa.js";
 import {
   fetchModuleDrafts,
   fetchQuizDrafts
@@ -82,6 +83,14 @@ onAuthStateChanged(auth, async (user) => {
 
   if (role !== "super_admin") {
     window.location.href = "dashboard.html";
+    return;
+  }
+
+  if (!await enforcePrivilegedMfa({
+    auth,
+    user,
+    setupPath: "super-admin-mfa.html"
+  })) {
     return;
   }
 
@@ -1300,15 +1309,15 @@ window.logout = async function() {
 window.resetMySuperAdminMfa = function() {
   if (!currentUser) return;
   openSystemPopup(
-    "Legacy 2FA Retired",
-    "App-level authenticator secrets are no longer stored in Firestore. Use Firebase Auth multi-factor enrollment for privileged accounts.",
+    "Manage Super Admin 2FA",
+    "Firebase Auth now manages super-admin 2FA. To reset an existing factor, remove it from Firebase Console or the Admin SDK, then return to the setup page.",
     async () => {
       clearSuperAdminMfaSession();
-      setMfaStatus("Legacy app-level 2FA session was cleared. Manage MFA through Firebase Auth.");
+      setMfaStatus("2FA session cleared. Existing Firebase Auth factors are managed outside Firestore.");
       closeSystemPopup();
     },
     {
-      confirmLabel: "Clear Legacy Session"
+      confirmLabel: "Clear Session"
     }
   );
 };

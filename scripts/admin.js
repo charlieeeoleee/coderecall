@@ -32,6 +32,7 @@ import {
 } from "./supabase-content.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { clearAdminMfaSession } from "./admin-mfa-session.js";
+import { enforcePrivilegedMfa } from "./firebase-native-mfa.js";
 
 
 const auth = getAuth(app);
@@ -82,6 +83,14 @@ onAuthStateChanged(auth, async (user) => {
 
   if (!roleMeetsMinimum(currentRole, "admin")) {
     window.location.href = "dashboard.html";
+    return;
+  }
+
+  if (!await enforcePrivilegedMfa({
+    auth,
+    user,
+    setupPath: currentRole === "super_admin" ? "super-admin-mfa.html" : "admin-mfa.html"
+  })) {
     return;
   }
 
@@ -1426,7 +1435,7 @@ function setMfaStatus(message) {
 
 window.resetMyAdminMfa = function() {
   clearAdminMfaSession();
-  setMfaStatus("Legacy app-level 2FA has been retired. Use Firebase Auth multi-factor enrollment instead.");
+  window.location.href = "admin-mfa.html";
 };
 
 function loadTheme() {
