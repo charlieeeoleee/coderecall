@@ -13,6 +13,7 @@ Run both audits from a trusted machine with a Firebase service account:
 
 ```powershell
 $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\service-account.json"
+$env:FIREBASE_PROJECT_ID="<your-project-id>"
 npm run roles:audit-fallbacks
 npm run roles:audit-mfa
 ```
@@ -46,7 +47,7 @@ When the dry run succeeds, replace `firestore.rules` with `firestore.claims-only
 
 ```powershell
 npm run test:rules
-npm run firebase:deploy:rules -- --project gamifiedlearningsystem
+npm run firebase:deploy:rules -- --project $env:FIREBASE_PROJECT_ID
 ```
 
 Do not deploy claims-only rules until the audits are clean. Otherwise admins can lose access.

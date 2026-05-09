@@ -70,7 +70,11 @@ async function listAllUsers(auth) {
 }
 
 async function main() {
-  const projectId = readArg("project") || process.env.FIREBASE_PROJECT_ID || "gamifiedlearningsystem";
+  const projectId = readArg("project") || process.env.FIREBASE_PROJECT_ID;
+  if (!projectId) {
+    throw new Error("Missing Firebase project id. Pass --project=<id> or set FIREBASE_PROJECT_ID.");
+  }
+
   const credential = await getCredential();
   initializeApp({ credential, projectId });
 

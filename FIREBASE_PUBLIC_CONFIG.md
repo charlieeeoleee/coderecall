@@ -1,12 +1,13 @@
 # Firebase public config handling
 
-Firebase browser configuration is public at runtime, but this repository should not commit the live project values repeatedly.
+Firebase browser configuration is public at runtime, but this repository should not commit the live project values.
 
 ## Local/deploy setup
 
-1. Copy `scripts/firebase-config.js` values from the Firebase Console web app settings.
-2. Keep any private notes or local backup copy in `scripts/firebase-config.local.js`; that file is ignored by Git.
-3. Before deploying, make sure `scripts/firebase-config.js` contains the intended public web config for the target Firebase project.
+1. Copy `scripts/firebase-config.example.js` to `scripts/firebase-config.runtime.js`.
+2. Fill `scripts/firebase-config.runtime.js` with the Firebase Console web app settings.
+3. Keep `scripts/firebase-config.runtime.js` local or inject it during deployment. It is ignored by Git.
+4. Deploy hosting from an environment that has `scripts/firebase-config.runtime.js` present.
 
 ## Required console hardening
 
@@ -18,8 +19,8 @@ In Google Cloud Console, restrict the Firebase web API key:
 
 Recommended referrer allowlist:
 
-- `https://gamifiedlearningsystem.web.app/*`
-- `https://gamifiedlearningsystem.firebaseapp.com/*`
+- `https://<your-firebase-hosting-site>.web.app/*`
+- `https://<your-firebase-hosting-site>.firebaseapp.com/*`
 - Any custom production domain, with `/*`.
 - Local development origins only while needed, such as `http://localhost:*/*` or `http://127.0.0.1:*/*`.
 
@@ -40,7 +41,7 @@ In Firebase Console:
 
 1. Create a new web API key in Google Cloud Console.
 2. Apply the referrer and API restrictions above before using it.
-3. Update `scripts/firebase-config.js` with the new key.
+3. Update `scripts/firebase-config.runtime.js` with the new key.
 4. Deploy hosting.
 5. Confirm login, Firestore reads/writes, contact tickets, admin, and super-admin pages still work.
 6. Disable or delete the old unrestricted key.

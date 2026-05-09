@@ -9,7 +9,7 @@
     "roles:audit-fallbacks": "node scripts/audit-role-fallbacks.mjs",
     "security:audit-firebase-config": "node scripts/audit-firebase-public-config.mjs",
     "rules:build-claims-only": "node scripts/build-claims-only-rules.mjs",
-    "rules:dry-run-claims-only": "npm run rules:build-claims-only && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --config firebase.claims-only.json --only firestore:rules --project gamifiedlearningsystem --dry-run --non-interactive",
+    "rules:dry-run-claims-only": "npm run rules:build-claims-only && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --config firebase.claims-only.json --only firestore:rules --project %FIREBASE_PROJECT_ID% --dry-run --non-interactive",
     "test:rules": "powershell -ExecutionPolicy Bypass -File scripts/run-firestore-rules-tests.ps1",
     "test:rules:claims-only": "npm run rules:build-claims-only && powershell -ExecutionPolicy Bypass -File scripts/run-firestore-rules-tests.ps1 firestore.claims-only.rules firebase.claims-only.json"
   },

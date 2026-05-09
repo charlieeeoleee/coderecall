@@ -72,11 +72,15 @@ async function main() {
   const email = readArg("email").toLowerCase();
   const uidArg = readArg("uid");
   const role = readArg("role");
-  const projectId = readArg("project") || process.env.FIREBASE_PROJECT_ID || "gamifiedlearningsystem";
+  const projectId = readArg("project") || process.env.FIREBASE_PROJECT_ID;
   const shouldSyncFirestore = !hasFlag("no-firestore-sync");
 
   if ((!email && !uidArg) || (email && uidArg) || !VALID_ROLES.has(role)) {
     showUsageAndExit();
+  }
+
+  if (!projectId) {
+    throw new Error("Missing Firebase project id. Pass --project=<id> or set FIREBASE_PROJECT_ID.");
   }
 
   const credential = await getCredential();

@@ -5,19 +5,46 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyDZiVk1T6ZbpKJrhRt1wQAr2vSSn4Wa_KU",
-  authDomain: "gamifiedlearningsystem.firebaseapp.com",
-  projectId: "gamifiedlearningsystem",
-  storageBucket: "gamifiedlearningsystem.firebasestorage.app",
-  messagingSenderId: "516998404507",
-  appId: "1:516998404507:web:0c625f9af2809ca4b6a93e"
+  ...readRuntimeFirebaseConfig()
 };
 
 export const app = initializeApp(firebaseConfig);
 
 export const firebaseAppCheckConfig = {
-  recaptchaV3SiteKey: ""
+  recaptchaV3SiteKey: readRuntimeAppCheckSiteKey()
 };
+
+function readRuntimeFirebaseConfig() {
+  const config = self.CODE_RECALL_FIREBASE_CONFIG;
+  const requiredKeys = [
+    "apiKey",
+    "authDomain",
+    "projectId",
+    "storageBucket",
+    "messagingSenderId",
+    "appId"
+  ];
+
+  if (!config || typeof config !== "object") {
+    throw new Error(
+      "Missing Firebase runtime config. Create scripts/firebase-config.runtime.js from scripts/firebase-config.example.js before running the app."
+    );
+  }
+
+  const missingKeys = requiredKeys.filter((key) => !String(config[key] || "").trim());
+  if (missingKeys.length) {
+    throw new Error(`Firebase runtime config is missing: ${missingKeys.join(", ")}`);
+  }
+
+  return requiredKeys.reduce((sanitizedConfig, key) => {
+    sanitizedConfig[key] = String(config[key]).trim();
+    return sanitizedConfig;
+  }, {});
+}
+
+function readRuntimeAppCheckSiteKey() {
+  return String(self.CODE_RECALL_FIREBASE_APP_CHECK_SITE_KEY || "").trim();
+}
 
 function readAppCheckSiteKey() {
   const configuredKey = firebaseAppCheckConfig.recaptchaV3SiteKey.trim();
