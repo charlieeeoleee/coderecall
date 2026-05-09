@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/super-admin-mfa.css?v=20260505b">
+  <link rel="stylesheet" href="styles/super-admin-mfa.css?v=20260509a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -15,7 +15,12 @@
     <section class="mfa-card">
       <div class="brand-row">
         <div class="logo">CODE:RECALL!</div>
-        <span class="role-pill">SUPER ADMIN 2FA</span>
+        <div class="brand-actions">
+          <span class="role-pill">SUPER ADMIN 2FA</span>
+          <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <span id="themeIcon">🌙</span>
+          </button>
+        </div>
       </div>
 
       <div class="mfa-copy">
@@ -34,7 +39,9 @@
         <div class="qr-setup-row">
           <div class="secret-box qr-box">
             <label>Scan This QR Code</label>
-            <img id="mfaQrImage" class="mfa-qr-image" alt="Authenticator QR setup code" />
+            <div id="mfaQrImage" class="mfa-qr-image" role="img" aria-label="Authenticator QR setup code">
+              <span>Loading QR...</span>
+            </div>
             <p class="hint-text">If the scan does not work, use the manual setup key instead.</p>
           </div>
 
@@ -50,22 +57,12 @@
           </div>
         </div>
 
-        <div class="secret-box">
-          <label>Backup Codes</label>
-          <div id="backupCodeList" class="backup-code-list"></div>
-          <div class="backup-code-actions">
-            <button type="button" class="ghost-btn" onclick="copyBackupCodes()">Copy Backup Codes</button>
-            <button type="button" class="ghost-btn" onclick="downloadBackupCodes()">Download Backup Codes</button>
-          </div>
-          <p class="hint-text">Save these codes somewhere safe. Each code works once if you lose access to your authenticator app.</p>
-        </div>
-
         <div class="secret-box recovery-box">
           <label>Recovery Policy</label>
           <ul class="recovery-list">
-            <li>Download or copy your backup codes before finishing setup.</li>
-            <li>Each backup code works one time only.</li>
-            <li>If your backup reserve gets low, reset and re-enroll 2FA before you get locked out.</li>
+            <li>Code Recall now uses Firebase Auth native multi-factor enrollment.</li>
+            <li>Keep your authenticator app backed up before finishing setup.</li>
+            <li>If you lose access, reset the enrolled factor from Firebase Console or the Admin SDK.</li>
           </ul>
         </div>
       </div>
@@ -83,8 +80,8 @@
       </div>
 
       <form id="mfaForm" class="mfa-form">
-        <label for="mfaCodeInput">Authenticator Code or Backup Code</label>
-        <input id="mfaCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter 6-digit code or backup code" maxlength="12" required />
+        <label for="mfaCodeInput">Authenticator Code</label>
+        <input id="mfaCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Enter 6-digit code" maxlength="8" required />
         <button id="mfaSubmitBtn" type="submit" class="primary-btn">Verify and Continue</button>
       </form>
 
@@ -99,6 +96,6 @@
   </main>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/super-admin-mfa.js?v=20260505b"></script>
+  <script type="module" src="scripts/super-admin-mfa.js?v=20260509a"></script>
 </body>
 </html>

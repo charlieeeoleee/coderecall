@@ -6,6 +6,11 @@ body{
   color:#fff;
 }
 
+button,
+a{
+  pointer-events:auto;
+}
+
 .mfa-shell{
   min-height:100vh;
   display:flex;
@@ -32,6 +37,12 @@ body{
   margin-bottom:22px;
 }
 
+.brand-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
 .logo{
   font-family:'Press Start 2P',cursive;
   font-size:18px;
@@ -47,6 +58,21 @@ body{
   font-size:12px;
   font-weight:700;
   letter-spacing:0.04em;
+}
+
+.theme-toggle{
+  width:42px;
+  height:42px;
+  border:none;
+  border-radius:50%;
+  background:linear-gradient(135deg,#ff2e97,#22d3ee);
+  color:#fff;
+  font-size:18px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow:0 10px 24px rgba(34,211,238,0.2);
 }
 
 .mfa-copy h1{
@@ -120,11 +146,23 @@ body{
 .mfa-qr-image{
   width:220px;
   height:220px;
-  object-fit:contain;
   border-radius:18px;
   background:#fff;
   padding:10px;
   box-sizing:border-box;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#1f2937;
+  font-size:13px;
+  font-weight:700;
+  overflow:hidden;
+}
+
+.mfa-qr-image svg{
+  width:100%;
+  height:100%;
+  display:block;
 }
 
 .secret-value-row{
@@ -155,6 +193,13 @@ body{
   display:inline-flex;
   align-items:center;
   justify-content:center;
+}
+
+.ghost-btn:disabled,
+.secondary-btn:disabled,
+.primary-btn:disabled{
+  cursor:not-allowed;
+  opacity:0.55;
 }
 
 .primary-btn{
@@ -257,6 +302,57 @@ body{
   margin-top:14px;
 }
 
+body.light-mode{
+  background:linear-gradient(135deg,#f7f4ff,#dff7ff);
+  color:#16122d;
+}
+
+body.light-mode .mfa-card{
+  background:rgba(255,255,255,0.92);
+  border-color:rgba(35,26,80,0.1);
+  box-shadow:0 24px 64px rgba(41,33,82,0.18);
+}
+
+body.light-mode .panel-block,
+body.light-mode .secret-box{
+  background:rgba(248,247,255,0.82);
+  border-color:rgba(35,26,80,0.12);
+}
+
+body.light-mode .mfa-copy p,
+body.light-mode .step-list,
+body.light-mode .hint-text,
+body.light-mode .recovery-list{
+  color:rgba(22,18,45,0.72);
+}
+
+body.light-mode .secret-box label{
+  color:#0f766e;
+}
+
+body.light-mode .secondary-btn,
+body.light-mode .ghost-btn,
+body.light-mode .link-btn,
+body.light-mode .backup-code-chip{
+  background:rgba(35,26,80,0.06);
+  color:#201a46;
+  border-color:rgba(35,26,80,0.12);
+}
+
+body.light-mode .mfa-form input{
+  background:rgba(255,255,255,0.86);
+  color:#16122d;
+  border-color:rgba(35,26,80,0.18);
+}
+
+body.light-mode .mfa-form input::placeholder{
+  color:rgba(22,18,45,0.38);
+}
+
+body.light-mode .theme-toggle{
+  background:linear-gradient(135deg,#ff8a2a,#ff2e97);
+}
+
 @media(max-width:640px){
   .mfa-card{
     padding:22px 18px;
@@ -267,8 +363,12 @@ body{
   }
 
   .brand-row{
-    flex-direction:column;
     align-items:flex-start;
+  }
+
+  .brand-actions{
+    flex-wrap:wrap;
+    justify-content:flex-end;
   }
 
   .mfa-copy h1{

@@ -658,6 +658,10 @@ function arrayEquals(a, b) {
 }
 
 export function renderQrSvgDataUri(value, size = 220) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderQrSvgMarkup(value, size))}`;
+}
+
+export function renderQrSvgMarkup(value, size = 220) {
   const qr = new QRCode(null, QRErrorCorrectLevel.M);
   qr.addData(new QR8bitByte(value));
   qr.make();
@@ -674,7 +678,7 @@ export function renderQrSvgDataUri(value, size = 220) {
     }
   }
 
-  const svg = [
+  return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${fullSize} ${fullSize}" shape-rendering="crispEdges">`,
     `<rect width="100%" height="100%" fill="#ffffff"/>`,
     `<g fill="#000000">`,
@@ -682,6 +686,4 @@ export function renderQrSvgDataUri(value, size = 220) {
     `</g>`,
     `</svg>`
   ].join("");
-
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
