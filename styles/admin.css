@@ -76,6 +76,18 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .review-list { display: grid; gap: 12px; }
 .review-item { padding: 16px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
 .review-item h5 { margin: 0 0 8px; font-size: 15px; }
+.admin-loading-card { position: relative; overflow: hidden; }
+.admin-loading-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: translateX(-100%);
+  animation: adminShimmer 1.2s infinite;
+}
+@keyframes adminShimmer {
+  to { transform: translateX(100%); }
+}
 .review-item p { margin: 0 0 8px; font-size: 13px; opacity: 0.85; }
 .review-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .meta-pill { display: inline-flex; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.08); }
@@ -315,4 +327,8 @@ body.light-mode .secondary-btn {
     white-space: normal;
     text-align: left;
   }
+}
+.slow-load-warning{
+  color:#8effe4 !important;
+  font-weight:700;
 }

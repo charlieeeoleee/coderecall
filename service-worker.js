@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260510";
+const CACHE_VERSION = "code-recall-v20260510i";
 const APP_SHELL = [
   "./",
   "./offline.html",
@@ -46,6 +46,9 @@ const APP_SHELL = [
   "./scripts/firebase-config.runtime.js",
   "./scripts/sound.js",
   "./scripts/role-utils.js",
+  "./scripts/career-path.js",
+  "./scripts/item-feedback.js",
+  "./scripts/item-feedback-loader.js",
   "./assets/favicon.png",
   "./assets/logo-dark.png",
   "./assets/logo-light.png"
@@ -105,11 +108,16 @@ async function networkFirstPage(request) {
   }
 }
 
+function isFreshAssetRequest(request) {
+  const url = new URL(request.url);
+  return [".js", ".css"].some((extension) => url.pathname.endsWith(extension));
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (!isCacheableRequest(request)) return;
 
-  if (request.mode === "navigate") {
+  if (request.mode === "navigate" || isFreshAssetRequest(request)) {
     event.respondWith(networkFirstPage(request));
     return;
   }

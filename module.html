@@ -232,6 +232,7 @@
         <p id="moduleNextStepText">Read the mission brief, then work through the module until the challenge unlocks.</p>
       </div>
       <button class="module-btn secondary-btn" onclick="goBackToLevels()">Back to Modules</button>
+      <button class="module-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="module">Report Issue / Feedback</button>
       <button class="module-btn success-btn" id="moduleCheckpointBtn" disabled>Checkpoint clears after reading</button>
       <button class="module-btn primary-btn" onclick="startQuiz()" id="moduleActionBtn">Continue</button>
     </div>
@@ -1846,6 +1847,7 @@
   </script>
   <script src="scripts/firebase-config.runtime.js"></script>
   <script type="module" src="scripts/module.js?v=20260423b"></script>
+  <script type="module" src="scripts/item-feedback-loader.js?v=20260510a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

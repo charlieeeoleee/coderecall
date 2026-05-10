@@ -245,6 +245,11 @@ body{
   animation:fadeSlideUp 0.6s ease both;
 }
 
+.slow-load-warning{
+  color:#8effe4 !important;
+  font-weight:700;
+}
+
 .settings-card:nth-child(1){ animation-delay:0.06s; }
 .settings-card:nth-child(2){ animation-delay:0.12s; }
 .settings-card:nth-child(3){ animation-delay:0.18s; }
@@ -629,6 +634,33 @@ body{
 .progress-info p{
   margin:10px 0;
   font-size:15px;
+}
+
+.career-path-panel{
+  margin-top:18px;
+  padding:16px;
+  border-radius:16px;
+  background:rgba(10,16,42,0.24);
+  border:1px solid rgba(255,255,255,0.08);
+}
+
+.career-path-label{
+  display:block;
+  margin-bottom:8px;
+  color:#7ff7ff;
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+}
+
+.career-path-panel strong{
+  display:block;
+  font-size:22px;
+  margin-bottom:4px;
+}
+
+.career-path-panel p{
+  margin:6px 0;
 }
 
 .protection-grid{
@@ -1432,10 +1464,72 @@ body.access-reduced-motion *::after{
   box-shadow: 0 0 8px rgba(255, 95, 138, 0.45);
 }
 
+.career-bar {
+  background: linear-gradient(90deg, #ff2e97, #00e5ff, #32ffc7);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.42);
+}
+
 .progress-text {
   font-size: 12px;
   opacity: 0.85;
   margin: 0 0 12px 0;
+}
+
+.performance-diagnostics-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;
+  margin:16px 0;
+}
+
+.performance-stat,
+.performance-log-row{
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(20,14,52,0.42);
+  border-radius:12px;
+  padding:14px;
+}
+
+.performance-stat span,
+.performance-log-row span{
+  display:block;
+  font-size:12px;
+  color:#c9c1ef;
+  margin-bottom:6px;
+}
+
+.performance-stat strong,
+.performance-log-row strong{
+  color:#fff;
+}
+
+.performance-stat p{
+  margin:8px 0 0;
+  color:#d8d1ef;
+  font-size:13px;
+}
+
+.performance-log-list{
+  display:grid;
+  gap:10px;
+  margin-bottom:16px;
+}
+
+.performance-log-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.performance-log-row.good strong{ color:#7fffd6; }
+.performance-log-row.watch strong{ color:#ffd166; }
+.performance-log-row.slow strong{ color:#ff8fab; }
+
+.performance-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
 }
 
 body.light-mode .progress-bar-container {
@@ -1444,6 +1538,32 @@ body.light-mode .progress-bar-container {
 
 body.light-mode .progress-text {
   color: #555;
+}
+
+body.light-mode .performance-stat,
+body.light-mode .performance-log-row{
+  background:rgba(255,255,255,0.78);
+  border-color:rgba(42,34,85,0.14);
+}
+
+body.light-mode .performance-stat span,
+body.light-mode .performance-log-row span,
+body.light-mode .performance-stat p{
+  color:#5a5470;
+}
+
+body.light-mode .performance-stat strong,
+body.light-mode .performance-log-row strong{
+  color:#19142d;
+}
+
+body.light-mode .career-path-panel{
+  background:#f6f8fc;
+  border-color:rgba(0,0,0,0.08);
+}
+
+body.light-mode .career-path-label{
+  color:#007ca6;
 }
 
 body.light-mode .protection-item{

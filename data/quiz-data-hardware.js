@@ -58,9 +58,9 @@ export const hardwareQuizData = {
           question: "What is the use of a CMOS battery to the motherboard?",
           choices: [
             "To provide power to the motherboard",
-            "To store the system date, time, and BIOS/UEFI settings",
+            "To power the CMOS/RTC memory that retains the system date, time, and BIOS/UEFI settings",
             "To keep the motherboard working properly",
-            "To run windows"
+            "To run Windows"
           ],
           answer: "B"
         },
@@ -109,7 +109,7 @@ export const hardwareQuizData = {
           choices: [
             "Cache",
             "Terabytes",
-            "Hardrive",
+            "Hard Drive",
             "Flash drive"
           ],
           answer: "A"
@@ -802,7 +802,7 @@ export const hardwareQuizData = {
           choices: [
             "Using your computer",
             "Eating",
-            "C: Organizing your things",
+            "Organizing your things",
             "Taking notes"
           ],
           answer: "B"
@@ -979,10 +979,10 @@ export const hardwareQuizData = {
           sub: 3,
           question: "The term UEFI means:",
           choices: [
-            "unified extension firmware interface",
-            "unity extension firmware internet",
-            "unified extensible firmware interface",
-            "unity extensive frostwire interconnect"
+            "Unified Extension Firmware Interface",
+            "Unity Extension Firmware Internet",
+            "Unified Extensible Firmware Interface",
+            "Unity Extensive Frostwire Interconnect"
           ],
           answer: "C"
         }
@@ -1020,7 +1020,7 @@ export const hardwareQuizData = {
             "Motherboard",
             "Firmware",
             "BIOS",
-            "CPU -"
+            "CPU"
           ],
           answer: "A"
         }
@@ -1816,7 +1816,7 @@ export const hardwareQuizData = {
           question: "What is the primary function of a Motherboard's CMOS battery?",
           choices: [
             "To provide power to the CPU fan",
-            "To store the system date, time, and BIOS settings while the power is off",
+            "To power the CMOS/RTC memory that retains the system date, time, and BIOS settings while the power is off",
             "To charge the laptop battery",
             "To increase the internet speed"
           ],
@@ -2778,5 +2778,4 @@ export const hardwareQuizData = {
     }
   }
 };
-
 

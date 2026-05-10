@@ -81,6 +81,7 @@
 
       <div class="quiz-actions">
       <button class="quiz-btn secondary-btn" id="backBtn" onclick="goBackToSubject()">Back</button>
+        <button class="quiz-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="assessment_question">Report This Item</button>
         <button class="quiz-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next &rarr;</button>
       </div>
     </section>
@@ -135,6 +136,7 @@
         </div>
       </div>
       <p id="resultRecoverySummary" class="result-recovery-summary" hidden></p>
+      <button class="quiz-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="assessment">Report Issue / Feedback</button>
       <button class="quiz-btn primary-btn" onclick="finishQuizFlow()">Return to Subject</button>
     </div>
   </div>
@@ -162,6 +164,7 @@
 
   <script src="scripts/firebase-config.runtime.js"></script>
   <script type="module" src="scripts/quiz.js?v=20260430f"></script>
+  <script type="module" src="scripts/item-feedback-loader.js?v=20260510a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

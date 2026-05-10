@@ -46,8 +46,8 @@ export const hardwarePretestQuestions = [
   },
   {
     question: "What is the primary function of a motherboard's CMOS battery?",
-    choices: ["To provide power to the CPU fan", "To store the system date, time, and BIOS settings while the power is off", "To charge the laptop battery", "To increase the internet speed"],
-    answer: "To store the system date, time, and BIOS settings while the power is off"
+    choices: ["To provide power to the CPU fan", "To power the CMOS/RTC memory that retains the system date, time, and BIOS settings while the power is off", "To charge the laptop battery", "To increase the internet speed"],
+    answer: "To power the CMOS/RTC memory that retains the system date, time, and BIOS settings while the power is off"
   },
   {
     question: "Which component is known as the center of activity where all devices in a computer are connected?",
@@ -66,8 +66,8 @@ export const hardwarePretestQuestions = [
   },
   {
     question: "What is the main function of the CMOS battery on the motherboard?",
-    choices: ["Providing power to monitor", "Storing information in the BIOS", "Cooling the CPU", "Running the operating system"],
-    answer: "Storing information in the BIOS"
+    choices: ["Providing power to monitor", "Powering the CMOS/RTC memory that retains BIOS/UEFI settings", "Cooling the CPU", "Running the operating system"],
+    answer: "Powering the CMOS/RTC memory that retains BIOS/UEFI settings"
   },
   {
     question: "Which of these is the first step when starting the disassembly of a personal computer?",

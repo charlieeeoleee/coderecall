@@ -42,6 +42,8 @@
   let currentNarrationWordIndex = 0;
   let narrationHighlightTimer = null;
   let narrationRestoreRecords = [];
+  const PERFORMANCE_LOG_KEY = "codeRecallPerfLogs";
+  const PERFORMANCE_LOG_LIMIT = 30;
 
   const PROTECTED_CONTENT_PATHS = new Set([
     "module.html",
@@ -887,6 +889,40 @@
     });
   }
 
+  function savePerformanceLog(entry) {
+    try {
+      const logs = JSON.parse(localStorage.getItem(PERFORMANCE_LOG_KEY) || "[]");
+      const nextLogs = Array.isArray(logs) ? logs.slice(-PERFORMANCE_LOG_LIMIT + 1) : [];
+      nextLogs.push(entry);
+      localStorage.setItem(PERFORMANCE_LOG_KEY, JSON.stringify(nextLogs));
+    } catch {
+      // Performance logging should never block page startup.
+    }
+  }
+
+  function initPerformanceLogger() {
+    const startedAt = performance.now();
+    window.addEventListener("load", () => {
+      window.requestAnimationFrame(() => {
+        const navigation = performance.getEntriesByType("navigation")[0];
+        const loadTime = Math.round(navigation?.duration || (performance.now() - startedAt));
+        const domReady = Math.round(navigation?.domContentLoadedEventEnd || 0);
+        const page = location.pathname.split("/").pop() || "index.html";
+        const entry = {
+          page,
+          loadTime,
+          domReady,
+          at: new Date().toISOString()
+        };
+
+        savePerformanceLog(entry);
+        if (loadTime > 1800) {
+          console.info(`[Code Recall perf] ${page} loaded in ${loadTime}ms`, entry);
+        }
+      });
+    }, { once: true });
+  }
+
   function isProtectedContentPage() {
     const page = location.pathname.split("/").pop() || "index.html";
     return PROTECTED_CONTENT_PATHS.has(page);
@@ -962,6 +998,7 @@
   window.stopCodeRecallNarration = stopCodeRecallNarration;
   window.toggleCodeRecallNarrationPause = toggleCodeRecallNarrationPause;
 
+  initPerformanceLogger();
   registerOfflineCache();
   initSelectiveContentProtection();
 })();

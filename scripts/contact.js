@@ -21,6 +21,15 @@ import { resolveUserRole, roleMeetsMinimum } from "./role-utils.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const CONTACT_CATEGORY_LABELS = {
+  concern: "Learning Concern",
+  privacy: "Privacy Concern",
+  item_feedback: "Item Feedback",
+  feedback: "System Feedback",
+  comment: "General Comment",
+  bug: "Bug Report",
+  idea: "Feature Idea"
+};
 
 let currentUser = null;
 let currentRole = "guest";
@@ -35,6 +44,7 @@ let currentAdminSort = "newest";
 let lastRenderedContactMessages = [];
 let myContactMessagesCache = [];
 let adminContactMessagesCache = [];
+const SLOW_CONTACT_LOAD_DELAY_MS = 4200;
 
 function goHome() {
   window.location.href = "index.html";
@@ -121,6 +131,10 @@ function buildTicketId() {
   const timePart = Date.now().toString().slice(-6);
   const randomPart = Math.floor(Math.random() * 900 + 100);
   return `TCK-${timePart}${randomPart}`;
+}
+
+function getContactCategoryLabel(category) {
+  return CONTACT_CATEGORY_LABELS[category] || category || "System Feedback";
 }
 
 function getLearnerStatusInfo(item) {
@@ -714,7 +728,7 @@ function renderMyMessages(messages, highlightedIds = []) {
           <span class="ticket-id">${escapeHtml(item.ticketId || item.id || "TCK-PENDING")}</span>
           <h3>${escapeHtml(item.subject || "Untitled message")}</h3>
           <div class="message-meta-wrap">
-            <span class="message-meta">${escapeHtml(item.category || "feedback")}</span>
+            <span class="message-meta">${escapeHtml(getContactCategoryLabel(item.category))}</span>
             <span class="message-meta learner-status-chip ${escapeHtml(getLearnerStatusInfo(item).className)}">${escapeHtml(getLearnerStatusInfo(item).label)}</span>
             ${highlightedSet.has(item.id) ? `<span class="message-meta reply-alert-pill">New Reply</span>` : ""}
           </div>
@@ -761,6 +775,23 @@ function renderListLoading(targetId, title, message) {
       <p>${escapeHtml(message)}</p>
     </article>
   `;
+}
+
+function startSlowContactNotice(targetId, message) {
+  return window.setTimeout(() => {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    target.innerHTML = `
+      <article class="message-card empty-card">
+        <h3>Still loading...</h3>
+        <p>${escapeHtml(message)}</p>
+      </article>
+    `;
+  }, SLOW_CONTACT_LOAD_DELAY_MS);
+}
+
+function clearSlowContactNotice(timerId) {
+  window.clearTimeout(timerId);
 }
 
 async function fetchContactMessagesForCurrentRole() {
@@ -893,7 +924,7 @@ function openTicketDetailModal(messageId) {
       </div>
       <div class="ticket-detail-stat">
         <span class="ticket-detail-stat-label">Category</span>
-        <div class="ticket-detail-stat-value">${escapeHtml(item.category || "feedback")}</div>
+        <div class="ticket-detail-stat-value">${escapeHtml(getContactCategoryLabel(item.category))}</div>
       </div>
       <div class="ticket-detail-stat">
         <span class="ticket-detail-stat-label">${showAdminView ? "Status" : "Learner Status"}</span>
@@ -1316,7 +1347,7 @@ function renderAdminInbox(messages) {
           <span class="ticket-id">${escapeHtml(item.ticketId || item.id || "TCK-PENDING")}</span>
           <h3>${escapeHtml(item.subject || "Untitled message")}</h3>
           <div class="message-meta-wrap">
-            <span class="message-meta">${escapeHtml(item.category || "feedback")}</span>
+            <span class="message-meta">${escapeHtml(getContactCategoryLabel(item.category))}</span>
             <span class="message-meta">${escapeHtml(item.status || "open")}</span>
             <span class="message-meta admin-ticket-state ${escapeHtml(ticketState.className)}">${escapeHtml(ticketState.label)}</span>
             <span class="message-meta">${escapeHtml(item.createdByRole || "user")}</span>
@@ -1478,8 +1509,17 @@ function startContactMessagesSubscription() {
   if (!mySource) return;
 
   renderListLoading("myMessagesList", "Loading messages...", "Fetching your contact history.");
+  const myMessagesSlowTimer = startSlowContactNotice(
+    "myMessagesList",
+    "Your messages are taking longer than usual. Keep this page open while we reconnect."
+  );
+  let adminInboxSlowTimer = null;
   if (roleMeetsMinimum(currentRole, "admin")) {
     renderListLoading("adminInboxList", "Loading inbox...", "Fetching learner contact messages.");
+    adminInboxSlowTimer = startSlowContactNotice(
+      "adminInboxList",
+      "The admin inbox is still loading. This usually means Firebase is responding slowly."
+    );
   }
 
   const unsubscribers = [];
@@ -1487,10 +1527,12 @@ function startContactMessagesSubscription() {
   unsubscribers.push(onSnapshot(
     mySource,
     (snapshot) => {
+      clearSlowContactNotice(myMessagesSlowTimer);
       myContactMessagesCache = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
       renderContactPanels();
     },
     (error) => {
+      clearSlowContactNotice(myMessagesSlowTimer);
       console.error("Unable to load your contact messages:", error);
       renderContactLoadError({ myMessages: true, adminInbox: false });
     }
@@ -1512,6 +1554,7 @@ function startContactMessagesSubscription() {
       unsubscribers.push(onSnapshot(
       entrySource,
       (snapshot) => {
+        clearSlowContactNotice(adminInboxSlowTimer);
         const nextCache = new Map();
         snapshot.docs.forEach((entry) => {
           nextCache.set(entry.id, { id: entry.id, ...entry.data() });
@@ -1520,6 +1563,7 @@ function startContactMessagesSubscription() {
         rebuildMessages();
       },
       (error) => {
+        clearSlowContactNotice(adminInboxSlowTimer);
         console.error("Unable to load admin contact messages:", error);
         renderContactLoadError({ myMessages: false, adminInbox: true });
       }
@@ -1529,10 +1573,12 @@ function startContactMessagesSubscription() {
     unsubscribers.push(onSnapshot(
       adminSource,
       (snapshot) => {
+        clearSlowContactNotice(adminInboxSlowTimer);
         adminContactMessagesCache = snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
         renderContactPanels();
       },
       (error) => {
+        clearSlowContactNotice(adminInboxSlowTimer);
         console.error("Unable to load admin contact messages:", error);
         renderContactLoadError({ myMessages: false, adminInbox: true });
       }

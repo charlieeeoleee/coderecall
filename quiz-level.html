@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/quiz-level.css?v=20260430f">
+  <link rel="stylesheet" href="styles/quiz-level.css?v=20260510a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -81,6 +81,7 @@
 
       <div class="level-actions">
       <button class="level-btn secondary-btn" id="backBtn" onclick="goBackToLevels()">Back</button>
+        <button class="level-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="quiz_level_question">Report This Item</button>
         <button class="level-btn primary-btn" id="nextBtn" onclick="handleNext()" disabled>Next &rarr;</button>
       </div>
     </section>
@@ -99,7 +100,10 @@
       <h3>Level Complete</h3>
       <p id="resultMessage">You finished this level.</p>
       <p id="resultRecoverySummary" class="result-recovery-summary" hidden></p>
-      <button class="level-btn primary-btn" onclick="finishLevelFlow()" id="finishLevelBtn">Next Level</button>
+      <div class="level-result-actions">
+        <button class="level-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="quiz_level">Report Issue / Feedback</button>
+        <button class="level-btn primary-btn" onclick="finishLevelFlow()" id="finishLevelBtn">Next Level</button>
+      </div>
     </div>
   </div>
 
@@ -132,8 +136,9 @@
     };
   </script>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/quiz-level.js?v=20260430f"></script>
-  <script src="scripts/loading.js?v=20260420a" defer></script>
+  <script type="module" src="scripts/quiz-level.js?v=20260510e"></script>
+  <script type="module" src="scripts/item-feedback-loader.js?v=20260510a"></script>
+  <script src="scripts/loading.js?v=20260510a" defer></script>
 </body>
 </html>
 

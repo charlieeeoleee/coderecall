@@ -136,6 +136,11 @@ body{
   padding: 120px 0 110px;
 }
 
+.slow-load-warning{
+  color:#8effe4 !important;
+  font-weight:700;
+}
+
 .level-header{
   text-align: center;
   padding: 28px 24px;
@@ -480,8 +485,17 @@ body{
   text-align: center;
 }
 
+.level-modal-box h3{
+  margin: 0 0 14px;
+}
+
+.level-modal-box > p:not(.result-recovery-summary){
+  margin: 0 0 20px;
+  line-height: 1.65;
+}
+
 .result-recovery-summary{
-  margin: 16px 0 0;
+  margin: 0 0 18px;
   padding: 14px 16px;
   border-radius: 16px;
   background: rgba(53, 224, 200, 0.12);
@@ -490,6 +504,18 @@ body{
   font-size: 14px;
   font-weight: 700;
   line-height: 1.6;
+}
+
+.level-result-actions{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 0.55fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.level-result-actions .level-btn{
+  width: 100%;
+  min-height: 48px;
 }
 
 body.light-mode .result-recovery-summary{
@@ -640,6 +666,10 @@ body.light-mode .sound-toggle-slider{
 
   .level-btn{
     width: 100%;
+  }
+
+  .level-result-actions{
+    grid-template-columns: 1fr;
   }
 
   .level-theme-toggle{

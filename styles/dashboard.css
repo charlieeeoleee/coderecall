@@ -239,7 +239,7 @@ body{
 /* GRID */
 .stats-grid{
   display:grid;
-  grid-template-columns:repeat(3, 1fr);
+  grid-template-columns:repeat(4, 1fr);
   gap:20px;
 }
 
@@ -358,6 +358,35 @@ body{
   align-items:center;
   gap:12px;
   margin-bottom:12px;
+}
+
+.career-role-card p{
+  margin-bottom:6px;
+}
+
+.career-role-path{
+  display:block;
+  margin-bottom:10px;
+  font-size:13px;
+  color:#7ff7ff;
+  font-weight:800;
+}
+
+.career-role-track{
+  margin:10px 0 8px;
+}
+
+.career-role-fill{
+  height:100%;
+  border-radius:10px;
+  background:linear-gradient(90deg,#ff2e97,#00e5ff,#32ffc7);
+  transition:width 0.4s ease;
+}
+
+.career-role-card small{
+  display:block;
+  line-height:1.45;
+  opacity:0.84;
 }
 
 .section-head-actions{
@@ -936,6 +965,10 @@ body.light-mode .progress-bar{
   background:#ddd;
 }
 
+body.light-mode .career-role-path{
+  color:#007ca6;
+}
+
 body.light-mode .user-top{
   background:#ffffff;
   box-shadow:0 5px 15px rgba(0,0,0,0.08);
@@ -1022,6 +1055,12 @@ body.light-mode .view-full-btn{
 }
 
 /* RESPONSIVE */
+@media(max-width:1400px){
+  .stats-grid{
+    grid-template-columns:repeat(2, 1fr);
+  }
+}
+
 @media(max-width:1100px){
   .stats-grid{
     grid-template-columns:1fr;
@@ -1306,6 +1345,11 @@ body.light-mode .view-full-btn{
 
 .compact-empty-state{
   margin-top:0;
+}
+
+.slow-load-warning{
+  color:#8effe4 !important;
+  font-weight:700;
 }
 
 .is-loading{

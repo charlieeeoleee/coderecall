@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles/settings.css?v=20260509b">
+  <link rel="stylesheet" href="styles/settings.css?v=20260510a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -53,7 +53,7 @@
           </button>
           <div>
           <h2 class="page-title">Settings</h2>
-          <p class="page-subtitle">Manage your account, preferences, and system actions.</p>
+          <p class="page-subtitle" id="settingsLoadStatus">Manage your account, preferences, and system actions.</p>
           </div>
         </div>
 
@@ -360,7 +360,51 @@
               <div id="subjectProgressBar" class="progress-bar subject-bar"></div>
             </div>
             <p id="subjectProgressText" class="progress-text">0% completed</p>
+
+            <div class="career-path-panel">
+              <span class="career-path-label">Career Role</span>
+              <strong id="careerPathTitle">Hardware Trainee</strong>
+              <p id="careerPathSubject">Computer Hardware career path</p>
+              <div class="progress-bar-container">
+                <div id="careerPathFill" class="progress-bar career-bar"></div>
+              </div>
+              <p id="careerPathNext" class="progress-text">Next role unlocks as you complete more learning activities.</p>
+            </div>
           </div>
+        </div>
+
+        <!-- PERFORMANCE DIAGNOSTICS -->
+        <div class="card settings-card">
+          <h3>&#9889; Performance Diagnostics</h3>
+          <p class="settings-section-note">
+            Review recent page load times stored on this device and refresh the app cache when pages feel delayed.
+          </p>
+
+          <div class="performance-diagnostics-grid">
+            <article class="performance-stat">
+              <span>Latest Page</span>
+              <strong id="perfLatestPage">No data yet</strong>
+              <p id="perfLatestLoad">Open a few pages to collect timing data.</p>
+            </article>
+            <article class="performance-stat">
+              <span>Slowest Recent Page</span>
+              <strong id="perfSlowestPage">No data yet</strong>
+              <p id="perfSlowestLoad">Slow pages will appear here.</p>
+            </article>
+          </div>
+
+          <div id="perfRecentList" class="performance-log-list">
+            <article class="performance-log-row">
+              <span>No performance logs yet.</span>
+              <strong>--</strong>
+            </article>
+          </div>
+
+          <div class="performance-actions">
+            <button type="button" class="action-btn secondary-action-btn" onclick="refreshPerformanceDiagnostics()">Refresh Diagnostics</button>
+            <button type="button" class="action-btn warning-btn" onclick="refreshAppCache()">Refresh App Cache</button>
+          </div>
+          <p id="performanceStatus" class="profile-edit-status"></p>
         </div>
 
         <!-- ACCOUNT PROTECTION -->
@@ -548,8 +592,8 @@
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/settings.js?v=20260509b"></script>
-  <script src="scripts/loading.js?v=20260509b" defer></script>
+  <script type="module" src="scripts/settings.js?v=20260510d"></script>
+  <script src="scripts/loading.js?v=20260510a" defer></script>
 </body>
 </html>
 

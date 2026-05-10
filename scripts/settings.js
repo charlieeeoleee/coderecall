@@ -38,6 +38,7 @@ import {
 } from "./retention-store.js";
 import { clearWrongAnswerReview } from "./review-store.js";
 import { hasTotpFactor } from "./firebase-native-mfa.js";
+import { buildCareerSubjectsFromProgress, getCareerProgress } from "./career-path.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -54,6 +55,7 @@ let currentRole = "guest";
 let pendingProfilePhotoDataUrl = "";
 let currentLoginType = "Unknown";
 let currentVerificationState = "Unknown";
+let latestUserSettingsData = null;
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 const DEFAULT_RETENTION_SCHEDULE = {
@@ -68,6 +70,108 @@ const ACCESSIBILITY_DEFAULTS = {
   narrationSpeed: 1
 };
 const TEXT_SIZE_OPTIONS = new Set(["normal", "large", "extra-large"]);
+const SETTINGS_STATUS_DEFAULT = "Manage your account, preferences, and system actions.";
+const SLOW_LOAD_DELAY_MS = 4200;
+const PERFORMANCE_LOG_KEY = "codeRecallPerfLogs";
+
+function setSettingsLoadStatus(message = SETTINGS_STATUS_DEFAULT, isWarning = false) {
+  const status = document.getElementById("settingsLoadStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("slow-load-warning", isWarning);
+}
+
+function startSlowSettingsNotice(message = "Still loading settings. Slow connections can take a few more seconds.") {
+  return window.setTimeout(() => {
+    setSettingsLoadStatus(message, true);
+  }, SLOW_LOAD_DELAY_MS);
+}
+
+function stopSlowSettingsNotice(timerId) {
+  window.clearTimeout(timerId);
+  setSettingsLoadStatus();
+}
+
+function readPerformanceLogs() {
+  try {
+    const logs = JSON.parse(localStorage.getItem(PERFORMANCE_LOG_KEY) || "[]");
+    return Array.isArray(logs) ? logs.filter((entry) => entry && entry.page) : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatLoadTime(value) {
+  const ms = Number(value || 0);
+  if (!Number.isFinite(ms) || ms <= 0) return "--";
+  return ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${Math.round(ms)}ms`;
+}
+
+function getLoadClass(loadTime) {
+  const value = Number(loadTime || 0);
+  if (value >= 3000) return "slow";
+  if (value >= 1800) return "watch";
+  return "good";
+}
+
+window.refreshPerformanceDiagnostics = function() {
+  const logs = readPerformanceLogs();
+  const latest = logs[logs.length - 1] || null;
+  const slowest = logs.reduce((current, entry) => {
+    if (!current) return entry;
+    return Number(entry.loadTime || 0) > Number(current.loadTime || 0) ? entry : current;
+  }, null);
+
+  const latestPage = document.getElementById("perfLatestPage");
+  const latestLoad = document.getElementById("perfLatestLoad");
+  const slowestPage = document.getElementById("perfSlowestPage");
+  const slowestLoad = document.getElementById("perfSlowestLoad");
+  const list = document.getElementById("perfRecentList");
+
+  if (latestPage) latestPage.textContent = latest?.page || "No data yet";
+  if (latestLoad) latestLoad.textContent = latest ? `Loaded in ${formatLoadTime(latest.loadTime)}` : "Open a few pages to collect timing data.";
+  if (slowestPage) slowestPage.textContent = slowest?.page || "No data yet";
+  if (slowestLoad) slowestLoad.textContent = slowest ? `Slowest recent load: ${formatLoadTime(slowest.loadTime)}` : "Slow pages will appear here.";
+
+  if (!list) return;
+  const recentLogs = logs.slice(-5).reverse();
+  if (!recentLogs.length) {
+    list.innerHTML = `
+      <article class="performance-log-row">
+        <span>No performance logs yet.</span>
+        <strong>--</strong>
+      </article>
+    `;
+    return;
+  }
+
+  list.innerHTML = recentLogs.map((entry) => `
+    <article class="performance-log-row ${getLoadClass(entry.loadTime)}">
+      <span>${entry.page}</span>
+      <strong>${formatLoadTime(entry.loadTime)}</strong>
+    </article>
+  `).join("");
+};
+
+window.refreshAppCache = async function() {
+  const status = document.getElementById("performanceStatus");
+  try {
+    if (status) status.textContent = "Refreshing app cache...";
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.update()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((key) => key.startsWith("code-recall-")).map((key) => caches.delete(key)));
+    }
+    if (status) status.textContent = "App cache refreshed. Reloading now...";
+    window.setTimeout(() => window.location.reload(), 500);
+  } catch (error) {
+    console.error("Unable to refresh app cache.", error);
+    if (status) status.textContent = "Unable to refresh the app cache right now.";
+  }
+};
 
 function readBooleanPreference(key, fallback = false) {
   const value = localStorage.getItem(key);
@@ -220,11 +324,13 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUser = user;
     currentIsGuest = false;
+    const slowLoadTimer = startSlowSettingsNotice();
     currentRole = await resolveUserRole(db, user);
     applyRoleNavigation(currentRole, "settings.html");
-    await loadUserSettings();
+    const settingsData = await loadUserSettings();
     loadPreferences();
-    loadProgress();
+    loadProgress(settingsData);
+    stopSlowSettingsNotice(slowLoadTimer);
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
@@ -309,34 +415,39 @@ async function loadUserSettings() {
   let name = "User";
   let email = currentUser.email || "No email";
   let photo = currentUser.photoURL || "https://i.pravatar.cc/80?img=12";
+  let userData = {};
 
   if (!docSnap.exists()) {
     name = currentUser.displayName || currentUser.email || "User";
 
-    await setDoc(userRef, {
+    userData = {
       xp: 0,
       xpWeekly: 0,
       xpChange: 0,
       name,
       photo,
-      email
-    });
+      email,
+      progress: {},
+      results: {}
+    };
+
+    await setDoc(userRef, userData);
   } else {
-    const data = docSnap.data();
+    userData = docSnap.data() || {};
 
     name =
-      data.name ||
+      userData.name ||
       currentUser.displayName ||
       currentUser.email ||
       "User";
 
     email =
-      data.email ||
+      userData.email ||
       currentUser.email ||
       "No email";
 
     photo =
-      data.photo ||
+      userData.photo ||
       currentUser.photoURL ||
       "https://i.pravatar.cc/80?img=12";
   }
@@ -376,6 +487,8 @@ async function loadUserSettings() {
   verificationStatus.className = `status-pill ${verificationClass}`;
   updateAccountActionVisibility();
   updateAccountProtectionCard();
+  latestUserSettingsData = userData;
+  return userData;
 }
 
 /* =========================
@@ -667,9 +780,9 @@ function wireRetentionScheduleControls() {
 /* =========================
    PROGRESS
 ========================= */
-function loadProgress() {
+function loadProgress(userData = latestUserSettingsData) {
   if (currentUser) {
-    loadProgressFromFirestore();
+    loadProgressFromFirestore(userData);
     return;
   }
 
@@ -705,21 +818,25 @@ function isSubjectCompleted(progressObj, resultsObj, subjectName) {
   );
 }
 
-async function loadProgressFromFirestore() {
-  const userRef = doc(db, "users", currentUser.uid);
-  const docSnap = await getDoc(userRef);
-
+async function loadProgressFromFirestore(userData = null) {
   let xp = 0;
   let progress = getLocalProgressState();
   let results = {};
-  if (docSnap.exists()) {
-    const data = docSnap.data();
-    xp = data.xp || 0;
+
+  if (!userData) {
+    const userRef = doc(db, "users", currentUser.uid);
+    const docSnap = await getDoc(userRef);
+    userData = docSnap.exists() ? (docSnap.data() || {}) : {};
+    latestUserSettingsData = userData;
+  }
+
+  if (userData) {
+    xp = userData.xp || 0;
     progress = {
       ...progress,
-      ...(data.progress || {})
+      ...(userData.progress || {})
     };
-    results = data.results || {};
+    results = userData.results || {};
   }
 
   renderProgress(xp, progress, results);
@@ -741,6 +858,10 @@ function renderProgress(xp, progress = getLocalProgressState(), results = {}) {
   });
 
   const subjectPercent = Math.floor((completedSubjects / totalSubjects) * 100);
+  const career = getCareerProgress({
+    xp,
+    subjects: buildCareerSubjectsFromProgress(progress, results)
+  });
 
   // ✅ TEXT VALUES (animated)
   animateNumber(document.getElementById("totalXP"), xp);
@@ -764,6 +885,20 @@ function renderProgress(xp, progress = getLocalProgressState(), results = {}) {
   if (xpText) xpText.textContent = `${xpPercent}% to next level`;
   if (levelText) levelText.textContent = `Level ${level}`;
   if (subjectText) subjectText.textContent = `${subjectPercent}% completed`;
+
+  const careerTitle = document.getElementById("careerPathTitle");
+  const careerPath = document.getElementById("careerPathSubject");
+  const careerNext = document.getElementById("careerPathNext");
+  const careerFill = document.getElementById("careerPathFill");
+
+  if (careerTitle) careerTitle.textContent = career.current.title;
+  if (careerPath) careerPath.textContent = `${career.subjectLabel} career path`;
+  if (careerNext) {
+    careerNext.textContent = career.next
+      ? `Next: ${career.next.title} - ${career.nextRequirement}`
+      : "Highest career role reached.";
+  }
+  if (careerFill) careerFill.style.width = `${career.progressToNext}%`;
 }
 
 window.renderProgress = renderProgress; // expose for external calls
@@ -1606,11 +1741,14 @@ function updateIcon() {
 ========================= */
 loadTheme();
 applyAccessibilityPreferences();
+window.refreshPerformanceDiagnostics();
 wireProfileEditor();
 wireRetentionScheduleControls();
 initSounds();
 initGlobalClickSound();
-tryStartMusic();
+window.addEventListener("load", () => {
+  window.setTimeout(tryStartMusic, 120);
+}, { once: true });
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".menu a").forEach((link) => {

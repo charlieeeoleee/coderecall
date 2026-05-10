@@ -34,6 +34,7 @@ import { loadRetentionQueue, clearAllLocalRetentionQueueStorage } from "./retent
 import { loadStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
+import { getCareerProgress } from "./career-path.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -51,6 +52,8 @@ let leaderboardState = "idle";
 let leaderboardErrorCode = "";
 const CONTACT_REPLY_SEEN_KEY_PREFIX = "contact_reply_seen";
 const SELECTED_SUBJECT_KEY = "selectedSubject";
+const DASHBOARD_STATUS_DEFAULT = "Jump straight back into your latest lesson or quiz";
+const SLOW_LOAD_DELAY_MS = 4200;
 const MODULE_XP_REWARD = 5;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 const QUIZ_LEVELS_PER_DIFFICULTY = 25;
@@ -67,6 +70,44 @@ let latestHistoryActionUrl = "";
 let contactReplyBadgeUnsubscribe = null;
 
 applyRoleNavigation("guest", "dashboard.html");
+
+function setDashboardLoadStatus(message = DASHBOARD_STATUS_DEFAULT, isWarning = false) {
+  const status = document.getElementById("dashboardLoadStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("slow-load-warning", isWarning);
+}
+
+function startSlowDashboardNotice() {
+  return window.setTimeout(() => {
+    setDashboardLoadStatus("Still loading your dashboard. Slow connections can take a few more seconds.", true);
+    const title = document.getElementById("continueLearningTitle");
+    const detail = document.getElementById("continueLearningDetail");
+    const kind = document.getElementById("continueLearningKind");
+    if (title) title.textContent = "Still checking your latest activity...";
+    if (detail) detail.textContent = "The page is connected, but Firebase is taking longer than usual.";
+    if (kind) kind.textContent = "slow network";
+  }, SLOW_LOAD_DELAY_MS);
+}
+
+function stopSlowDashboardNotice(timerId) {
+  window.clearTimeout(timerId);
+  setDashboardLoadStatus();
+}
+
+function deferNonCriticalTask(task) {
+  const run = () => {
+    Promise.resolve()
+      .then(task)
+      .catch((error) => console.warn("Deferred dashboard task failed:", error));
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 1200 });
+  } else {
+    window.setTimeout(run, 80);
+  }
+}
 
 function timestampToMillis(value) {
   if (!value) return 0;
@@ -276,9 +317,9 @@ onAuthStateChanged(auth, async (user) => {
     currentIsGuest = false;
     applyRoleNavigation(await resolveUserRole(db, user), "dashboard.html");
 
-    await updateUserStreak();
     await loadDashboard();
     startContactReplyBadgeSubscription();
+    deferNonCriticalTask(updateUserStreak);
   } else if (isGuest) {
     currentUser = null;
     currentIsGuest = true;
@@ -295,6 +336,7 @@ onAuthStateChanged(auth, async (user) => {
    LOAD REAL USER DASHBOARD
 ========================= */
 async function loadDashboard() {
+  const slowLoadTimer = startSlowDashboardNotice();
   setInsightLoadingState(true);
   updateContactReplyBadge(0);
   const userRef = doc(db, "users", currentUser.uid);
@@ -356,33 +398,38 @@ async function loadDashboard() {
   }
 
   currentXP = xp;
-  await syncPublicLeaderboardEntry(db, currentUser.uid, {
-    name,
-    photo,
-    xp,
-    xpWeekly,
-    xpChange
-  });
   updateUserUI(name, photo);
   updateStatsUI(xp);
   const subjectSnapshot = buildSubjectProgressSnapshot(data.progress || {}, data.results || {});
+  renderCareerPathCard(xp, subjectSnapshot);
   renderSubjectProgressSection(subjectSnapshot);
   renderCertificatesPreview(subjectSnapshot);
-  await Promise.all([
-    renderReviewInsights(data),
-    renderMemoryReviewInsights(data),
-    renderStudyHistoryInsights(data),
-    loadLeaderboard()
-  ]);
-  renderDashboardAchievementsExpanded({
-    xp,
-    isGuest: false,
-    streak: Number(data.streak || 0),
-    progress: data.progress || {},
-    results: data.results || {}
+  stopSlowDashboardNotice(slowLoadTimer);
+  deferNonCriticalTask(async () => {
+    await syncPublicLeaderboardEntry(db, currentUser.uid, {
+      name,
+      photo,
+      xp,
+      xpWeekly,
+      xpChange
+    });
+
+    await Promise.all([
+      renderReviewInsights(data),
+      renderMemoryReviewInsights(data),
+      renderStudyHistoryInsights(data),
+      loadLeaderboard()
+    ]);
+    renderDashboardAchievementsExpanded({
+      xp,
+      isGuest: false,
+      streak: Number(data.streak || 0),
+      progress: data.progress || {},
+      results: data.results || {}
+    });
+    renderDashboardLeaderboardPreview();
+    await refreshContactReplyBadge();
   });
-  renderDashboardLeaderboardPreview();
-  await refreshContactReplyBadge();
 }
 
 async function reconcileLocalProgressToFirestore(userRef, data) {
@@ -531,6 +578,7 @@ async function reconcileLocalProgressToFirestore(userRef, data) {
    LOAD GUEST DASHBOARD
 ========================= */
 function loadGuestDashboard() {
+  const slowLoadTimer = startSlowDashboardNotice();
   setInsightLoadingState(true);
   updateContactReplyBadge(0);
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
@@ -539,19 +587,23 @@ function loadGuestDashboard() {
   currentXP = guestXP;
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   updateStatsUI(guestXP);
+  renderCareerPathCard(guestXP, guestSnapshot);
   renderSubjectProgressSection(guestSnapshot);
   renderCertificatesPreview(guestSnapshot);
-  renderReviewInsights();
-  renderMemoryReviewInsights({});
-  renderStudyHistoryInsights({});
-  renderDashboardAchievementsExpanded({
-    xp: guestXP,
-    isGuest: true,
-    streak: parseInt(localStorage.getItem("guest_streak")) || 0,
-    progress: {},
-    results: {}
+  stopSlowDashboardNotice(slowLoadTimer);
+  deferNonCriticalTask(() => {
+    renderReviewInsights();
+    renderMemoryReviewInsights({});
+    renderStudyHistoryInsights({});
+    renderDashboardAchievementsExpanded({
+      xp: guestXP,
+      isGuest: true,
+      streak: parseInt(localStorage.getItem("guest_streak")) || 0,
+      progress: {},
+      results: {}
+    });
+    renderDashboardLeaderboardPreview();
   });
-  renderDashboardLeaderboardPreview();
 }
 
 function getTotalModulesForSubject(subject) {
@@ -745,6 +797,23 @@ function renderSubjectProgressSection(subjects = []) {
       </div>
     </article>
   `).join("");
+}
+
+function renderCareerPathCard(xp = 0, subjects = []) {
+  const career = getCareerProgress({ xp, subjects });
+  const title = document.getElementById("careerRoleTitle");
+  const path = document.getElementById("careerRolePath");
+  const next = document.getElementById("careerRoleNext");
+  const fill = document.getElementById("careerRoleFill");
+
+  if (title) title.textContent = career.current.title;
+  if (path) path.textContent = `${career.subjectLabel} career path`;
+  if (next) {
+    next.textContent = career.next
+      ? `Next: ${career.next.title} - ${career.nextRequirement}`
+      : "Top role reached for this path.";
+  }
+  if (fill) fill.style.width = `${career.progressToNext}%`;
 }
 
 function buildCertificatePreviewItems(subjects = []) {
@@ -1828,7 +1897,9 @@ function updateIcon() {
 loadTheme();
 initSounds();
 initGlobalClickSound();
-tryStartMusic();
+window.addEventListener("load", () => {
+  window.setTimeout(tryStartMusic, 120);
+}, { once: true });
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".menu a").forEach((link) => {

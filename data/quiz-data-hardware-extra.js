@@ -55,9 +55,9 @@ export const hardwareQuizData = {
         "question":  "What is the use of a CMOS battery to the motherboard?",
         "choices":  [
                         "To provide power to the motherboard",
-                        "To store the system date, time, and BIOS/UEFI settings",
+                        "To power the CMOS/RTC memory that retains the system date, time, and BIOS/UEFI settings",
                         "To keep the motherboard working properly",
-                        "To  run windows"
+                        "To run Windows"
                     ],
         "answer":  "B"
     },

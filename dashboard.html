@@ -3,7 +3,7 @@
 <head>
   <title>Code Recall Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260428c">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260510a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -69,6 +69,15 @@
             <div id="progressFill" style="width:0%"></div>
           </div>
         </div>
+        <div class="card career-role-card">
+          <h3>Career Role</h3>
+          <p id="careerRoleTitle">Hardware Trainee</p>
+          <span id="careerRolePath" class="career-role-path">Computer Hardware career path</span>
+          <div class="progress-bar career-role-track">
+            <div id="careerRoleFill" class="career-role-fill" style="width:0%"></div>
+          </div>
+          <small id="careerRoleNext">Next role unlocks as you complete more learning activities.</small>
+        </div>
       </div>
 
       <!-- START LEARNING -->
@@ -84,7 +93,7 @@
         <div class="section-head">
           <div>
             <h3>Continue Learning</h3>
-            <span class="section-note">Jump straight back into your latest lesson or quiz</span>
+            <span class="section-note" id="dashboardLoadStatus">Jump straight back into your latest lesson or quiz</span>
           </div>
           <button id="continueLearningBtn" class="view-full-btn" onclick="continueLatestActivity()">Resume Now</button>
         </div>
@@ -262,8 +271,8 @@
   <div id="confettiContainer" class="confetti-container"></div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/dashboard.js?v=20260428c"></script>
-  <script src="scripts/loading.js?v=20260420b" defer></script>
+  <script type="module" src="scripts/dashboard.js?v=20260510c"></script>
+  <script src="scripts/loading.js?v=20260510a" defer></script>
 </body>
 </html>
 

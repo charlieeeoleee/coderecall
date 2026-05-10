@@ -46,8 +46,68 @@ let currentRole = "user";
 let systemPopupAction = null;
 let systemPopupBusy = false;
 let contactInboxUnsubscribe = null;
+const SUPER_ADMIN_STATUS_DEFAULT = "Manage roles, review the whole system, and control app user records for the prototype.";
+const SLOW_SUPER_ADMIN_LOAD_DELAY_MS = 5000;
 
 applyRoleNavigation("guest", "super-admin.html");
+
+function setSuperAdminLoadStatus(message = SUPER_ADMIN_STATUS_DEFAULT, isWarning = false) {
+  const status = document.getElementById("superAdminLoadStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("slow-load-warning", isWarning);
+}
+
+function startSlowSuperAdminNotice() {
+  return window.setTimeout(() => {
+    setSuperAdminLoadStatus(
+      "Still loading Super Admin data. Large learner records or slow Firebase responses can take a few more seconds.",
+      true
+    );
+  }, SLOW_SUPER_ADMIN_LOAD_DELAY_MS);
+}
+
+function stopSlowSuperAdminNotice(timerId) {
+  window.clearTimeout(timerId);
+  setSuperAdminLoadStatus();
+}
+
+function deferSuperAdminTask(task) {
+  const run = () => {
+    Promise.resolve()
+      .then(task)
+      .catch((error) => console.warn("Deferred Super Admin task failed:", error));
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 1500 });
+  } else {
+    window.setTimeout(run, 100);
+  }
+}
+
+function renderAdminLoadingState(targetId, message = "Loading...") {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.innerHTML = `
+    <article class="review-item admin-loading-card">
+      <h5>${escapeHtml(message)}</h5>
+      <p>We are fetching this section in the background.</p>
+    </article>
+  `;
+}
+
+function renderAdminGridLoadingState(targetId, message = "Loading...") {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.innerHTML = `
+    <article class="analytics-card admin-loading-card">
+      <span>${escapeHtml(message)}</span>
+      <strong>...</strong>
+      <p>Fetching background data.</p>
+    </article>
+  `;
+}
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -108,26 +168,17 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadSuperAdminDashboard() {
+  const slowLoadTimer = startSlowSuperAdminNotice();
   const [
     usersSnap,
     securityProfilesSnap,
     grantsSnap,
-    pendingUsersSnap,
-    moduleDrafts,
-    quizDrafts,
-    notesSnap,
-    auditSnap,
-    contactMessagesSnap
+    pendingUsersSnap
   ] = await Promise.all([
     safeGetDocs("users", collection(db, "users")),
     safeGetDocs("securityProfiles", collection(db, "securityProfiles")),
     safeGetDocs("accessRoles", collection(db, "accessRoles")),
-    safeGetDocs("pendingUsers", collection(db, "pendingUsers")),
-    safeSupabaseRead("module drafts", fetchModuleDrafts),
-    safeSupabaseRead("quiz drafts", fetchQuizDrafts),
-    safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
-    safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12))),
-    safeGetDocs("contactMessages", collection(db, "contactMessages"))
+    safeGetDocs("pendingUsers", collection(db, "pendingUsers"))
   ]);
 
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
@@ -136,24 +187,50 @@ async function loadSuperAdminDashboard() {
   );
   const grants = grantsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const contactMessages = contactMessagesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
-  renderContactInboxCounts(contactMessages);
+  renderAdminGridLoadingState("systemHealthGrid", "Loading system health");
+  renderAdminLoadingState("superModulePublishList", "Loading module drafts");
+  renderAdminLoadingState("superQuizPublishList", "Loading quiz drafts");
+  renderAdminLoadingState("manualImportChecklist", "Preparing checklist");
+  renderAdminLoadingState("auditLogList", "Loading audit trail");
+
   renderOverview(users);
   renderAccessGrantList(grants);
-  renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
+  renderSystemHealth(users, grants, pendingUsers, [], [], []);
   renderRetentionOversight(users);
   renderTwoFactorOversight(users, securityProfiles);
   renderSubjectCompletionBreakdown(users);
   renderMostMissedTopics(users);
   renderUserTable(users);
-  renderPublishingQueue(moduleDrafts, quizDrafts);
-  renderManualImportChecklist();
-  renderAuditLog(audits);
   wireAccessGrantForm();
   wireIntakeForm();
+  stopSlowSuperAdminNotice(slowLoadTimer);
+
+  deferSuperAdminTask(async () => {
+    const [
+      moduleDrafts,
+      quizDrafts,
+      notesSnap,
+      auditSnap,
+      contactMessagesSnap
+    ] = await Promise.all([
+      safeSupabaseRead("module drafts", fetchModuleDrafts),
+      safeSupabaseRead("quiz drafts", fetchQuizDrafts),
+      safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
+      safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12))),
+      safeGetDocs("contactMessages", collection(db, "contactMessages"))
+    ]);
+
+    const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+    const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+    const contactMessages = contactMessagesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+
+    renderContactInboxCounts(contactMessages);
+    renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
+    renderPublishingQueue(moduleDrafts, quizDrafts);
+    renderManualImportChecklist();
+    renderAuditLog(audits);
+  });
 }
 
 function renderContactInboxCounts(messages) {

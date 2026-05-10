@@ -26,6 +26,8 @@ const quizLevel = parseInt(params.get("quizLevel") || "1", 10);
 
 const XP_PER_CORRECT = 2;
 const MAX_DAILY_TRIES_PER_QUESTION = 3;
+const SLOW_QUIZ_LOAD_DELAY_MS = 4200;
+const QUIZ_PREFETCH_KEY_PREFIX = "codeRecallQuizLevelPrefetch";
 
 const HARDWARE_DOC_IMAGE_BASE = "assets/quizzes/hardware/docx";
 const HARDWARE_QUIZ_LEVEL_FALLBACKS = {
@@ -206,14 +208,83 @@ let selectedConfidence = null;
 let score = 0;
 let currentUser = auth.currentUser || null;
 let rationaleNextAction = "advance";
+let rationaleRetryIndex = null;
 let currentTotalXP = 0;
 let questionBankCache = null;
+let preparedQuestionBankCache = null;
 const RESUME_ACTIVITY_KEY = "resume_activity";
 let retentionGateShown = false;
 let awardedQuestionIds = new Set();
 let correctQuestionIdsThisRun = new Set();
 let wrongAnswerReviewKeys = new Set();
 let recoveredMistakesThisRun = 0;
+
+function getQuizPrefetchKey(level = quizLevel) {
+  return `${QUIZ_PREFETCH_KEY_PREFIX}:${subject}:${difficulty}:${level}`;
+}
+
+function readPrefetchedQuestionSet() {
+  try {
+    const raw = sessionStorage.getItem(getQuizPrefetchKey());
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.questions) ? parsed.questions : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePrefetchedQuestionSet(level, levelQuestions) {
+  if (!Array.isArray(levelQuestions) || !levelQuestions.length) return;
+  try {
+    sessionStorage.setItem(getQuizPrefetchKey(level), JSON.stringify({
+      subject,
+      difficulty,
+      level,
+      questions: levelQuestions,
+      at: new Date().toISOString()
+    }));
+  } catch {
+    // Session prefetch is optional; the quiz should continue normally if storage is full.
+  }
+}
+
+function deferQuizTask(task) {
+  const run = () => {
+    Promise.resolve()
+      .then(task)
+      .catch((error) => console.warn("Deferred quiz task failed:", error));
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 1500 });
+  } else {
+    window.setTimeout(run, 120);
+  }
+}
+
+function startSlowQuizNotice() {
+  return window.setTimeout(() => {
+    const subtitle = document.getElementById("levelSubtitle");
+    const questionText = document.getElementById("questionText");
+    if (subtitle) {
+      subtitle.textContent = "Still loading quiz data. Slow connections can take a few more seconds.";
+      subtitle.classList.add("slow-load-warning");
+    }
+    if (questionText) {
+      questionText.textContent = "Still preparing this question...";
+    }
+  }, SLOW_QUIZ_LOAD_DELAY_MS);
+}
+
+function stopSlowQuizNotice(timerId) {
+  window.clearTimeout(timerId);
+  const subtitle = document.getElementById("levelSubtitle");
+  if (subtitle) {
+    subtitle.textContent = "Answer 3 questions to complete this level and earn 6 XP.";
+    subtitle.classList.remove("slow-load-warning");
+  }
+}
 
 function getSubjectDisplayName() {
   return subject === "hardware" ? "Computer Hardware" : "Electrical";
@@ -693,36 +764,48 @@ async function syncXpDock() {
 }
 
 async function getQuestionBank() {
+  if (preparedQuestionBankCache) {
+    return preparedQuestionBankCache;
+  }
+
   const baseBank = await loadQuestionBank();
-  const electricalBank = JSON.parse(JSON.stringify(baseBank.electrical || {}));
-  const hardwareBank = JSON.parse(JSON.stringify(baseBank.hardware || {}));
-  const hardwareFallbacks = HARDWARE_QUIZ_LEVEL_FALLBACKS[difficulty] || {};
-  const hardwareOverrides = HARDWARE_QUIZ_OVERRIDES[difficulty] || {};
+  const subjectBank = baseBank[subject] || {};
+  const difficultyBank = subjectBank[difficulty] || {};
+  const preparedDifficultyBank = {
+    [difficulty]: {}
+  };
 
-  Object.entries(hardwareFallbacks).forEach(([levelKey, levelQuestions]) => {
-    if (!hardwareBank[difficulty]?.[levelKey]?.length) {
-      if (!hardwareBank[difficulty]) {
-        hardwareBank[difficulty] = {};
+  Object.entries(difficultyBank).forEach(([levelKey, levelQuestions]) => {
+    preparedDifficultyBank[difficulty][levelKey] = JSON.parse(JSON.stringify(levelQuestions || []));
+  });
+
+  if (subject === "hardware") {
+    const hardwareFallbacks = HARDWARE_QUIZ_LEVEL_FALLBACKS[difficulty] || {};
+    const hardwareOverrides = HARDWARE_QUIZ_OVERRIDES[difficulty] || {};
+
+    Object.entries(hardwareFallbacks).forEach(([levelKey, levelQuestions]) => {
+      if (!preparedDifficultyBank[difficulty]?.[levelKey]?.length) {
+        preparedDifficultyBank[difficulty][levelKey] = JSON.parse(JSON.stringify(levelQuestions));
       }
-      hardwareBank[difficulty][levelKey] = JSON.parse(JSON.stringify(levelQuestions));
-    }
-  });
-
-  Object.entries(hardwareBank[difficulty] || {}).forEach(([levelKey, levelQuestions]) => {
-    hardwareBank[difficulty][levelKey] = (levelQuestions || []).map((question) => {
-      const overrideKey = `${question.level}.${question.sub}`;
-      const override = hardwareOverrides[overrideKey] || {};
-      return {
-        ...question,
-        ...override,
-        choices: override.choices || question.choices
-      };
     });
-  });
 
-  return subject === "electrical"
-    ? { electrical: electricalBank }
-    : { hardware: hardwareBank };
+    Object.entries(preparedDifficultyBank[difficulty] || {}).forEach(([levelKey, levelQuestions]) => {
+      preparedDifficultyBank[difficulty][levelKey] = (levelQuestions || []).map((question) => {
+        const overrideKey = `${question.level}.${question.sub}`;
+        const override = hardwareOverrides[overrideKey] || {};
+        return {
+          ...question,
+          ...override,
+          choices: override.choices || question.choices
+        };
+      });
+    });
+  }
+
+  preparedQuestionBankCache = {
+    [subject]: preparedDifficultyBank
+  };
+  return preparedQuestionBankCache;
 }
 
 async function getQuestionSet() {
@@ -748,7 +831,7 @@ async function getTotalLevels() {
 }
 
 async function prepareQuestions() {
-  const levelQuestions = await getQuestionSet();
+  const levelQuestions = readPrefetchedQuestionSet() || await getQuestionSet();
   const preparedQuestions = levelQuestions.map((question) => shuffleQuestionChoices(normalizeAnswer(question)));
   questions = shuffleAvoidingOriginalOrder(
     preparedQuestions,
@@ -774,6 +857,18 @@ async function prepareQuestions() {
       }
     ]);
   }
+}
+
+async function prefetchNextQuizLevel() {
+  const totalLevels = await getTotalLevels();
+  const nextLevel = quizLevel + 1;
+  if (nextLevel > totalLevels || sessionStorage.getItem(getQuizPrefetchKey(nextLevel))) return;
+
+  const bank = await getQuestionBank();
+  const bySubject = bank[subject] || {};
+  const byDifficulty = bySubject[difficulty] || {};
+  const nextQuestions = byDifficulty[nextLevel] || [];
+  writePrefetchedQuestionSet(nextLevel, nextQuestions);
 }
 
 function renderHeader() {
@@ -1034,6 +1129,7 @@ window.closeRationale = function () {
 
 function showRationaleWithAction(isCorrect, question, options = {}) {
   rationaleNextAction = options.nextAction || "advance";
+  rationaleRetryIndex = Number.isInteger(options.retryIndex) ? options.retryIndex : null;
   document.getElementById("rationaleTitle").textContent = options.title || (isCorrect ? "Correct ✓" : "Wrong ✕");
   document.getElementById("rationaleText").textContent = options.text || buildRationale(question, isCorrect);
   const rationaleActionBtn = document.getElementById("rationaleActionBtn");
@@ -1047,9 +1143,15 @@ window.closeRationale = function () {
   document.getElementById("rationaleModal").classList.remove("active");
 
   if (rationaleNextAction === "retry") {
+    if (Number.isInteger(rationaleRetryIndex)) {
+      currentIndex = rationaleRetryIndex;
+    }
+    rationaleRetryIndex = null;
     renderQuestion();
     return;
   }
+
+  rationaleRetryIndex = null;
 
   if (rationaleNextAction === "advance" && currentIndex < questions.length) {
     renderQuestion();
@@ -1231,10 +1333,6 @@ window.handleNext = function () {
           ...reviewPayload,
           seedReason: "low_confidence_correct"
         }
-      }).then(() => {
-        promptRetentionGateAfterWeakAnswer().catch((error) => {
-          console.warn("Unable to show retention gate after low-confidence answer.", error);
-        });
       }).catch((error) => {
         console.warn("Unable to queue low-confidence retention item.", error);
       });
@@ -1265,41 +1363,43 @@ window.handleNext = function () {
     });
   } else {
     playSound("wrong");
-    saveWrongAnswerReview({
-      db,
-      user: currentUser,
-      payload: reviewPayload
-    }).catch((error) => {
-      console.warn("Unable to save wrong-answer review item.", error);
-    });
-    wrongAnswerReviewKeys.add(reviewTrackingKey);
-    saveRetentionReview({
-      db,
-      user: currentUser,
-      payload: {
-        ...reviewPayload,
-        seedReason: "wrong_answer"
-      }
-    }).then(() => {
-      promptRetentionGateAfterWeakAnswer().catch((error) => {
-        console.warn("Unable to show retention gate after wrong answer.", error);
+    const remainingTries = getRemainingQuestionTries(questionState);
+    const exhaustedTries = remainingTries <= 0;
+
+    if (exhaustedTries) {
+      saveWrongAnswerReview({
+        db,
+        user: currentUser,
+        payload: reviewPayload
+      }).catch((error) => {
+        console.warn("Unable to save wrong-answer review item.", error);
       });
-    }).catch((error) => {
-      console.warn("Unable to queue retention review item.", error);
-    });
-    currentIndex += 1;
+      wrongAnswerReviewKeys.add(reviewTrackingKey);
+      saveRetentionReview({
+        db,
+        user: currentUser,
+        payload: {
+          ...reviewPayload,
+          seedReason: "wrong_answer"
+        }
+      }).catch((error) => {
+        console.warn("Unable to queue retention review item.", error);
+      });
+      currentIndex += 1;
+    }
+
     selectedChoice = null;
     selectedConfidence = null;
     saveQuizLevelResumeState().catch((error) => {
       console.warn("Unable to save quiz level resume state.", error);
     });
-    const remainingTries = getRemainingQuestionTries(questionState);
     showRationaleWithAction(false, currentQuestion, {
       text: remainingTries > 0
-        ? `${buildRationale(currentQuestion, false)} This question has been added to Wrong-Answer Review. You still have ${remainingTries} ${remainingTries === 1 ? "try" : "tries"} left for this question today.`
+        ? `${buildRationale(currentQuestion, false)} You still have ${remainingTries} ${remainingTries === 1 ? "try" : "tries"} left for this question today.`
         : `${buildRationale(currentQuestion, false)} This question is now locked for today and has been added to Wrong-Answer Review. You can answer it again tomorrow.`,
-      buttonText: currentIndex < questions.length ? "Continue" : "Finish",
-      nextAction: currentIndex < questions.length ? "advance" : "finish"
+      buttonText: remainingTries > 0 ? "Try Again" : (currentIndex < questions.length ? "Continue" : "Finish"),
+      nextAction: remainingTries > 0 ? "retry" : (currentIndex < questions.length ? "advance" : "finish"),
+      retryIndex: remainingTries > 0 ? currentIndex : null
     });
   }
 };
@@ -1325,6 +1425,7 @@ async function initializePage() {
   setupSoundToggles();
   bindConfidenceOptions();
   renderHeader();
+  const slowLoadTimer = startSlowQuizNotice();
   saveStudyHistory({
     db,
     user: currentUser,
@@ -1344,6 +1445,8 @@ async function initializePage() {
   await Promise.all([syncAwardedQuestionIds(), syncWrongAnswerReviewKeys()]);
   restoreQuizLevelResumeState();
   renderQuestion();
+  stopSlowQuizNotice(slowLoadTimer);
+  deferQuizTask(prefetchNextQuizLevel);
   tryStartMusic();
   syncXpDock().catch((error) => {
     console.error("Error loading XP dock:", error);
