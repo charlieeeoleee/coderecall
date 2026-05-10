@@ -23,6 +23,8 @@ import { resolveUserRole, syncUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { clearAdminMfaSession } from "./admin-mfa-session.js";
+import { hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
+import { syncNativeMfaProfile } from "./native-mfa-profile.js";
 
 
 const auth = getAuth(app);
@@ -36,6 +38,19 @@ let activeMfaProvider = "password";
 async function getLandingPageForUser(user) {
   const role = await resolveUserRole(db, user);
   await syncUserRole(db, user, role);
+
+  if (role === "super_admin") {
+    if (!hasTotpFactor(user)) return "super-admin-mfa.html";
+    if (!await signedInWithSecondFactor(user)) return "super-admin-mfa.html";
+    return "super-admin.html";
+  }
+
+  if (role === "admin") {
+    if (!hasTotpFactor(user)) return "admin-mfa.html";
+    if (!await signedInWithSecondFactor(user)) return "admin-mfa.html";
+    return "admin.html";
+  }
+
   return "dashboard.html";
 }
 
@@ -143,6 +158,11 @@ window.register = async function(){
       return;
     }
 
+    if (!isPrivacyConsentChecked()) {
+      showPopup("Privacy Consent Required", "Please review and accept the Privacy Policy before creating your account.");
+      return;
+    }
+
     /* COMPLETE GOOGLE REGISTRATION */
     if (pendingGoogle) {
       const pending = JSON.parse(pendingGoogle);
@@ -163,7 +183,12 @@ window.register = async function(){
         provider: "google",
         role: existingData.role || "user",
         createdAt: existingData.createdAt || Date.now(),
-        progress: existingData.progress || {}
+        progress: existingData.progress || {},
+        privacyConsent: {
+          accepted: true,
+          acceptedAt: Date.now(),
+          policyVersion: "2026-05-10"
+        }
       });
 
       await syncPublicLeaderboardEntry(db, pending.uid, {
@@ -201,7 +226,12 @@ window.register = async function(){
       provider: "password",
       role: "user",
       createdAt: Date.now(),
-      progress: {}
+      progress: {},
+      privacyConsent: {
+        accepted: true,
+        acceptedAt: Date.now(),
+        policyVersion: "2026-05-10"
+      }
     });
 
     await syncPublicLeaderboardEntry(db, cred.user.uid, {
@@ -307,8 +337,8 @@ function handleMfaRequired(error, provider) {
   const label = document.getElementById("mfaChallengeLabel");
   if (label) {
     label.textContent = totpHint.displayName
-      ? `Enter the authenticator code for ${totpHint.displayName}.`
-      : "Enter the 6-digit code from your authenticator app.";
+      ? `No QR code is needed. Enter the current 6-digit code from ${totpHint.displayName}.`
+      : "No QR code is needed. Enter the current 6-digit code from your authenticator app.";
   }
   setMfaChallengeStatus("");
   document.getElementById("mfaChallengePopup")?.classList.add("active");
@@ -324,7 +354,7 @@ function setMfaChallengeStatus(message, isError = false) {
   const status = document.getElementById("mfaChallengeStatus");
   if (!status) return;
   status.textContent = message;
-  status.style.color = isError ? "#ff97b6" : "#8ef7cf";
+  status.classList.toggle("error", isError);
 }
 
 window.closeMfaChallenge = function() {
@@ -353,12 +383,17 @@ window.confirmMfaChallenge = async function() {
   try {
     const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, code);
     const result = await activeMfaResolver.resolveSignIn(assertion);
+    const verifiedProvider = activeMfaProvider;
+    const verifiedRole = await resolveUserRole(db, result.user);
+    await syncNativeMfaProfile(db, result.user, verifiedRole, {
+      method: `firebase_totp_${verifiedProvider}`
+    });
     activeMfaResolver = null;
     document.getElementById("mfaChallengePopup")?.classList.remove("active");
     clearSuperAdminMfaSession();
     clearAdminMfaSession();
 
-    if (activeMfaProvider === "google") {
+    if (verifiedProvider === "google") {
       await finishGoogleSignIn(result.user);
     } else {
       await finishPasswordSignIn(result.user);
@@ -430,6 +465,10 @@ function showPendingGoogleRegistration(pending){
   document.getElementById("registerPasswordWrapper").style.display = "none";
   document.getElementById("registerBtn").textContent = "Complete Registration";
   document.getElementById("googleRegisterNote").style.display = "block";
+}
+
+function isPrivacyConsentChecked() {
+  return Boolean(document.getElementById("privacyConsent")?.checked);
 }
 
 /* RESET PASSWORD POPUP */

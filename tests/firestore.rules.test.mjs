@@ -12,6 +12,7 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   updateDoc,
   where
@@ -21,7 +22,6 @@ let testEnv;
 
 const projectId = "coderecall-rules-test";
 const rulesFile = process.env.FIRESTORE_RULES_FILE || "firestore.rules";
-const isClaimsOnlyRules = rulesFile.includes("claims-only");
 
 function authContext(uid, token = {}) {
   return testEnv.authenticatedContext(uid, token).firestore();
@@ -145,11 +145,25 @@ test("admin custom claims require Firebase MFA for cross-user reads", async () =
 });
 
 test("super-admin custom claims with MFA can manage user access fields", async () => {
+  const superWithoutMfa = authContext("claimSuper", {
+    email: "super@example.com",
+    role: "super_admin",
+    admin: true,
+    super_admin: true
+  });
   const db = authContext("claimSuper", mfaToken({
     email: "super@example.com",
     role: "super_admin",
     admin: true,
     super_admin: true
+  }));
+
+  await assertFails(updateDoc(doc(superWithoutMfa, "users", "learner"), {
+    role: "admin",
+    status: "active",
+    progress: {
+      role: "admin"
+    }
   }));
 
   await assertSucceeds(updateDoc(doc(db, "users", "learner"), {
@@ -166,6 +180,36 @@ test("normal users can read only their own contact tickets", async () => {
 
   await assertSucceeds(getDoc(doc(db, "contactMessages", "ownedTicket")));
   await assertFails(getDoc(doc(db, "contactMessages", "assignedOther")));
+});
+
+test("signed-in users can write only safe security audit events", async () => {
+  const db = authContext("learner", { email: "learner@example.com" });
+
+  await assertSucceeds(setDoc(doc(db, "auditLogs", "safeDeniedRoute"), {
+    action: "denied_admin_route",
+    details: "Denied direct admin route visit.",
+    actorUid: "learner",
+    actorEmail: "learner@example.com",
+    createdAt: serverTimestamp()
+  }));
+
+  await assertFails(setDoc(doc(db, "auditLogs", "spoofedActor"), {
+    action: "denied_admin_route",
+    details: "Spoofed actor.",
+    actorUid: "someoneElse",
+    actorEmail: "learner@example.com",
+    createdAt: serverTimestamp()
+  }));
+
+  await assertFails(setDoc(doc(db, "auditLogs", "arbitraryAction"), {
+    action: "role_changed",
+    details: "Should not be client-writable.",
+    actorUid: "learner",
+    actorEmail: "learner@example.com",
+    createdAt: serverTimestamp()
+  }));
+
+  await assertFails(getDoc(doc(db, "auditLogs", "safeDeniedRoute")));
 });
 
 test("admins with MFA can read unassigned or assigned tickets but not another admin's assigned ticket", async () => {
@@ -192,12 +236,60 @@ test("super-admins with MFA can list privileged collections", async () => {
   await assertSucceeds(getDocs(collection(db, "accessRoles")));
 });
 
-test("stored role access matches the selected rules mode", async () => {
-  const db = authContext("adminStored", { email: "stored-admin@example.com" });
+test("privileged users with Firebase MFA can mirror their native 2FA profile without secrets", async () => {
+  const adminWithoutMfa = authContext("claimAdmin", {
+    email: "claim-admin@example.com",
+    role: "admin",
+    admin: true
+  });
+  const adminWithMfa = authContext("claimAdmin", mfaToken({
+    email: "claim-admin@example.com",
+    role: "admin",
+    admin: true
+  }));
 
-  if (isClaimsOnlyRules) {
-    await assertFails(getDoc(doc(db, "users", "learner")));
-  } else {
-    await assertSucceeds(getDoc(doc(db, "users", "learner")));
-  }
+  await assertFails(setDoc(doc(adminWithoutMfa, "securityProfiles", "claimAdmin"), {
+    uid: "claimAdmin",
+    email: "claim-admin@example.com",
+    role: "admin",
+    firebaseMfaEnrolled: true,
+    firebaseMfaProvider: "totp",
+    firebaseMfaSource: "firebase_auth",
+    lastVerifiedAt: "2026-05-09T00:00:00.000Z",
+    lastVerificationMethod: "firebase_totp",
+    updatedAt: "2026-05-09T00:00:00.000Z"
+  }));
+
+  await assertSucceeds(setDoc(doc(adminWithMfa, "securityProfiles", "claimAdmin"), {
+    uid: "claimAdmin",
+    email: "claim-admin@example.com",
+    role: "admin",
+    firebaseMfaEnrolled: true,
+    firebaseMfaProvider: "totp",
+    firebaseMfaSource: "firebase_auth",
+    lastVerifiedAt: "2026-05-09T00:00:00.000Z",
+    lastVerificationMethod: "firebase_totp",
+    updatedAt: "2026-05-09T00:00:00.000Z"
+  }));
+
+  await assertFails(setDoc(doc(adminWithMfa, "securityProfiles", "claimAdmin"), {
+    uid: "claimAdmin",
+    email: "claim-admin@example.com",
+    role: "admin",
+    firebaseMfaEnrolled: true,
+    firebaseMfaProvider: "totp",
+    firebaseMfaSource: "firebase_auth",
+    lastVerifiedAt: "2026-05-09T00:00:00.000Z",
+    lastVerificationMethod: "firebase_totp",
+    updatedAt: "2026-05-09T00:00:00.000Z",
+    totpSecret: "should-not-write"
+  }));
+});
+
+test("stored role access still requires Firebase MFA for cross-user reads", async () => {
+  const storedAdminWithoutMfa = authContext("adminStored", { email: "stored-admin@example.com" });
+  const storedAdminWithMfa = authContext("adminStored", mfaToken({ email: "stored-admin@example.com" }));
+
+  await assertFails(getDoc(doc(storedAdminWithoutMfa, "users", "learner")));
+  await assertSucceeds(getDoc(doc(storedAdminWithMfa, "users", "learner")));
 });

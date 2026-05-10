@@ -827,8 +827,12 @@ function isPretestAssessment() {
   return type === "pretest";
 }
 
+function isStandardTestAssessment() {
+  return type === "pretest" || type === "posttest";
+}
+
 function requiresConfidenceSelection() {
-  return !isPretestAssessment();
+  return !isStandardTestAssessment();
 }
 
 function bindConfidenceOptions() {
@@ -887,7 +891,7 @@ function withTimeout(promise, fallbackValue, timeoutMs = 1200) {
 }
 
 async function maybeShowRetentionGate({ trigger = "existing_due" } = {}) {
-  if (isPretestAssessment()) return;
+  if (!requiresConfidenceSelection()) return;
   if (retentionGateShown) return;
 
   await authReadyPromise;
@@ -933,7 +937,7 @@ async function maybeShowRetentionGate({ trigger = "existing_due" } = {}) {
 }
 
 async function promptRetentionGateAfterWeakAnswer() {
-  if (isPretestAssessment()) return;
+  if (!requiresConfidenceSelection()) return;
   retentionGateShown = false;
   await maybeShowRetentionGate({ trigger: "weak_answer" });
 }
@@ -1331,7 +1335,7 @@ window.handleNext = function () {
   const isCorrect = selectedChoice === currentQuestion.answer;
   const reviewPayload = buildWrongAnswerReviewPayload(currentQuestion, selectedChoice);
   const reviewTrackingKey = buildReviewTrackingKey(reviewPayload);
-  const tracksReviewQueues = !isPretestAssessment();
+  const tracksReviewQueues = requiresConfidenceSelection();
   const lowConfidence = tracksReviewQueues && isLowConfidenceAnswer(selectedConfidence);
 
   if (isCorrect) {

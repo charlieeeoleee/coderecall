@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles/settings.css?v=20260430b">
+  <link rel="stylesheet" href="styles/settings.css?v=20260509b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -106,15 +106,39 @@
             <button type="button" class="action-btn secondary-action-btn" id="resendVerificationBtn" hidden>
               Resend Verification
             </button>
-            <button type="button" class="action-btn secondary-action-btn" id="passwordResetBtn" hidden>
-              Send Password Reset
-            </button>
+          </div>
+
+          <div class="account-security-panel">
+            <h4>Account Security</h4>
+            <p id="accountSecurityNote" class="account-security-note">
+              Email and password changes depend on your sign-in provider.
+            </p>
+            <p id="accountSecurityWarning" class="account-security-warning" hidden>
+              You are not an email/password authenticated user. Email and password changes are managed by your sign-in provider.
+            </p>
+
+            <div class="account-security-grid">
+              <label>
+                <span>New Email Address</span>
+                <input type="email" id="changeEmailInput" placeholder="new-email@example.com">
+              </label>
+              <button type="button" class="action-btn secondary-action-btn" id="changeEmailBtn">
+                Send Email Change Link
+              </button>
+            </div>
+
+            <div class="account-security-actions">
+              <button type="button" class="action-btn secondary-action-btn" id="passwordResetBtn">
+                Send Password Reset
+              </button>
+              <p id="accountSecurityStatus" class="profile-edit-status"></p>
+            </div>
           </div>
         </div>
 
-        <!-- APPEARANCE -->
+        <!-- APPEARANCE / ACCESSIBILITY -->
         <div class="card settings-card">
-          <h3>&#127912; Appearance</h3>
+          <h3>&#127912; Appearance / Accessibility</h3>
 
           <div class="setting-row">
             <div>
@@ -125,6 +149,82 @@
             <button class="action-btn theme-action-btn" onclick="toggleTheme()">
               Toggle Theme
             </button>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <strong>High Contrast</strong>
+              <p>Increase contrast for text, cards, buttons, and focus states.</p>
+            </div>
+
+            <label class="switch" aria-label="Toggle high contrast mode">
+              <input type="checkbox" id="highContrastToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <strong>Screen Reader Assist</strong>
+              <p>Add keyboard skip navigation and stronger focus indicators.</p>
+            </div>
+
+            <label class="switch" aria-label="Toggle screen reader assist">
+              <input type="checkbox" id="screenReaderAssistToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <strong>Reduced Motion</strong>
+              <p>Minimize animations and movement across the system.</p>
+            </div>
+
+            <label class="switch" aria-label="Toggle reduced motion">
+              <input type="checkbox" id="reducedMotionToggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <strong>Text Size</strong>
+              <p>Adjust interface text for easier reading.</p>
+            </div>
+
+            <label class="select-control" for="textSizeSelect">
+              <select id="textSizeSelect">
+                <option value="normal">Normal</option>
+                <option value="large">Large</option>
+                <option value="extra-large">Extra Large</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="setting-row volume-setting-row">
+            <div>
+              <strong>Narration Speed</strong>
+              <p>Set the default speed for future read-aloud narration.</p>
+            </div>
+
+            <label class="volume-control" for="narrationSpeedInput">
+              <input type="range" id="narrationSpeedInput" min="50" max="250" step="5">
+              <span id="narrationSpeedValue">1.00x</span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div>
+              <strong>Read Aloud</strong>
+              <p>Listen to selected text, page content, questions, and lesson instructions.</p>
+            </div>
+
+            <div class="read-aloud-actions">
+              <button type="button" class="action-btn secondary-action-btn" id="readAloudPageBtn">Read Page</button>
+              <button type="button" class="action-btn secondary-action-btn" id="pauseNarrationBtn">Pause</button>
+              <button type="button" class="action-btn secondary-action-btn" id="stopNarrationBtn">Stop</button>
+            </div>
           </div>
         </div>
 
@@ -143,6 +243,19 @@
               <span class="slider"></span>
             </label>
           </div>
+
+          <div class="setting-row volume-setting-row">
+            <div>
+              <strong>Sound Effects Volume</strong>
+              <p>Adjust clicks, quiz feedback, badges, and completion sounds.</p>
+            </div>
+
+            <label class="volume-control" for="sfxVolumeInput">
+              <input type="range" id="sfxVolumeInput" min="0" max="100" step="1">
+              <span id="sfxVolumeValue">65%</span>
+            </label>
+          </div>
+
           <div class="setting-row">
 
             <div>
@@ -156,6 +269,17 @@
             </label>
           </div>
 
+          <div class="setting-row volume-setting-row">
+            <div>
+              <strong>Music Volume</strong>
+              <p>Lower the background theme music before it starts playing loudly.</p>
+            </div>
+
+            <label class="volume-control" for="musicVolumeInput">
+              <input type="range" id="musicVolumeInput" min="0" max="100" step="1">
+              <span id="musicVolumeValue">18%</span>
+            </label>
+          </div>
 
           <div class="setting-row">
             <div>
@@ -239,6 +363,126 @@
           </div>
         </div>
 
+        <!-- ACCOUNT PROTECTION -->
+        <div class="card settings-card">
+          <h3>&#128737; Account Protection</h3>
+
+          <div class="protection-grid">
+            <div class="protection-item">
+              <span>Current Role</span>
+              <strong id="protectionRole">Guest</strong>
+            </div>
+            <div class="protection-item">
+              <span>Sign-in Method</span>
+              <strong id="protectionLoginType">Unknown</strong>
+            </div>
+            <div class="protection-item">
+              <span>Email Status</span>
+              <strong id="protectionVerification">Unknown</strong>
+            </div>
+            <div class="protection-item">
+              <span>2FA Requirement</span>
+              <strong id="protectionMfa">Not required</strong>
+            </div>
+            <div class="protection-item">
+              <span>Session Safety</span>
+              <strong id="protectionSession">Checking</strong>
+            </div>
+            <div class="protection-item">
+              <span>Protected Data</span>
+              <strong id="protectionData">User only</strong>
+            </div>
+          </div>
+
+          <p id="protectionSummary" class="protection-summary">
+            Your account protection status will appear here after sign-in.
+          </p>
+
+          <div class="protection-actions">
+            <button type="button" class="action-btn secondary-action-btn" id="manageMfaBtn" hidden>
+              Manage 2FA
+            </button>
+            <button type="button" class="action-btn secondary-action-btn" id="protectionVerifyEmailBtn" hidden>
+              Send Verification Email
+            </button>
+          </div>
+        </div>
+
+        <!-- PRIVACY & DATA -->
+        <div class="card settings-card">
+          <h3>&#128274; Privacy & Data</h3>
+          <p class="settings-section-note">
+            Review how Code Recall processes account, learning, support, role, and security data.
+          </p>
+
+          <div class="privacy-data-grid">
+            <article class="privacy-data-item">
+              <span>Privacy Notice</span>
+              <strong>Available</strong>
+              <p>View the policy shown during registration and Google account completion.</p>
+            </article>
+            <article class="privacy-data-item">
+              <span>Data Requests</span>
+              <strong>Contact Admin</strong>
+              <p>Request correction, deletion, access, or privacy support through Contact Us.</p>
+            </article>
+            <article class="privacy-data-item">
+              <span>Protected Records</span>
+              <strong>Role-Gated</strong>
+              <p>Admin and super-admin records are guarded by Firebase Auth and Firestore rules.</p>
+            </article>
+            <article class="privacy-data-item">
+              <span>Audit Trail</span>
+              <strong>Enabled</strong>
+              <p>Privileged actions and suspicious access attempts are recorded for review.</p>
+            </article>
+          </div>
+
+          <div class="privacy-data-actions">
+            <a class="action-btn privacy-link-btn" href="privacy.html">View Privacy Policy</a>
+            <a class="action-btn secondary-action-btn privacy-link-btn" href="contact.html">Send Privacy Request</a>
+          </div>
+        </div>
+
+        <!-- COMPLIANCE CHECKLIST -->
+        <div class="card settings-card">
+          <h3>&#9989; Compliance Checklist</h3>
+          <p class="settings-section-note">
+            Visible privacy controls aligned with the system's Data Privacy Act readiness work.
+          </p>
+
+          <div class="compliance-list">
+            <article class="compliance-item">
+              <span>Consent Recorded</span>
+              <strong>Required at signup</strong>
+            </article>
+            <article class="compliance-item">
+              <span>Privacy Request Channel</span>
+              <strong>Contact category added</strong>
+            </article>
+            <article class="compliance-item">
+              <span>Access Limitation</span>
+              <strong>Role and 2FA gated</strong>
+            </article>
+            <article class="compliance-item">
+              <span>Security Audit Trail</span>
+              <strong>Enabled for privileged events</strong>
+            </article>
+            <article class="compliance-item">
+              <span>Policy Version</span>
+              <strong>2026-05-10</strong>
+            </article>
+            <article class="compliance-item">
+              <span>Offline App Shell</span>
+              <strong>Cache enabled</strong>
+            </article>
+            <article class="compliance-item">
+              <span>Content Protection</span>
+              <strong>Learning pages only</strong>
+            </article>
+          </div>
+        </div>
+
         <!-- SYSTEM ACTIONS -->
         <div class="card settings-card full-width">
           <h3>&#9881; System Actions</h3>
@@ -304,8 +548,8 @@
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/settings.js?v=20260430b"></script>
-  <script src="scripts/loading.js?v=20260414a" defer></script>
+  <script type="module" src="scripts/settings.js?v=20260509b"></script>
+  <script src="scripts/loading.js?v=20260509b" defer></script>
 </body>
 </html>
 

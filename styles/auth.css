@@ -334,6 +334,26 @@ input:-webkit-autofill{
   color:var(--accent);
 }
 
+.privacy-consent{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  color:var(--text-color);
+  font-size:12px;
+  line-height:1.45;
+}
+
+.privacy-consent input{
+  width:auto;
+  margin-top:3px;
+  flex-shrink:0;
+}
+
+.privacy-consent a{
+  color:var(--accent);
+  font-weight:700;
+}
+
 .light-mode .container{
   backdrop-filter:blur(12px);
   background:rgba(255,255,255,0.88);
@@ -431,6 +451,250 @@ input:-webkit-autofill{
   color:#1a1140;
 }
 
+#mfaChallengePopup{
+  background:rgba(7, 5, 24, 0.72);
+  box-sizing:border-box;
+  font-family:'Poppins', sans-serif;
+  overflow-y:auto;
+  padding:24px;
+}
+
+#mfaChallengePopup .mfa-card{
+  width:min(760px, 100%);
+  max-height:calc(100vh - 48px);
+  overflow-y:auto;
+  background:rgba(26,17,64,0.9);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:28px;
+  box-shadow:0 24px 64px rgba(5,8,25,0.35);
+  backdrop-filter:blur(14px);
+  box-sizing:border-box;
+  color:#fff;
+  padding:30px;
+  text-align:left;
+}
+
+#mfaChallengePopup .brand-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:22px;
+}
+
+#mfaChallengePopup .brand-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+#mfaChallengePopup .logo{
+  color:#ff8a2a;
+  font-family:'Press Start 2P',cursive;
+  font-size:18px;
+  text-shadow:0 0 8px rgba(255,138,42,0.55),0 0 16px rgba(255,46,151,0.35);
+}
+
+#mfaChallengePopup .role-pill{
+  background:rgba(0,229,255,0.14);
+  border-radius:999px;
+  color:#72f0ff;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.04em;
+  padding:10px 14px;
+}
+
+#mfaChallengePopup .mfa-copy h1{
+  color:#fff;
+  font-size:38px;
+  line-height:1.05;
+  margin:0 0 8px;
+}
+
+#mfaChallengePopup .mfa-copy p{
+  color:rgba(255,255,255,0.78);
+  font-size:16px;
+  line-height:1.5;
+  margin:0 0 24px;
+}
+
+#mfaChallengePopup .panel-block{
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:22px;
+  margin-bottom:24px;
+  padding:22px;
+}
+
+#mfaChallengePopup .panel-block h2{
+  color:#fff;
+  font-size:24px;
+  margin:0 0 12px;
+}
+
+#mfaChallengePopup .secret-box{
+  background:rgba(15,11,37,0.42);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;
+  margin-top:16px;
+  padding:18px;
+}
+
+#mfaChallengePopup .secret-box label{
+  color:#7ff7e0;
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  margin-bottom:10px;
+  text-transform:uppercase;
+}
+
+#mfaChallengePopup .hint-text{
+  color:rgba(255,255,255,0.72);
+  font-size:14px;
+  line-height:1.55;
+  margin:10px 0 0;
+}
+
+#mfaChallengePopup .mfa-form{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+#mfaChallengePopup .mfa-form label{
+  color:#fff;
+  font-size:14px;
+  font-weight:600;
+}
+
+#mfaChallengeCode{
+  background:rgba(7,9,26,0.4);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:16px;
+  box-sizing:border-box;
+  color:#fff;
+  font-family:'Poppins',sans-serif;
+  font-size:18px;
+  margin:0;
+  padding:16px 18px;
+  width:100%;
+}
+
+#mfaChallengeCode::placeholder{
+  color:rgba(255,255,255,0.36);
+}
+
+#mfaChallengePopup .primary-btn,
+#mfaChallengePopup .secondary-btn{
+  border:none;
+  border-radius:14px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Poppins',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  min-height:48px;
+  padding:12px 18px;
+  width:100%;
+}
+
+#mfaChallengePopup .primary-btn{
+  background:linear-gradient(135deg,#ff2e97,#00d4ff);
+  box-shadow:0 16px 34px rgba(0,212,255,0.18);
+  color:#fff;
+}
+
+#mfaChallengePopup .secondary-btn{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.08);
+  color:#fff;
+}
+
+#mfaChallengePopup .action-row{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+  margin-top:18px;
+}
+
+#mfaChallengePopup .status-text{
+  color:#8ef7cf;
+  font-weight:600;
+  line-height:1.5;
+  margin:18px 0 0;
+  min-height:24px;
+}
+
+#mfaChallengePopup .status-text.error{
+  color:#ff8fb6;
+}
+
+.light-mode #mfaChallengePopup{
+  background:rgba(229, 236, 248, 0.82);
+}
+
+.light-mode #mfaChallengePopup .mfa-card{
+  background:rgba(255,255,255,0.92);
+  border-color:rgba(35,26,80,0.1);
+  box-shadow:0 24px 64px rgba(41,33,82,0.18);
+  color:#16122d;
+}
+
+.light-mode #mfaChallengePopup .role-pill{
+  background:rgba(15,118,110,0.14);
+  color:#0f766e;
+}
+
+.light-mode #mfaChallengePopup .mfa-copy h1,
+.light-mode #mfaChallengePopup .panel-block h2,
+.light-mode #mfaChallengePopup .mfa-form label{
+  color:#16122d;
+}
+
+.light-mode #mfaChallengePopup .mfa-copy p,
+.light-mode #mfaChallengePopup .hint-text{
+  color:rgba(22,18,45,0.72);
+}
+
+.light-mode #mfaChallengePopup .panel-block,
+.light-mode #mfaChallengePopup .secret-box{
+  background:rgba(248,247,255,0.82);
+  border-color:rgba(35,26,80,0.12);
+}
+
+.light-mode #mfaChallengePopup .secret-box label{
+  color:#0b6f68;
+}
+
+.light-mode #mfaChallengeCode{
+  background:rgba(255,255,255,0.86);
+  border-color:rgba(35,26,80,0.18);
+  color:#16122d;
+}
+
+.light-mode #mfaChallengeCode::placeholder{
+  color:rgba(22,18,45,0.38);
+}
+
+.light-mode #mfaChallengePopup .secondary-btn{
+  background:rgba(35,26,80,0.06);
+  border-color:rgba(35,26,80,0.12);
+  color:#201a46;
+}
+
+.light-mode #mfaChallengePopup .status-text{
+  color:#047857;
+}
+
+.light-mode #mfaChallengePopup .status-text.error{
+  color:#b32152;
+}
+
 @media (max-width: 850px){
   body{
     padding:18px;
@@ -516,6 +780,36 @@ input:-webkit-autofill{
 
   .popup-box{
     width:min(420px, 92%);
+  }
+
+  #mfaChallengePopup{
+    padding:14px;
+  }
+
+  #mfaChallengePopup .mfa-card{
+    max-height:calc(100vh - 28px);
+    padding:22px 18px;
+  }
+
+  #mfaChallengePopup .brand-row{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  #mfaChallengePopup .logo{
+    font-size:14px;
+  }
+
+  #mfaChallengePopup .mfa-copy h1{
+    font-size:30px;
+  }
+
+  #mfaChallengePopup .panel-block{
+    padding:18px;
+  }
+
+  #mfaChallengePopup .action-row{
+    grid-template-columns:1fr;
   }
 
   .light-mode .container{

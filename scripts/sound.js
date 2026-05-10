@@ -1,17 +1,45 @@
 const STORAGE_KEYS = {
   soundEnabled: "soundEnabled",
   musicEnabled: "musicEnabled",
+  sfxVolume: "sfxVolume",
+  musicVolumePreference: "musicVolume",
   musicTime: "themeMusicTime",
   musicTrack: "themeMusicTrack",
   musicPlaying: "themeMusicPlaying",
   musicVolume: "themeMusicVolume"
 };
 
+const DEFAULT_SFX_VOLUME = 0.65;
+const DEFAULT_MUSIC_VOLUME = 0.18;
+
 let sounds = {};
 let clickSoundInitialized = false;
 let themeMusic = null;
 let musicResumeTimer = null;
 let soundEffectsUnlocked = false;
+
+function clampVolume(value, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(1, Math.max(0, numeric));
+}
+
+export function getSfxVolume() {
+  return clampVolume(localStorage.getItem(STORAGE_KEYS.sfxVolume), DEFAULT_SFX_VOLUME);
+}
+
+export function getMusicVolume() {
+  return clampVolume(localStorage.getItem(STORAGE_KEYS.musicVolumePreference), DEFAULT_MUSIC_VOLUME);
+}
+
+function applySoundEntryVolume(entry) {
+  if (!entry) return;
+  const volume = entry.baseVolume * getSfxVolume();
+  entry.volume = volume;
+  entry.pool.forEach((audio) => {
+    audio.volume = volume;
+  });
+}
 
 function loadSound(name, volume = 1) {
   const audio = new Audio(`assets/sounds/${name}.mp3`);
@@ -22,11 +50,13 @@ function loadSound(name, volume = 1) {
 }
 
 function createSoundEntry(name, volume = 1, size = 3) {
-  return {
+  const entry = {
     src: `assets/sounds/${name}.mp3`,
-    volume,
-    pool: Array.from({ length: size }, () => loadSound(name, volume))
+    baseVolume: volume,
+    volume: volume * getSfxVolume(),
+    pool: Array.from({ length: size }, () => loadSound(name, volume * getSfxVolume()))
   };
+  return entry;
 }
 
 function getThemeTrackName() {
@@ -49,7 +79,7 @@ function saveMusicState() {
 
   sessionStorage.setItem(STORAGE_KEYS.musicTrack, getThemeTrackName());
   sessionStorage.setItem(STORAGE_KEYS.musicPlaying, String(!themeMusic.paused));
-  sessionStorage.setItem(STORAGE_KEYS.musicVolume, String(themeMusic.volume ?? 0.35));
+  sessionStorage.setItem(STORAGE_KEYS.musicVolume, String(themeMusic.volume ?? getMusicVolume()));
   saveMusicTime();
 }
 
@@ -78,7 +108,7 @@ function createThemeMusic() {
   const audio = new Audio(`assets/sounds/${trackName}.mp3`);
   audio.loop = true;
   audio.preload = "auto";
-  audio.volume = parseFloat(sessionStorage.getItem(STORAGE_KEYS.musicVolume) || "0.35");
+  audio.volume = getMusicVolume();
 
   const savedTrack = sessionStorage.getItem(STORAGE_KEYS.musicTrack);
   const savedTime = getSavedMusicTime();
@@ -181,6 +211,7 @@ export function playSound(name) {
   const entry = sounds[name];
   const pool = entry?.pool;
   if (!entry || !Array.isArray(pool) || pool.length === 0) return;
+  applySoundEntryVolume(entry);
 
   try {
     const instance = pool.find((audio) => audio.paused || audio.ended) || pool[0];
@@ -288,10 +319,10 @@ export function restartThemeMusic() {
   stopMusicStateSync();
 
   let currentTime = getSavedMusicTime();
-  let currentVolume = 0.35;
+  let currentVolume = getMusicVolume();
 
   if (themeMusic) {
-    currentVolume = themeMusic.volume || 0.35;
+    currentVolume = themeMusic.volume || getMusicVolume();
     try {
       themeMusic.pause();
     } catch {
@@ -329,21 +360,36 @@ export function restartThemeMusic() {
 
 export function lowerThemeMusic(volume = 0.08) {
   if (!themeMusic) return;
-  themeMusic.volume = volume;
+  themeMusic.volume = Math.min(getMusicVolume(), clampVolume(volume, 0.08));
   saveMusicState();
 }
 
 export function restoreThemeMusic() {
   if (!themeMusic) return;
 
-  let savedVolume = parseFloat(sessionStorage.getItem(STORAGE_KEYS.musicVolume) || "0.35");
+  themeMusic.volume = getMusicVolume();
+  saveMusicState();
+}
 
-  if (!Number.isFinite(savedVolume) || savedVolume <= 0.1) {
-    savedVolume = 0.35;
+export function setSfxVolume(volume) {
+  const nextVolume = clampVolume(volume, DEFAULT_SFX_VOLUME);
+  localStorage.setItem(STORAGE_KEYS.sfxVolume, String(nextVolume));
+  Object.values(sounds).forEach(applySoundEntryVolume);
+}
+
+export function setMusicVolume(volume) {
+  const nextVolume = clampVolume(volume, DEFAULT_MUSIC_VOLUME);
+  localStorage.setItem(STORAGE_KEYS.musicVolumePreference, String(nextVolume));
+  sessionStorage.setItem(STORAGE_KEYS.musicVolume, String(nextVolume));
+
+  if (!themeMusic) {
+    createThemeMusic();
   }
 
-  themeMusic.volume = savedVolume;
-  saveMusicState();
+  if (themeMusic) {
+    themeMusic.volume = nextVolume;
+    saveMusicState();
+  }
 }
 
 export function handleSoundToggle(enabled) {

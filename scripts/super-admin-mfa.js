@@ -11,7 +11,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { hasTotpFactor } from "./firebase-native-mfa.js";
+import { hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
+import { syncNativeMfaProfile } from "./native-mfa-profile.js";
 import { renderQrSvgMarkup } from "./local-qr.js";
 
 const auth = getAuth(app);
@@ -47,10 +48,25 @@ function setStatus(message, isError = false) {
   status.style.color = isError ? "#ff97b6" : "#8ef7cf";
 }
 
+function describeSetupError(error) {
+  const code = String(error?.code || "");
+  if (code.includes("operation-not-allowed") || code.includes("unsupported") || code.includes("invalid-argument")) {
+    return "Firebase native TOTP is not enabled for this project yet. Run npm.cmd run auth:enable-totp with Firebase Admin credentials, then sign in again.";
+  }
+  if (code.includes("requires-recent-login")) {
+    return "Firebase requires a fresh sign-in before enrolling 2FA. Log out, sign in again, then return here.";
+  }
+  if (code.includes("unverified-email")) {
+    return "Firebase requires a verified email before enrolling 2FA. Verify this account's email, then sign in again.";
+  }
+  return `Unable to create the Firebase Auth 2FA setup${code ? ` (${code})` : ""}. Sign in again and try once more.`;
+}
+
 function showSetupUi(email) {
   document.getElementById("setupPanel").hidden = false;
   document.getElementById("verifyPanel").hidden = true;
   document.getElementById("mfaForm").hidden = false;
+  document.getElementById("mfaResetBtn").hidden = false;
   document.getElementById("mfaTitle").textContent = "Set Up Super Admin 2FA";
   document.getElementById("mfaSubtitle").textContent = "Before you can use super-admin controls, connect an authenticator app and verify one code.";
   document.getElementById("mfaAccountLabel").textContent = `Code Recall (${email || "super-admin"})`;
@@ -61,17 +77,18 @@ function showAlreadyEnrolledUi() {
   document.getElementById("setupPanel").hidden = true;
   document.getElementById("verifyPanel").hidden = false;
   document.getElementById("mfaForm").hidden = true;
+  document.getElementById("mfaResetBtn").hidden = true;
   document.getElementById("mfaTitle").textContent = "Super Admin 2FA Is Enabled";
   document.getElementById("mfaSubtitle").textContent = "Sign in again and Firebase will ask for your authenticator code before privileged access opens.";
   updateRecoveryNotice(true);
-  setStatus("2FA is already enrolled. Log out, then sign in again to trigger the second-factor check.");
+  setStatus("2FA is already enrolled. Log out, then sign in again to verify with your authenticator code.");
 }
 
 function updateRecoveryNotice(enrolled) {
   const notice = document.getElementById("mfaRecoveryNotice");
   if (!notice) return;
   notice.textContent = enrolled
-    ? "Recovery and factor management are handled in Firebase Auth."
+    ? "To change or remove this 2FA method, reset the enrolled factor from Firebase Console or the Admin SDK."
     : "After enrollment, privileged sign-ins require the current code from your authenticator app.";
   notice.style.color = "#8ef7cf";
 }
@@ -94,7 +111,7 @@ async function prepareEnrollment(user) {
     console.error("Unable to prepare Firebase MFA enrollment.", error);
     const qrImage = document.getElementById("mfaQrImage");
     if (qrImage) qrImage.textContent = "QR unavailable";
-    setStatus("Unable to create the Firebase Auth 2FA setup. Make sure TOTP MFA is enabled in Firebase Console, then sign in again.", true);
+    setStatus(describeSetupError(error), true);
   }
 }
 
@@ -107,7 +124,24 @@ async function completeEnrollment(code) {
   const assertion = TotpMultiFactorGenerator.assertionForEnrollment(pendingTotpSecret, code);
   await multiFactor(currentUser).enroll(assertion, "Code Recall Super Admin");
   clearSuperAdminMfaSession();
-  setStatus("Super-admin 2FA is now enabled. Please sign in again to verify with your authenticator code.");
+  setStatus("Super-admin 2FA is now enabled. Checking your secure session...");
+
+  await currentUser.reload();
+  currentUser = auth.currentUser || currentUser;
+
+  if (await signedInWithSecondFactor(currentUser)) {
+    await syncNativeMfaProfile(db, currentUser, "super_admin", {
+      method: "firebase_totp_enrollment"
+    });
+    window.location.replace("super-admin.html");
+    return;
+  }
+
+  sessionStorage.setItem(
+    "code_recall_mfa_notice",
+    "Your authenticator is enrolled. Sign in one more time so Firebase can issue a 2FA-verified session."
+  );
+  setStatus("2FA is enrolled. Sign in once more so Firebase can verify this privileged session.");
   window.setTimeout(async () => {
     await signOut(auth);
     window.location.replace("auth.html");
@@ -187,7 +221,7 @@ async function copyText(value) {
 }
 
 window.resetCurrentMfaEnrollment = function() {
-  setStatus("Firebase Auth MFA factors must be reset from Firebase Console or Admin SDK.", true);
+  setStatus("To change or remove this 2FA method, reset the enrolled factor from Firebase Console or the Admin SDK.", false);
 };
 
 window.logoutMfa = async function() {

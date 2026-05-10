@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Code: Recall - Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/auth.css">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,6 +77,14 @@
           <input type="password" id="registerPassword" placeholder="Password">
           <span class="toggle-password" onclick="togglePassword('registerPassword')">👁</span>
         </div>
+
+        <label class="privacy-consent">
+          <input type="checkbox" id="privacyConsent">
+          <span>
+            I agree to the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+            and allow Code Recall to process my account and learning data.
+          </span>
+        </label>
 
         <button class="primary-btn" id="registerBtn" onclick="register()">Register</button>
 
@@ -151,22 +162,45 @@
   </div>
 
   <!-- 2FA CHALLENGE POPUP -->
-  <div id="mfaChallengePopup" class="popup">
-    <div class="popup-box">
-      <h3>Two-Factor Verification</h3>
-      <p id="mfaChallengeLabel">Enter the 6-digit code from your authenticator app.</p>
-      <input type="text" id="mfaChallengeCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Authenticator code">
-      <p id="mfaChallengeStatus" class="helper-text"></p>
-
-      <div class="popup-actions">
-        <button id="mfaChallengeBtn" onclick="confirmMfaChallenge()">Verify</button>
-        <button class="secondary-popup-btn" onclick="closeMfaChallenge()">Cancel</button>
+  <div id="mfaChallengePopup" class="popup mfa-challenge-popup">
+    <section class="mfa-card" role="dialog" aria-modal="true" aria-labelledby="mfaChallengeTitle">
+      <div class="brand-row">
+        <div class="logo">CODE:RECALL!</div>
+        <div class="brand-actions">
+          <span class="role-pill">ENROLLED 2FA</span>
+        </div>
       </div>
-    </div>
+
+      <div class="mfa-copy">
+        <h1 id="mfaChallengeTitle">Verify Super Admin Access</h1>
+        <p id="mfaChallengeLabel">No QR code is needed. Enter the current 6-digit code from your authenticator app.</p>
+      </div>
+
+      <div class="panel-block">
+        <h2>Enter Verification Code</h2>
+        <p class="hint-text">Open the authenticator app already connected to this account to get the current 6-digit code.</p>
+        <div class="secret-box">
+          <label>Authenticator Ready</label>
+          <p class="hint-text">This account is already enrolled, so there is no QR code to scan.</p>
+        </div>
+      </div>
+
+      <div class="mfa-form">
+        <label for="mfaChallengeCode">Authenticator Code</label>
+        <input type="text" id="mfaChallengeCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter 6-digit code">
+      </div>
+
+      <div class="action-row">
+        <button id="mfaChallengeBtn" type="button" class="primary-btn" onclick="confirmMfaChallenge()">Verify and Continue</button>
+        <button type="button" class="secondary-btn" onclick="closeMfaChallenge()">Cancel</button>
+      </div>
+
+      <p id="mfaChallengeStatus" class="status-text"></p>
+    </section>
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/auth.js?v=20260505a"></script>
+  <script type="module" src="scripts/auth.js?v=20260509a"></script>
   <script src="scripts/loading.js" defer></script>
 </body>
 </html>

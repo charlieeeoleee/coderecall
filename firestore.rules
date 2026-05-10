@@ -52,10 +52,10 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() &&
         (
-          request.auth.token.role == "admin" ||
-          request.auth.token.role == "super_admin" ||
-          request.auth.token.admin == true ||
-          request.auth.token.super_admin == true ||
+          request.auth.token.get("role", "user") == "admin" ||
+          request.auth.token.get("role", "user") == "super_admin" ||
+          request.auth.token.get("admin", false) == true ||
+          request.auth.token.get("super_admin", false) == true ||
           isBootstrapAdminEmail() ||
           hasStoredAdminRole()
         );
@@ -64,8 +64,8 @@ service cloud.firestore {
     function isSuperAdmin() {
       return isSignedIn() &&
         (
-          request.auth.token.role == "super_admin" ||
-          request.auth.token.super_admin == true ||
+          request.auth.token.get("role", "user") == "super_admin" ||
+          request.auth.token.get("super_admin", false) == true ||
           isBootstrapSuperAdminEmail() ||
           hasStoredSuperAdminRole()
         );
@@ -79,11 +79,11 @@ service cloud.firestore {
     }
 
     function isMfaAdmin() {
-      return isBootstrapAdminEmail() || hasStoredAdminRole() || (isAdmin() && hasFirebaseMfa());
+      return isAdmin() && hasFirebaseMfa();
     }
 
     function isMfaSuperAdmin() {
-      return isBootstrapSuperAdminEmail() || hasStoredSuperAdminRole() || (isSuperAdmin() && hasFirebaseMfa());
+      return isSuperAdmin() && hasFirebaseMfa();
     }
 
     function isOwner(uid) {
@@ -123,7 +123,8 @@ service cloud.firestore {
         "studyHistory",
         "retentionQueue",
         "wrongAnswerReview",
-        "resumeActivity"
+        "resumeActivity",
+        "privacyConsent"
       ]);
     }
 
@@ -151,6 +152,39 @@ service cloud.firestore {
       return isMfaSuperAdmin()
         && !("totpSecret" in request.resource.data)
         && !("backupCodeHashes" in request.resource.data);
+    }
+
+    function validNativeMfaSecurityProfileData(userId) {
+      return isOwner(userId)
+        && hasFirebaseMfa()
+        && request.resource.data.uid == userId
+        && request.resource.data.firebaseMfaEnrolled == true
+        && request.resource.data.firebaseMfaSource == "firebase_auth"
+        && request.resource.data.role in ["admin", "super_admin"];
+    }
+
+    function nativeMfaProfileKeys() {
+      return [
+        "uid",
+        "email",
+        "role",
+        "firebaseMfaEnrolled",
+        "firebaseMfaProvider",
+        "firebaseMfaSource",
+        "lastVerifiedAt",
+        "lastVerificationMethod",
+        "updatedAt"
+      ];
+    }
+
+    function validNativeMfaSecurityProfileCreate(userId) {
+      return validNativeMfaSecurityProfileData(userId)
+        && request.resource.data.keys().hasOnly(nativeMfaProfileKeys());
+    }
+
+    function validNativeMfaSecurityProfileUpdate(userId) {
+      return validNativeMfaSecurityProfileData(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(nativeMfaProfileKeys());
     }
 
     function securityProfileHasNoStoredSecrets() {
@@ -216,6 +250,28 @@ service cloud.firestore {
         && appendedLearnerConversationEntryIsSafe();
     }
 
+    function validClientSecurityAuditCreate() {
+      return isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          "action",
+          "details",
+          "actorUid",
+          "actorEmail",
+          "createdAt"
+        ])
+        && request.resource.data.action in [
+          "denied_admin_route",
+          "denied_super_admin_route",
+          "mfa_required_privileged_route",
+          "mfa_enrollment_required"
+        ]
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorEmail == request.auth.token.get("email", "")
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 500
+        && request.resource.data.createdAt == request.time;
+    }
+
     match /users/{userId} {
       allow create: if validOwnerUserCreate(userId);
       allow read: if isOwner(userId) || isMfaAdmin();
@@ -235,7 +291,8 @@ service cloud.firestore {
 
     match /securityProfiles/{userId} {
       allow read: if isMfaSuperAdmin() || (isOwner(userId) && securityProfileHasNoStoredSecrets());
-      allow create, update: if validLegacySecurityProfileWrite();
+      allow create: if validLegacySecurityProfileWrite() || validNativeMfaSecurityProfileCreate(userId);
+      allow update: if validLegacySecurityProfileWrite() || validNativeMfaSecurityProfileUpdate(userId);
     }
 
     match /pendingUsers/{pendingUserId} {
@@ -247,7 +304,8 @@ service cloud.firestore {
     }
 
     match /auditLogs/{logId} {
-      allow read, create: if isMfaAdmin();
+      allow read: if isMfaAdmin();
+      allow create: if isMfaAdmin() || validClientSecurityAuditCreate();
     }
 
     match /contactMessages/{messageId} {

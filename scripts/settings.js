@@ -4,7 +4,8 @@ import {
   onAuthStateChanged,
   signOut,
   sendEmailVerification,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  verifyBeforeUpdateEmail
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   getFirestore,
@@ -19,7 +20,12 @@ import {
   tryStartMusic,
   restartThemeMusic,
   handleSoundToggle,
-  handleMusicToggle
+  handleMusicToggle,
+  getSfxVolume,
+  getMusicVolume,
+  setSfxVolume,
+  setMusicVolume,
+  playSound
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole, syncUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
@@ -31,6 +37,7 @@ import {
   clearRetentionQueue
 } from "./retention-store.js";
 import { clearWrongAnswerReview } from "./review-store.js";
+import { hasTotpFactor } from "./firebase-native-mfa.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -52,6 +59,67 @@ const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 const DEFAULT_RETENTION_SCHEDULE = {
   immediateOnSeed: true,
   intervals: [1, 3, 7, 14]
+};
+const ACCESSIBILITY_DEFAULTS = {
+  highContrast: false,
+  screenReaderAssist: false,
+  reducedMotion: false,
+  textSize: "normal",
+  narrationSpeed: 1
+};
+const TEXT_SIZE_OPTIONS = new Set(["normal", "large", "extra-large"]);
+
+function readBooleanPreference(key, fallback = false) {
+  const value = localStorage.getItem(key);
+  if (value == null) return fallback;
+  return value === "true";
+}
+
+function readNumberPreference(key, fallback, { min = 0, max = 1 } = {}) {
+  const value = Number(localStorage.getItem(key));
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
+}
+
+function getAccessibilityPreferences() {
+  const textSize = localStorage.getItem("textSizePreference") || ACCESSIBILITY_DEFAULTS.textSize;
+
+  return {
+    highContrast: readBooleanPreference("highContrastMode", ACCESSIBILITY_DEFAULTS.highContrast),
+    screenReaderAssist: readBooleanPreference("screenReaderAssist", ACCESSIBILITY_DEFAULTS.screenReaderAssist),
+    reducedMotion: readBooleanPreference("reducedMotion", ACCESSIBILITY_DEFAULTS.reducedMotion),
+    textSize: TEXT_SIZE_OPTIONS.has(textSize) ? textSize : ACCESSIBILITY_DEFAULTS.textSize,
+    narrationSpeed: readNumberPreference(
+      "narrationSpeed",
+      ACCESSIBILITY_DEFAULTS.narrationSpeed,
+      { min: 0.5, max: 2.5 }
+    )
+  };
+}
+
+function applyAccessibilityPreferences() {
+  const prefs = getAccessibilityPreferences();
+  const target = document.body;
+  if (!target) return prefs;
+
+  target.classList.toggle("access-high-contrast", prefs.highContrast);
+  target.classList.toggle("access-screen-reader-assist", prefs.screenReaderAssist);
+  target.classList.toggle("access-reduced-motion", prefs.reducedMotion);
+  target.classList.toggle("access-text-large", prefs.textSize === "large");
+  target.classList.toggle("access-text-extra-large", prefs.textSize === "extra-large");
+  window.codeRecallNarrationSpeed = prefs.narrationSpeed;
+  if (typeof window.applyAccessibilityPreferences === "function") {
+    window.applyAccessibilityPreferences();
+  }
+  return prefs;
+}
+
+function formatNarrationSpeed(speed) {
+  return `${speed.toFixed(2)}x`;
+}
+
+window.getCodeRecallNarrationSpeed = function() {
+  return getAccessibilityPreferences().narrationSpeed;
 };
 
 function getAssessmentXP(type, result = null) {
@@ -177,6 +245,60 @@ function getRoleLabel(role) {
   return "Guest";
 }
 
+function setProtectionText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
+function updateAccountProtectionCard() {
+  const roleLabel = getRoleLabel(currentRole);
+  const requiresMfa = currentRole === "admin" || currentRole === "super_admin";
+  const hasMfa = currentUser ? hasTotpFactor(currentUser) : false;
+  const verified = currentVerificationState === "Verified";
+
+  setProtectionText("protectionRole", roleLabel);
+  setProtectionText("protectionLoginType", currentLoginType);
+  setProtectionText("protectionVerification", currentVerificationState);
+  setProtectionText(
+    "protectionMfa",
+    requiresMfa ? (hasMfa ? "Enabled" : "Required") : "Not required"
+  );
+  setProtectionText(
+    "protectionSession",
+    currentIsGuest ? "Guest/local session" : "Protected by Firebase Auth"
+  );
+  setProtectionText(
+    "protectionData",
+    requiresMfa ? "Privileged access protected" : "Learner access only"
+  );
+
+  const summary = document.getElementById("protectionSummary");
+  if (summary) {
+    if (currentIsGuest) {
+      summary.textContent = "Guest progress is local to this device. Sign in to protect and sync your account.";
+    } else if (requiresMfa && hasMfa) {
+      summary.textContent = "Privileged access is protected by Firebase Auth and authenticator-based 2FA.";
+    } else if (requiresMfa) {
+      summary.textContent = "This privileged account must finish 2FA enrollment before admin controls can open.";
+    } else if (!verified && currentLoginType === "Email / Password") {
+      summary.textContent = "Verify your email to complete account protection.";
+    } else {
+      summary.textContent = "This learner account is protected by Firebase Auth and role-based Firestore rules.";
+    }
+  }
+
+  const manageMfaBtn = document.getElementById("manageMfaBtn");
+  if (manageMfaBtn) {
+    manageMfaBtn.hidden = !requiresMfa;
+    manageMfaBtn.textContent = hasMfa ? "View 2FA Status" : "Set Up 2FA";
+  }
+
+  const verifyEmailBtn = document.getElementById("protectionVerifyEmailBtn");
+  if (verifyEmailBtn) {
+    verifyEmailBtn.hidden = currentIsGuest || currentLoginType !== "Email / Password" || verified;
+  }
+}
+
 /* =========================
    LOAD REAL USER
 ========================= */
@@ -253,6 +375,7 @@ async function loadUserSettings() {
   verificationStatus.textContent = verificationText;
   verificationStatus.className = `status-pill ${verificationClass}`;
   updateAccountActionVisibility();
+  updateAccountProtectionCard();
 }
 
 /* =========================
@@ -296,6 +419,7 @@ function loadGuestSettings() {
   verificationStatus.textContent = "Guest Session";
   verificationStatus.className = "status-pill locked";
   updateAccountActionVisibility();
+  updateAccountProtectionCard();
 }
 
 function dataOrEmpty(docSnap, key) {
@@ -315,6 +439,94 @@ function loadPreferences() {
   const soundToggle = document.getElementById("soundToggle");
   const autoAdvanceToggle = document.getElementById("autoAdvanceToggle");
   const musicToggle = document.getElementById("musicToggle");
+  const sfxVolumeInput = document.getElementById("sfxVolumeInput");
+  const sfxVolumeValue = document.getElementById("sfxVolumeValue");
+  const musicVolumeInput = document.getElementById("musicVolumeInput");
+  const musicVolumeValue = document.getElementById("musicVolumeValue");
+  const highContrastToggle = document.getElementById("highContrastToggle");
+  const screenReaderAssistToggle = document.getElementById("screenReaderAssistToggle");
+  const reducedMotionToggle = document.getElementById("reducedMotionToggle");
+  const textSizeSelect = document.getElementById("textSizeSelect");
+  const narrationSpeedInput = document.getElementById("narrationSpeedInput");
+  const narrationSpeedValue = document.getElementById("narrationSpeedValue");
+  const readAloudPageBtn = document.getElementById("readAloudPageBtn");
+  const pauseNarrationBtn = document.getElementById("pauseNarrationBtn");
+  const stopNarrationBtn = document.getElementById("stopNarrationBtn");
+  const accessibilityPrefs = applyAccessibilityPreferences();
+
+  if (highContrastToggle) {
+    highContrastToggle.checked = accessibilityPrefs.highContrast;
+    highContrastToggle.addEventListener("change", (e) => {
+      localStorage.setItem("highContrastMode", e.target.checked ? "true" : "false");
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (screenReaderAssistToggle) {
+    screenReaderAssistToggle.checked = accessibilityPrefs.screenReaderAssist;
+    screenReaderAssistToggle.addEventListener("change", (e) => {
+      localStorage.setItem("screenReaderAssist", e.target.checked ? "true" : "false");
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (reducedMotionToggle) {
+    reducedMotionToggle.checked = accessibilityPrefs.reducedMotion;
+    reducedMotionToggle.addEventListener("change", (e) => {
+      localStorage.setItem("reducedMotion", e.target.checked ? "true" : "false");
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (textSizeSelect) {
+    textSizeSelect.value = accessibilityPrefs.textSize;
+    textSizeSelect.addEventListener("change", (e) => {
+      const nextSize = TEXT_SIZE_OPTIONS.has(e.target.value) ? e.target.value : ACCESSIBILITY_DEFAULTS.textSize;
+      localStorage.setItem("textSizePreference", nextSize);
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (narrationSpeedInput && narrationSpeedValue) {
+    const savedNarrationSpeed = Math.round(accessibilityPrefs.narrationSpeed * 100);
+    narrationSpeedInput.value = String(savedNarrationSpeed);
+    narrationSpeedValue.textContent = formatNarrationSpeed(savedNarrationSpeed / 100);
+
+    narrationSpeedInput.addEventListener("input", (e) => {
+      const nextSpeed = Math.round(Number(e.target.value || 100)) / 100;
+      localStorage.setItem("narrationSpeed", String(nextSpeed));
+      narrationSpeedValue.textContent = formatNarrationSpeed(nextSpeed);
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (readAloudPageBtn) {
+    readAloudPageBtn.addEventListener("click", () => {
+      if (typeof window.readCodeRecallPageAloud === "function") {
+        window.readCodeRecallPageAloud();
+      } else {
+        showInfoPopup("Read Aloud Unavailable", "Your browser does not support read-aloud narration on this page.");
+      }
+    });
+  }
+
+  if (pauseNarrationBtn) {
+    pauseNarrationBtn.addEventListener("click", () => {
+      if (typeof window.toggleCodeRecallNarrationPause === "function") {
+        const isPaused = window.toggleCodeRecallNarrationPause();
+        pauseNarrationBtn.textContent = isPaused ? "Resume" : "Pause";
+      }
+    });
+  }
+
+  if (stopNarrationBtn) {
+    stopNarrationBtn.addEventListener("click", () => {
+      if (typeof window.stopCodeRecallNarration === "function") {
+        window.stopCodeRecallNarration();
+      }
+      if (pauseNarrationBtn) pauseNarrationBtn.textContent = "Pause";
+    });
+  }
 
   if (soundToggle) {
     soundToggle.checked = soundEnabled !== "false";
@@ -334,6 +546,42 @@ function loadPreferences() {
     musicToggle.checked = musicEnabled !== "false";
     musicToggle.addEventListener("change", (e) => {
       handleMusicToggle(e.target.checked);
+    });
+  }
+
+  if (sfxVolumeInput && sfxVolumeValue) {
+    const savedSfxVolume = Math.round(getSfxVolume() * 100);
+    sfxVolumeInput.value = String(savedSfxVolume);
+    sfxVolumeValue.textContent = `${savedSfxVolume}%`;
+
+    sfxVolumeInput.addEventListener("input", (e) => {
+      const nextVolume = Math.round(Number(e.target.value || 0));
+      setSfxVolume(nextVolume / 100);
+      sfxVolumeValue.textContent = `${nextVolume}%`;
+      if (soundToggle) {
+        soundToggle.checked = nextVolume > 0;
+        handleSoundToggle(nextVolume > 0);
+      }
+    });
+
+    sfxVolumeInput.addEventListener("change", () => {
+      if (soundToggle?.checked !== false) playSound("click");
+    });
+  }
+
+  if (musicVolumeInput && musicVolumeValue) {
+    const savedMusicVolume = Math.round(getMusicVolume() * 100);
+    musicVolumeInput.value = String(savedMusicVolume);
+    musicVolumeValue.textContent = `${savedMusicVolume}%`;
+
+    musicVolumeInput.addEventListener("input", (e) => {
+      const nextVolume = Math.round(Number(e.target.value || 0));
+      setMusicVolume(nextVolume / 100);
+      musicVolumeValue.textContent = `${nextVolume}%`;
+      if (musicToggle) {
+        musicToggle.checked = nextVolume > 0;
+        handleMusicToggle(nextVolume > 0);
+      }
     });
   }
 
@@ -549,6 +797,11 @@ function wireProfileEditor() {
   const resetPhotoBtn = document.getElementById("resetProfilePhotoBtn");
   const resendVerificationBtn = document.getElementById("resendVerificationBtn");
   const passwordResetBtn = document.getElementById("passwordResetBtn");
+  const changeEmailBtn = document.getElementById("changeEmailBtn");
+  const changeEmailInput = document.getElementById("changeEmailInput");
+  const accountSecurityStatus = document.getElementById("accountSecurityStatus");
+  const manageMfaBtn = document.getElementById("manageMfaBtn");
+  const protectionVerifyEmailBtn = document.getElementById("protectionVerifyEmailBtn");
 
   if (fileInput) {
     fileInput.addEventListener("change", () => {
@@ -597,6 +850,7 @@ function wireProfileEditor() {
           verificationStatus.textContent = "Verified";
           verificationStatus.className = "status-pill unlocked";
           updateAccountActionVisibility();
+          updateAccountProtectionCard();
           showInfoPopup("Already Verified", "This account is already verified.");
           return;
         }
@@ -626,6 +880,72 @@ function wireProfileEditor() {
         console.error("Password reset error:", error);
         showInfoPopup("Unable to Send", "We could not send a password reset email right now.");
       }
+    });
+  }
+
+  if (changeEmailBtn) {
+    changeEmailBtn.addEventListener("click", async () => {
+      if (!currentUser) {
+        if (accountSecurityStatus) accountSecurityStatus.textContent = "Please sign in before changing your email.";
+        return;
+      }
+
+      const nextEmail = changeEmailInput?.value?.trim().toLowerCase() || "";
+      const currentEmail = (currentUser.email || "").toLowerCase();
+
+      if (!nextEmail) {
+        if (accountSecurityStatus) accountSecurityStatus.textContent = "Enter the new email address first.";
+        return;
+      }
+
+      if (nextEmail === currentEmail) {
+        if (accountSecurityStatus) accountSecurityStatus.textContent = "That is already your current email address.";
+        return;
+      }
+
+      changeEmailBtn.disabled = true;
+      changeEmailBtn.textContent = "Sending...";
+
+      try {
+        await verifyBeforeUpdateEmail(currentUser, nextEmail);
+        if (accountSecurityStatus) {
+          accountSecurityStatus.textContent = "Email change link sent. Open it from your new inbox to finish the change.";
+        }
+        showInfoPopup("Email Change Sent", "Check the new email address and open the verification link to finish changing your account email.");
+      } catch (error) {
+        console.error("Email change error:", error);
+        const needsRecentLogin = error?.code === "auth/requires-recent-login";
+        if (accountSecurityStatus) {
+          accountSecurityStatus.textContent = needsRecentLogin
+            ? "Please log out, sign in again, then retry the email change."
+            : "Unable to send the email change link right now.";
+        }
+        showInfoPopup(
+          needsRecentLogin ? "Sign In Again Required" : "Unable to Change Email",
+          needsRecentLogin
+            ? "Firebase requires a fresh sign-in before changing email. Log out, sign back in, then retry."
+            : "We could not send the email change link right now."
+        );
+      } finally {
+        changeEmailBtn.disabled = false;
+        changeEmailBtn.textContent = "Send Email Change Link";
+      }
+    });
+  }
+
+  if (manageMfaBtn) {
+    manageMfaBtn.addEventListener("click", () => {
+      if (currentRole === "super_admin") {
+        window.location.href = "super-admin-mfa.html";
+      } else if (currentRole === "admin") {
+        window.location.href = "admin-mfa.html";
+      }
+    });
+  }
+
+  if (protectionVerifyEmailBtn && resendVerificationBtn) {
+    protectionVerifyEmailBtn.addEventListener("click", () => {
+      resendVerificationBtn.click();
     });
   }
 
@@ -680,6 +1000,12 @@ function wireProfileEditor() {
 function updateAccountActionVisibility() {
   const resendVerificationBtn = document.getElementById("resendVerificationBtn");
   const passwordResetBtn = document.getElementById("passwordResetBtn");
+  const changeEmailBtn = document.getElementById("changeEmailBtn");
+  const changeEmailInput = document.getElementById("changeEmailInput");
+  const accountSecurityNote = document.getElementById("accountSecurityNote");
+  const accountSecurityWarning = document.getElementById("accountSecurityWarning");
+  const canManageEmail = !currentIsGuest && currentLoginType === "Email / Password";
+  const canManagePassword = !currentIsGuest && currentLoginType === "Email / Password";
 
   if (resendVerificationBtn) {
     const shouldShowResend =
@@ -690,11 +1016,40 @@ function updateAccountActionVisibility() {
   }
 
   if (passwordResetBtn) {
-    const shouldShowPasswordReset =
-      !currentIsGuest &&
-      currentLoginType === "Email / Password";
-    passwordResetBtn.hidden = !shouldShowPasswordReset;
+    passwordResetBtn.hidden = false;
+    passwordResetBtn.disabled = !canManagePassword;
   }
+
+  if (changeEmailBtn) {
+    changeEmailBtn.disabled = !canManageEmail;
+  }
+
+  if (changeEmailInput) {
+    changeEmailInput.disabled = !canManageEmail;
+  }
+
+  if (accountSecurityNote) {
+    if (currentIsGuest) {
+      accountSecurityNote.textContent = "Sign in with an account before changing email or password.";
+    } else if (currentLoginType === "Google") {
+      accountSecurityNote.textContent = "This account uses Google sign-in.";
+    } else if (currentLoginType === "Email / Password") {
+      accountSecurityNote.textContent = "Use a verified link to change your email, or send yourself a password reset link.";
+    } else {
+      accountSecurityNote.textContent = "Email and password changes depend on your sign-in provider.";
+    }
+  }
+
+  if (accountSecurityWarning) {
+    accountSecurityWarning.hidden = canManageEmail || currentLoginType === "Email / Password";
+    if (currentIsGuest) {
+      accountSecurityWarning.textContent = "You are using guest mode. Sign in with an email/password account to change email or password.";
+    } else {
+      accountSecurityWarning.textContent = "You are not an email/password authenticated user. Email and password changes are managed by your sign-in provider.";
+    }
+  }
+
+  updateAccountProtectionCard();
 }
 
 /* =========================
@@ -1250,6 +1605,7 @@ function updateIcon() {
    INIT
 ========================= */
 loadTheme();
+applyAccessibilityPreferences();
 wireProfileEditor();
 wireRetentionScheduleControls();
 initSounds();

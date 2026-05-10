@@ -28,7 +28,9 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { enforcePrivilegedMfa } from "./firebase-native-mfa.js";
+import { enforcePrivilegedMfa, hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
+import { syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { writeSecurityAudit } from "./security-audit.js";
 import {
   fetchModuleDrafts,
   fetchQuizDrafts
@@ -40,6 +42,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
+let currentRole = "user";
 let systemPopupAction = null;
 let systemPopupBusy = false;
 let contactInboxUnsubscribe = null;
@@ -78,10 +81,12 @@ onAuthStateChanged(auth, async (user) => {
 
   currentUser = user;
   const role = await resolveUserRole(db, user);
+  currentRole = role;
   await syncUserRole(db, user, role);
   applyRoleNavigation(role, "super-admin.html");
 
   if (role !== "super_admin") {
+    await writeSecurityAudit(db, user, "denied_super_admin_route", `Denied super-admin.html route for resolved role: ${role}`);
     window.location.href = "dashboard.html";
     return;
   }
@@ -94,6 +99,9 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
+  await syncNativeMfaProfile(db, user, role, {
+    method: "firebase_totp_super_admin_access"
+  });
   await updateUserUI(user);
   await loadSuperAdminDashboard();
   startContactInboxSubscription();
@@ -123,7 +131,9 @@ async function loadSuperAdminDashboard() {
   ]);
 
   const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const securityProfiles = securityProfilesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  const securityProfiles = await addCurrentSessionMfaProfile(
+    securityProfilesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
+  );
   const grants = grantsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
   const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
@@ -390,20 +400,25 @@ function summarizeRetentionInsights(learners) {
 
 function summarizeTwoFactorOversight(users, profiles) {
   const privilegedUsers = users.filter((user) => ["admin", "super_admin"].includes(getRoleFromUserData(user)));
-  const profileMap = new Map(
-    profiles.map((profile) => [profile.uid || profile.id, profile])
-  );
+  const profileIndex = buildSecurityProfileIndex(profiles);
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const startMs = startOfToday.getTime();
 
   const rows = privilegedUsers.map((user) => {
     const role = getRoleFromUserData(user);
-    const profile = profileMap.get(user.id) || null;
-    const enrolled = Boolean(profile?.totpEnabled && profile?.totpSecret);
-    const backupCodesRemaining = Array.isArray(profile?.backupCodeHashes) ? profile.backupCodeHashes.length : 0;
+    const profile = getSecurityProfileForUser(user, profileIndex);
+    const nativeEnrolled = Boolean(profile?.firebaseMfaEnrolled);
+    const legacyEnrolled = Boolean(profile?.totpEnabled && profile?.totpSecret);
+    const enrolled = nativeEnrolled || legacyEnrolled;
+    const backupCodesRemaining = legacyEnrolled && Array.isArray(profile?.backupCodeHashes)
+      ? profile.backupCodeHashes.length
+      : null;
     const lastVerifiedMs = toTimestampMs(profile?.lastVerifiedAt);
     const enrolledMs = toTimestampMs(profile?.enrolledAt);
+    const providerLabel = nativeEnrolled
+      ? `Firebase Auth ${profile?.firebaseMfaProvider || "TOTP"}`
+      : "Legacy app 2FA";
 
     return {
       id: user.id,
@@ -411,6 +426,9 @@ function summarizeTwoFactorOversight(users, profiles) {
       email: user.email || "No email",
       role,
       enrolled,
+      nativeEnrolled,
+      legacyEnrolled,
+      providerLabel,
       backupCodesRemaining,
       backupCodeUseCount: Math.max(0, Number(profile?.backupCodeUseCount || 0)),
       lastVerificationMethod: String(profile?.lastVerificationMethod || ""),
@@ -426,10 +444,74 @@ function summarizeTwoFactorOversight(users, profiles) {
     enrolledCount: rows.filter((row) => row.enrolled).length,
     pendingCount: rows.filter((row) => !row.enrolled).length,
     verifiedTodayCount: rows.filter((row) => row.verifiedToday).length,
-    lowBackupCount: rows.filter((row) => row.enrolled && row.backupCodesRemaining <= 2).length,
+    lowBackupCount: rows.filter((row) => row.legacyEnrolled && row.backupCodesRemaining <= 2).length,
     backupUseCount: rows.reduce((sum, row) => sum + row.backupCodeUseCount, 0),
     rows
   };
+}
+
+async function addCurrentSessionMfaProfile(profiles) {
+  if (!currentUser || !["admin", "super_admin"].includes(currentRole)) return profiles;
+  if (!hasTotpFactor(currentUser) || !await signedInWithSecondFactor(currentUser)) return profiles;
+
+  const currentEmail = normalizeEmail(currentUser.email);
+  const existingIndex = profiles.findIndex((profile) => {
+    const ids = [profile.id, profile.uid].filter(Boolean).map(String);
+    return ids.includes(currentUser.uid) || normalizeEmail(profile.email) === currentEmail;
+  });
+
+  const sessionProfile = {
+    id: currentUser.uid,
+    uid: currentUser.uid,
+    email: currentUser.email || "",
+    role: currentRole,
+    firebaseMfaEnrolled: true,
+    firebaseMfaProvider: "TOTP",
+    firebaseMfaSource: "firebase_auth",
+    lastVerifiedAt: Date.now(),
+    lastVerificationMethod: "firebase_totp_current_session",
+    updatedAt: Date.now()
+  };
+
+  if (existingIndex >= 0) {
+    return profiles.map((profile, index) => (
+      index === existingIndex
+        ? { ...profile, ...sessionProfile }
+        : profile
+    ));
+  }
+
+  return [...profiles, sessionProfile];
+}
+
+function buildSecurityProfileIndex(profiles) {
+  const byId = new Map();
+  const byEmail = new Map();
+
+  profiles.forEach((profile) => {
+    const keys = [profile.id, profile.uid].filter(Boolean);
+    keys.forEach((key) => byId.set(String(key), profile));
+
+    const email = normalizeEmail(profile.email);
+    if (email) byEmail.set(email, profile);
+  });
+
+  return { byId, byEmail };
+}
+
+function getSecurityProfileForUser(user, profileIndex) {
+  const keys = [user.id, user.uid, user.authUid, user.firebaseUid].filter(Boolean);
+  for (const key of keys) {
+    const profile = profileIndex.byId.get(String(key));
+    if (profile) return profile;
+  }
+
+  const profileByEmail = profileIndex.byEmail.get(normalizeEmail(user.email));
+  return profileByEmail || null;
+}
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
 }
 
 function toTimestampMs(value) {
@@ -569,14 +651,14 @@ function renderTwoFactorOversight(users, profiles) {
   setText(
     "superMfaEnrolledCountDetail",
     summary.enrolledCount
-      ? `${summary.enrolledCount} privileged account(s) already have authenticator-based 2FA enabled.`
+      ? `${summary.enrolledCount} privileged account(s) have Firebase Auth 2FA recorded.`
       : "No privileged accounts are enrolled yet."
   );
   setText("superMfaPendingCount", summary.pendingCount);
   setText(
     "superMfaPendingCountDetail",
     summary.pendingCount
-      ? `${summary.pendingCount} privileged account(s) still need to finish 2FA enrollment.`
+      ? `${summary.pendingCount} privileged account(s) still need a recorded Firebase 2FA verification.`
       : "No enrollment gaps found."
   );
   setText("superMfaVerifiedTodayCount", summary.verifiedTodayCount);
@@ -590,8 +672,8 @@ function renderTwoFactorOversight(users, profiles) {
   setText(
     "superMfaLowBackupCountDetail",
     summary.lowBackupCount
-      ? `${summary.lowBackupCount} privileged account(s) should re-enroll soon because only 2 or fewer backup codes remain.`
-      : "No privileged account is running low on backup codes."
+      ? `${summary.lowBackupCount} legacy 2FA account(s) should re-enroll soon because only 2 or fewer backup codes remain.`
+      : "Native Firebase 2FA accounts do not use app backup-code reserves."
   );
   setText("superMfaBackupUseCount", summary.backupUseCount);
   setText(
@@ -611,7 +693,7 @@ function renderTwoFactorOversight(users, profiles) {
     .map((row) => ({
       title: row.name,
       metric: row.enrolled ? "Enrolled" : "Pending",
-      detail: `${row.role} • ${row.email} • Backup codes left: ${row.backupCodesRemaining} • Last verified: ${row.lastVerifiedLabel}`
+      detail: `${row.role} • ${row.email} • Provider: ${row.enrolled ? row.providerLabel : "Not recorded"} • Last verified: ${row.lastVerifiedLabel}`
     }));
 
   const recentRows = summary.rows
@@ -621,11 +703,11 @@ function renderTwoFactorOversight(users, profiles) {
     .map((row) => ({
       title: row.name,
       metric: row.lastVerifiedLabel,
-      detail: `${row.role} • ${row.email} • Method: ${row.lastVerificationMethod || "unknown"} • Enrolled: ${row.enrolledLabel}`
+      detail: `${row.role} • ${row.email} • Method: ${row.lastVerificationMethod || "unknown"} • Provider: ${row.providerLabel}`
     }));
 
   const recoveryRiskRows = summary.rows
-    .filter((row) => row.enrolled)
+    .filter((row) => row.legacyEnrolled)
     .sort((a, b) => a.backupCodesRemaining - b.backupCodesRemaining || b.backupCodeUseCount - a.backupCodeUseCount || a.name.localeCompare(b.name))
     .slice(0, 6)
     .map((row) => ({
@@ -647,7 +729,7 @@ function renderTwoFactorOversight(users, profiles) {
   renderInsightList(
     "superMfaRecoveryRiskList",
     recoveryRiskRows,
-    "No privileged account has enrolled in 2FA yet."
+    "No legacy backup-code risk is being tracked for native Firebase 2FA accounts."
   );
 }
 

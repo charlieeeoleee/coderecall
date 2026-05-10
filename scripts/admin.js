@@ -33,6 +33,8 @@ import {
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { clearAdminMfaSession } from "./admin-mfa-session.js";
 import { enforcePrivilegedMfa } from "./firebase-native-mfa.js";
+import { syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { writeSecurityAudit } from "./security-audit.js";
 
 
 const auth = getAuth(app);
@@ -82,6 +84,7 @@ onAuthStateChanged(auth, async (user) => {
   applyRoleNavigation(currentRole, "admin.html");
 
   if (!roleMeetsMinimum(currentRole, "admin")) {
+    await writeSecurityAudit(db, user, "denied_admin_route", `Denied admin.html route for resolved role: ${currentRole}`);
     window.location.href = "dashboard.html";
     return;
   }
@@ -94,6 +97,9 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
+  await syncNativeMfaProfile(db, user, currentRole, {
+    method: "firebase_totp_admin_access"
+  });
   await updateUserUI(user);
   setAdminMfaPanelVisibility(currentRole);
   await loadAdminDashboard();
