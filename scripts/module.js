@@ -37,6 +37,10 @@ let pendingStudyHistorySavePromise = null;
 let currentModuleGateState = {
   readBottom: false,
   quickCheckAttempted: false,
+  matchingRequired: false,
+  matchingCompleted: false,
+  dragDropRequired: false,
+  dragDropCompleted: false,
   completed: false
 };
 
@@ -1365,6 +1369,14 @@ function getQuickCheckAttemptKey() {
   return `${getModuleDoneKey()}_quick_check_attempted`;
 }
 
+function getMatchingActivityDoneKey() {
+  return `${getModuleDoneKey()}_matching_activity_done`;
+}
+
+function getDragDropActivityDoneKey() {
+  return `${getModuleDoneKey()}_drag_drop_activity_done`;
+}
+
 function getQuickCheckBestScoreKey() {
   return `${getModuleDoneKey()}_quick_check_best_score`;
 }
@@ -1436,6 +1448,7 @@ async function saveModuleResumeState(scrollY = window.scrollY || 0) {
     title: moduleData?.title || `Module ${moduleNumber}`,
     detail: `Module ${moduleNumber} • ${difficultyNames[difficulty] || difficulty} • ${subjectNames[subject] || subject}`,
     scrollY: Math.max(0, Math.round(Number(scrollY) || 0)),
+    progressPercent: Math.max(0, Math.min(100, Math.round((Math.max(0, Number(scrollY) || 0) / Math.max(1, document.documentElement.scrollHeight - window.innerHeight)) * 100))),
     updatedAt: new Date().toISOString()
   };
 
@@ -1525,6 +1538,24 @@ async function hasQuickCheckAttempted() {
   return data.progress?.[getQuickCheckAttemptKey()] === true || localAttempted;
 }
 
+async function hasMatchingActivityCompleted() {
+  const localCompleted = localStorage.getItem(getMatchingActivityDoneKey()) === "true";
+  if (localCompleted) return true;
+  if (!currentUser) return localCompleted;
+
+  const data = await getCachedUserData(currentUser.uid);
+  return data.progress?.[getMatchingActivityDoneKey()] === true || localCompleted;
+}
+
+async function hasDragDropActivityCompleted() {
+  const localCompleted = localStorage.getItem(getDragDropActivityDoneKey()) === "true";
+  if (localCompleted) return true;
+  if (!currentUser) return localCompleted;
+
+  const data = await getCachedUserData(currentUser.uid);
+  return data.progress?.[getDragDropActivityDoneKey()] === true || localCompleted;
+}
+
 async function markModuleReadBottom() {
   await authReadyPromise;
   localStorage.setItem(getModuleReadKey(), "true");
@@ -1553,16 +1584,50 @@ async function markQuickCheckAttempted() {
   mergeCachedUserData({ progress });
 }
 
+async function markMatchingActivityCompleted() {
+  await authReadyPromise;
+  localStorage.setItem(getMatchingActivityDoneKey(), "true");
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const data = await getCachedUserData(currentUser.uid);
+  const progress = data.progress || {};
+  progress[getMatchingActivityDoneKey()] = true;
+  await updateDoc(userRef, { progress });
+  mergeCachedUserData({ progress });
+}
+
+async function markDragDropActivityCompleted() {
+  await authReadyPromise;
+  localStorage.setItem(getDragDropActivityDoneKey(), "true");
+
+  if (!currentUser) return;
+
+  const userRef = await ensureUserDoc(currentUser.uid);
+  const data = await getCachedUserData(currentUser.uid);
+  const progress = data.progress || {};
+  progress[getDragDropActivityDoneKey()] = true;
+  await updateDoc(userRef, { progress });
+  mergeCachedUserData({ progress });
+}
+
 async function getModuleGateState() {
-  const [readBottom, quickCheckAttempted, completed] = await Promise.all([
+  const [readBottom, quickCheckAttempted, matchingCompleted, dragDropCompleted, completed] = await Promise.all([
     hasReachedModuleBottom(),
     hasQuickCheckAttempted(),
+    hasMatchingActivityCompleted(),
+    hasDragDropActivityCompleted(),
     isModuleCompleted()
   ]);
 
   return {
     readBottom,
     quickCheckAttempted,
+    matchingRequired: Boolean(currentModuleGateState.matchingRequired),
+    matchingCompleted,
+    dragDropRequired: Boolean(currentModuleGateState.dragDropRequired),
+    dragDropCompleted,
     completed
   };
 }
@@ -1797,6 +1862,21 @@ function getReadingProgressPercent() {
   return Math.round(clampNumber((window.scrollY / scrollable) * 100, 0, 100));
 }
 
+function isModuleGateReady(gateState = currentModuleGateState) {
+  return Boolean(
+    gateState.readBottom
+    && gateState.quickCheckAttempted
+    && (!gateState.matchingRequired || gateState.matchingCompleted)
+    && (!gateState.dragDropRequired || gateState.dragDropCompleted)
+  );
+}
+
+function getPendingActivityLabel(gateState = currentModuleGateState) {
+  if (gateState.matchingRequired && !gateState.matchingCompleted) return "Complete Matching Practice";
+  if (gateState.dragDropRequired && !gateState.dragDropCompleted) return "Complete Drag-and-Drop Practice";
+  return "";
+}
+
 function getCheckpointStatusText(completed, statusLabel = null, gateState = currentModuleGateState) {
   if (statusLabel) return statusLabel;
   if (completed || gateState.completed) return "Checkpoint cleared";
@@ -1812,6 +1892,9 @@ function getCheckpointStatusText(completed, statusLabel = null, gateState = curr
     return "Challenge reached - complete the Quick Check";
   }
 
+  const pendingActivity = getPendingActivityLabel(gateState);
+  if (pendingActivity) return `${pendingActivity} to clear checkpoint`;
+
   return "Checkpoint ready to finalize";
 }
 
@@ -1819,6 +1902,8 @@ function getCheckpointButtonText(completed, gateState = currentModuleGateState) 
   if (completed || gateState.completed) return "Checkpoint cleared";
   if (!gateState.readBottom) return `Keep reading - ${getReadingProgressPercent()}%`;
   if (!gateState.quickCheckAttempted) return "Quick Check required";
+  const pendingActivity = getPendingActivityLabel(gateState);
+  if (pendingActivity) return pendingActivity;
   return "Checkpoint ready";
 }
 
@@ -1895,6 +1980,12 @@ function updateModuleActionState(gateState = currentModuleGateState) {
     return;
   }
 
+  const pendingActivity = getPendingActivityLabel(gateState);
+  if (pendingActivity) {
+    actionBtn.textContent = pendingActivity;
+    return;
+  }
+
   actionBtn.textContent = "Finalizing Module...";
 }
 
@@ -1924,7 +2015,15 @@ function updateModuleNextStep(gateState = currentModuleGateState) {
   if (!gateState.quickCheckAttempted) {
     kickerEl.textContent = "Challenge Phase";
     titleEl.textContent = "Finish the Quick Check";
-    textEl.textContent = "Answer every Quick Check item. The checkpoint clears automatically after the challenge is complete.";
+    textEl.textContent = "Answer every Quick Check item. Any required practice activity must also be completed before the checkpoint clears.";
+    return;
+  }
+
+  const pendingActivity = getPendingActivityLabel(gateState);
+  if (pendingActivity) {
+    kickerEl.textContent = "Practice Phase";
+    titleEl.textContent = pendingActivity;
+    textEl.textContent = "Finish this interactive activity. The checkpoint clears automatically once all required module activities are complete.";
     return;
   }
 
@@ -1996,7 +2095,7 @@ async function maybeAutoCompleteModule() {
     return;
   }
 
-  if (!gateState.readBottom || !gateState.quickCheckAttempted) {
+  if (!isModuleGateReady(gateState)) {
     updateCheckpointUi(false, null, gateState);
     return;
   }
@@ -2007,8 +2106,11 @@ async function maybeAutoCompleteModule() {
     await markModuleCompleted();
     const earnedXP = await awardModuleXPOnce();
     currentModuleGateState = {
+      ...currentModuleGateState,
       readBottom: true,
       quickCheckAttempted: true,
+      matchingCompleted: true,
+      dragDropCompleted: true,
       completed: true
     };
     updateCheckpointUi(
@@ -2941,18 +3043,39 @@ async function renderModulePage() {
   renderPassiveCircuits(data);
   renderActiveCircuits(data);
   renderMotherboardFormFactors(data);
-    renderModuleImages(data.images || [], gallery, galleryChip, galleryNote, data);
+  const matchingRequired = Boolean(getMatchingActivity(data, lessonDetails)?.pairs?.length);
+  const dragDropActivity = getDragDropActivity(data);
+  const dragDropRequired = Boolean(dragDropActivity?.items?.length && dragDropActivity?.zones?.length);
+  currentModuleGateState = {
+    ...currentModuleGateState,
+    matchingRequired,
+    dragDropRequired,
+    matchingCompleted: matchingRequired ? currentModuleGateState.matchingCompleted : true,
+    dragDropCompleted: dragDropRequired ? currentModuleGateState.dragDropCompleted : true
+  };
+  renderModuleImages(data.images || [], gallery, galleryChip, galleryNote, data);
 
   let completed = false;
   let restoredXP = 0;
   let gateState = {
     readBottom: false,
     quickCheckAttempted: false,
+    matchingRequired,
+    matchingCompleted: !matchingRequired,
+    dragDropRequired,
+    dragDropCompleted: !dragDropRequired,
     completed: false
   };
 
   try {
     gateState = await getModuleGateState();
+    gateState = {
+      ...gateState,
+      matchingRequired,
+      matchingCompleted: matchingRequired ? gateState.matchingCompleted : true,
+      dragDropRequired,
+      dragDropCompleted: dragDropRequired ? gateState.dragDropCompleted : true
+    };
     currentModuleGateState = gateState;
     completed = gateState.completed;
 
@@ -2962,6 +3085,9 @@ async function renderModulePage() {
   } catch (error) {
     console.error("Unable to load module completion state:", error);
   }
+
+  renderMatchingActivity(data, lessonDetails);
+  renderDragDropActivity(data);
 
   updateCheckpointUi(
     completed,
@@ -3016,6 +3142,398 @@ function buildGamifiedLesson(data) {
       ]
     }
   };
+}
+
+function getMatchingActivity(data, lessonDetails = {}) {
+  const title = data?.title || "";
+  const presets = {
+    "Introduction to Electricity and Electronics": {
+      prompt: "Match each basic circuit idea to its role.",
+      pairs: [
+        { term: "Source", match: "Provides the electrical energy" },
+        { term: "Path", match: "Gives current a route to flow" },
+        { term: "Load", match: "Uses electrical energy to do work" }
+      ]
+    },
+    "Tools for Electrical Work": {
+      prompt: "Match each electrical tool to the job it performs.",
+      pairs: [
+        { term: "Wire stripper", match: "Removes insulation from conductors" },
+        { term: "Multimeter", match: "Measures voltage, current, or resistance" },
+        { term: "Needle-nose pliers", match: "Grips wires in tight spaces" }
+      ]
+    },
+    "Parts of the Computer and Input Output Devices": {
+      prompt: "Match each computer part to its main function.",
+      pairs: [
+        { term: "CPU", match: "Processes instructions" },
+        { term: "RAM", match: "Temporarily holds active data" },
+        { term: "HDD", match: "Stores files and programs long-term" }
+      ]
+    },
+    "Motherboard": {
+      prompt: "Match each motherboard part to its purpose.",
+      pairs: [
+        { term: "CPU socket", match: "Holds the processor" },
+        { term: "RAM slot", match: "Holds memory modules" },
+        { term: "SATA port", match: "Connects storage drives" }
+      ]
+    },
+    "Passive Components": {
+      prompt: "Match each passive component to its circuit role.",
+      pairs: [
+        { term: "Resistor", match: "Limits current" },
+        { term: "Capacitor", match: "Stores and releases electrical energy" },
+        { term: "Inductor", match: "Stores energy in a magnetic field" }
+      ]
+    },
+    "Active Components": {
+      prompt: "Match each active component to how it is used.",
+      pairs: [
+        { term: "Diode", match: "Allows current mainly one way" },
+        { term: "Transistor", match: "Acts as a switch or amplifier" },
+        { term: "Integrated circuit", match: "Combines many functions in one package" }
+      ]
+    }
+  };
+
+  if (presets[title]) {
+    return {
+      title: "Matching Practice",
+      ...presets[title]
+    };
+  }
+
+  const sections = Array.isArray(lessonDetails?.sections) ? lessonDetails.sections : [];
+  const pairs = sections
+    .filter((item) => item?.heading && item?.body)
+    .slice(0, 3)
+    .map((item) => ({
+      term: item.heading,
+      match: String(item.body).split(".")[0].trim()
+    }))
+    .filter((pair) => pair.term && pair.match);
+
+  if (pairs.length < 3) return null;
+
+  return {
+    title: "Concept Matching",
+    prompt: "Match each lesson concept to the explanation that fits it.",
+    pairs
+  };
+}
+
+function renderMatchingActivity(data, lessonDetails = {}) {
+  const section = document.getElementById("moduleMatchingSection");
+  const titleEl = document.getElementById("moduleMatchingTitle");
+  const chipEl = document.getElementById("moduleMatchingChip");
+  const promptEl = document.getElementById("moduleMatchingPrompt");
+  const boardEl = document.getElementById("moduleMatchingBoard");
+  const statusEl = document.getElementById("moduleMatchingStatus");
+  const resetBtn = document.getElementById("moduleMatchingReset");
+  if (!section || !titleEl || !chipEl || !promptEl || !boardEl || !statusEl || !resetBtn) return false;
+
+  const activity = getMatchingActivity(data, lessonDetails);
+  if (!activity?.pairs?.length) {
+    section.hidden = true;
+    boardEl.innerHTML = "";
+    return false;
+  }
+
+  const pairs = activity.pairs.map((pair, index) => ({ ...pair, id: `match-${index}` }));
+  const shuffledMatches = [...pairs].sort(() => Math.random() - 0.5);
+  let selectedTermId = "";
+  const solved = new Set();
+  if (currentModuleGateState.matchingCompleted) {
+    pairs.forEach((pair) => solved.add(pair.id));
+  }
+
+  section.hidden = false;
+  titleEl.textContent = activity.title || "Matching Practice";
+  chipEl.textContent = `${pairs.length} pairs`;
+  promptEl.textContent = activity.prompt || "Match each term to its correct function.";
+
+  function updateStatus(message = "") {
+    statusEl.textContent = message || `${solved.size}/${pairs.length} matched`;
+    if (solved.size === pairs.length) {
+      statusEl.textContent = "Nice work. All matching pairs are complete.";
+      section.classList.add("is-complete");
+      if (!currentModuleGateState.matchingCompleted) {
+        currentModuleGateState = {
+          ...currentModuleGateState,
+          matchingRequired: true,
+          matchingCompleted: true
+        };
+        void markMatchingActivityCompleted()
+          .then(() => maybeAutoCompleteModule())
+          .catch((error) => console.error("Unable to save matching activity progress:", error));
+      }
+    } else {
+      section.classList.remove("is-complete");
+    }
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = `
+      <div class="module-matching-column">
+        <h3>Parts / Concepts</h3>
+        ${pairs.map((pair) => `
+          <button type="button" class="module-match-card ${selectedTermId === pair.id ? "selected" : ""} ${solved.has(pair.id) ? "matched" : ""}" data-term-id="${escapeHtml(pair.id)}">
+            ${escapeHtml(pair.term)}
+          </button>
+        `).join("")}
+      </div>
+      <div class="module-matching-column">
+        <h3>Functions</h3>
+        ${shuffledMatches.map((pair) => `
+          <button type="button" class="module-match-card module-match-answer ${solved.has(pair.id) ? "matched" : ""}" data-match-id="${escapeHtml(pair.id)}">
+            ${escapeHtml(pair.match)}
+          </button>
+        `).join("")}
+      </div>
+    `;
+
+    boardEl.querySelectorAll("[data-term-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (solved.has(button.dataset.termId)) return;
+        selectedTermId = button.dataset.termId || "";
+        renderBoard();
+        updateStatus("Now choose the matching function.");
+      });
+    });
+
+    boardEl.querySelectorAll("[data-match-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!selectedTermId) {
+          updateStatus("Select a part or concept first.");
+          return;
+        }
+        const matchId = button.dataset.matchId || "";
+        if (matchId === selectedTermId) {
+          solved.add(matchId);
+          selectedTermId = "";
+          renderBoard();
+          updateStatus();
+          return;
+        }
+        button.classList.add("incorrect");
+        updateStatus("Not quite. Try a different function.");
+        window.setTimeout(() => button.classList.remove("incorrect"), 520);
+      });
+    });
+  }
+
+  resetBtn.onclick = () => {
+    selectedTermId = "";
+    solved.clear();
+    renderBoard();
+    updateStatus("Select a term, then choose the matching function.");
+  };
+
+  renderBoard();
+  updateStatus("Select a term, then choose the matching function.");
+  return true;
+}
+
+function getDragDropActivity(data) {
+  const title = data?.title || "";
+  const presets = {
+    "Personal Protective Equipment (PPE)": {
+      prompt: "Sort each item by what it mainly protects.",
+      zones: [
+        { id: "person", label: "Protects the Technician" },
+        { id: "task", label: "Matches the Work Hazard" }
+      ],
+      items: [
+        { label: "Insulated gloves", zone: "person" },
+        { label: "Face shield", zone: "person" },
+        { label: "Arc flash risk", zone: "task" },
+        { label: "Flying debris", zone: "task" }
+      ]
+    },
+    "Safety Tools": {
+      prompt: "Sort safety items by what they protect most directly.",
+      zones: [
+        { id: "technician", label: "Technician Safety" },
+        { id: "component", label: "Component Safety" }
+      ],
+      items: [
+        { label: "Goggles", zone: "technician" },
+        { label: "Dust mask", zone: "technician" },
+        { label: "Anti-static wrist strap", zone: "component" },
+        { label: "ESD mat", zone: "component" }
+      ]
+    },
+    "Basic Electrical Quantities": {
+      prompt: "Sort each quantity by whether it describes flow/pressure or opposition/use.",
+      zones: [
+        { id: "movement", label: "Movement / Push" },
+        { id: "control", label: "Opposition / Use" }
+      ],
+      items: [
+        { label: "Voltage", zone: "movement" },
+        { label: "Current", zone: "movement" },
+        { label: "Resistance", zone: "control" },
+        { label: "Power", zone: "control" }
+      ]
+    },
+    "Direct Current (DC) vs. Alternating Current (AC)": {
+      prompt: "Sort each example into DC or AC.",
+      zones: [
+        { id: "dc", label: "Direct Current" },
+        { id: "ac", label: "Alternating Current" }
+      ],
+      items: [
+        { label: "Battery", zone: "dc" },
+        { label: "USB power bank", zone: "dc" },
+        { label: "Household outlet", zone: "ac" },
+        { label: "Power grid", zone: "ac" }
+      ]
+    }
+  };
+
+  return presets[title] || null;
+}
+
+function renderDragDropActivity(data) {
+  const section = document.getElementById("moduleDragDropSection");
+  const titleEl = document.getElementById("moduleDragDropTitle");
+  const chipEl = document.getElementById("moduleDragDropChip");
+  const promptEl = document.getElementById("moduleDragDropPrompt");
+  const bankEl = document.getElementById("moduleDragDropBank");
+  const zonesEl = document.getElementById("moduleDragDropZones");
+  const statusEl = document.getElementById("moduleDragDropStatus");
+  const resetBtn = document.getElementById("moduleDragDropReset");
+  if (!section || !titleEl || !chipEl || !promptEl || !bankEl || !zonesEl || !statusEl || !resetBtn) return false;
+
+  const activity = getDragDropActivity(data);
+  if (!activity?.items?.length || !activity?.zones?.length) {
+    section.hidden = true;
+    bankEl.innerHTML = "";
+    zonesEl.innerHTML = "";
+    return false;
+  }
+
+  const items = activity.items.map((item, index) => ({ ...item, id: `drag-${index}` }));
+  const placed = new Map();
+  if (currentModuleGateState.dragDropCompleted) {
+    items.forEach((item) => placed.set(item.id, item.zone));
+  }
+  let selectedItemId = "";
+
+  section.hidden = false;
+  titleEl.textContent = activity.title || "Drag-and-Drop Practice";
+  chipEl.textContent = `${items.length} items`;
+  promptEl.textContent = activity.prompt || "Sort each item into the correct category.";
+
+  function updateStatus(message = "") {
+    const correctCount = Array.from(placed.entries()).filter(([itemId, zoneId]) => {
+      const item = items.find((candidate) => candidate.id === itemId);
+      return item?.zone === zoneId;
+    }).length;
+    statusEl.textContent = message || `${correctCount}/${items.length} correctly placed`;
+    section.classList.toggle("is-complete", correctCount === items.length);
+    if (correctCount === items.length) {
+      statusEl.textContent = "Great sorting. All items are in the correct category.";
+      if (!currentModuleGateState.dragDropCompleted) {
+        currentModuleGateState = {
+          ...currentModuleGateState,
+          dragDropRequired: true,
+          dragDropCompleted: true
+        };
+        void markDragDropActivityCompleted()
+          .then(() => maybeAutoCompleteModule())
+          .catch((error) => console.error("Unable to save drag-and-drop activity progress:", error));
+      }
+    }
+  }
+
+  function renderBoard() {
+    const unplacedItems = items.filter((item) => !placed.has(item.id));
+    bankEl.innerHTML = unplacedItems.map((item) => `
+      <button type="button" class="module-drag-item ${selectedItemId === item.id ? "selected" : ""}" draggable="true" data-drag-id="${escapeHtml(item.id)}">
+        ${escapeHtml(item.label)}
+      </button>
+    `).join("");
+
+    zonesEl.innerHTML = activity.zones.map((zone) => {
+      const zoneItems = items.filter((item) => placed.get(item.id) === zone.id);
+      return `
+        <div class="module-drop-zone" data-zone-id="${escapeHtml(zone.id)}">
+          <h3>${escapeHtml(zone.label)}</h3>
+          <div class="module-drop-zone-items">
+            ${zoneItems.map((item) => `
+              <button type="button" class="module-drag-item placed ${item.zone === zone.id ? "correct" : "incorrect"}" data-placed-id="${escapeHtml(item.id)}">
+                ${escapeHtml(item.label)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    bankEl.querySelectorAll("[data-drag-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedItemId = button.dataset.dragId || "";
+        renderBoard();
+        updateStatus("Now tap a category to place it.");
+      });
+      button.addEventListener("dragstart", (event) => {
+        event.dataTransfer?.setData("text/plain", button.dataset.dragId || "");
+        selectedItemId = button.dataset.dragId || "";
+      });
+    });
+
+    zonesEl.querySelectorAll("[data-zone-id]").forEach((zoneEl) => {
+      zoneEl.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        zoneEl.classList.add("drag-over");
+      });
+      zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("drag-over"));
+      zoneEl.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const itemId = event.dataTransfer?.getData("text/plain") || selectedItemId;
+        placeItem(itemId, zoneEl.dataset.zoneId || "");
+      });
+      zoneEl.addEventListener("click", () => {
+        if (!selectedItemId) {
+          updateStatus("Select or drag an item first.");
+          return;
+        }
+        placeItem(selectedItemId, zoneEl.dataset.zoneId || "");
+      });
+    });
+
+    zonesEl.querySelectorAll("[data-placed-id]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        placed.delete(button.dataset.placedId || "");
+        selectedItemId = "";
+        renderBoard();
+        updateStatus("Item returned. Place it again.");
+      });
+    });
+  }
+
+  function placeItem(itemId, zoneId) {
+    if (!itemId || !zoneId) return;
+    placed.set(itemId, zoneId);
+    selectedItemId = "";
+    renderBoard();
+    const item = items.find((candidate) => candidate.id === itemId);
+    updateStatus(item?.zone === zoneId ? "Correct placement." : "That category is not right yet. Tap the item to return it.");
+  }
+
+  resetBtn.onclick = () => {
+    placed.clear();
+    selectedItemId = "";
+    renderBoard();
+    updateStatus("Place each item into the correct category.");
+  };
+
+  renderBoard();
+  updateStatus("Place each item into the correct category.");
+  return true;
 }
 
 function renderPills(container, items) {
@@ -3195,7 +3713,10 @@ function renderMiniQuiz(container, quizItems) {
     };
 
     if (statusEl) {
-      statusEl.textContent = "Quick Check completed. Module checkpoint is now ready.";
+      const pendingActivity = getPendingActivityLabel(currentModuleGateState);
+      statusEl.textContent = pendingActivity
+        ? `Quick Check completed. ${pendingActivity} before the checkpoint clears.`
+        : "Quick Check completed. Module checkpoint is now ready.";
     }
 
     const xpEarned = await awardQuickCheckXP(score * QUICK_CHECK_XP_PER_CORRECT);
@@ -3242,7 +3763,10 @@ function renderTextQuickCheck(container, challenge) {
     };
 
     if (statusEl) {
-      statusEl.textContent = "Quick Check completed.";
+      const pendingActivity = getPendingActivityLabel(currentModuleGateState);
+      statusEl.textContent = pendingActivity
+        ? `Quick Check completed. ${pendingActivity} before the checkpoint clears.`
+        : "Quick Check completed.";
     }
 
     await maybeAutoCompleteModule();
@@ -4257,6 +4781,7 @@ window.addEventListener("beforeunload", () => {
     title: document.getElementById("title")?.textContent || `Module ${moduleNumber}`,
     detail: `Module ${moduleNumber} • ${difficultyNames[difficulty] || difficulty} • ${subjectNames[subject] || subject}`,
     scrollY: Math.max(0, Math.round(window.scrollY || 0)),
+    progressPercent: Math.max(0, Math.min(100, Math.round((Math.max(0, Number(window.scrollY) || 0) / Math.max(1, document.documentElement.scrollHeight - window.innerHeight)) * 100))),
     updatedAt: new Date().toISOString()
   };
 

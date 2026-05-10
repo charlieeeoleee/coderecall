@@ -218,6 +218,7 @@ let awardedQuestionIds = new Set();
 let correctQuestionIdsThisRun = new Set();
 let wrongAnswerReviewKeys = new Set();
 let recoveredMistakesThisRun = 0;
+let imageInspectorAction = null;
 
 function getQuizPrefetchKey(level = quizLevel) {
   return `${QUIZ_PREFETCH_KEY_PREFIX}:${subject}:${difficulty}:${level}`;
@@ -261,6 +262,143 @@ function deferQuizTask(task) {
   } else {
     window.setTimeout(run, 120);
   }
+}
+
+function ensureImageInspectorModal() {
+  let modal = document.getElementById("imageInspectorModal");
+  if (modal) return modal;
+
+  modal = document.createElement("div");
+  modal.id = "imageInspectorModal";
+  modal.className = "image-inspector-modal";
+  modal.setAttribute("aria-hidden", "true");
+  modal.innerHTML = `
+    <div class="image-inspector-dialog" role="dialog" aria-modal="true" aria-labelledby="imageInspectorTitle">
+      <div class="image-inspector-head">
+        <h2 id="imageInspectorTitle">Image Preview</h2>
+        <button type="button" class="image-inspector-close" id="imageInspectorClose" aria-label="Close image preview">&times;</button>
+      </div>
+      <figure class="image-inspector-figure">
+        <img id="imageInspectorImg" src="" alt="">
+        <figcaption id="imageInspectorCaption"></figcaption>
+      </figure>
+      <div class="image-inspector-actions" id="imageInspectorActions" hidden>
+        <button type="button" class="image-inspector-action-btn" id="imageInspectorActionBtn">Use This Answer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeImageInspector();
+  });
+  document.getElementById("imageInspectorClose")?.addEventListener("click", closeImageInspector);
+  document.getElementById("imageInspectorActionBtn")?.addEventListener("click", () => {
+    if (typeof imageInspectorAction === "function") {
+      imageInspectorAction();
+    }
+    closeImageInspector();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeImageInspector();
+  });
+
+  return modal;
+}
+
+function openImageInspector(src, caption = "Question visual", details = "", actionLabel = "", action = null) {
+  if (!src) return;
+  const modal = ensureImageInspectorModal();
+  const image = document.getElementById("imageInspectorImg");
+  const title = document.getElementById("imageInspectorTitle");
+  const captionEl = document.getElementById("imageInspectorCaption");
+  const actions = document.getElementById("imageInspectorActions");
+  const actionBtn = document.getElementById("imageInspectorActionBtn");
+
+  if (image) {
+    image.src = src;
+    image.alt = caption;
+  }
+  if (title) title.textContent = caption;
+  if (captionEl) captionEl.textContent = details || "Use this enlarged view to inspect details before answering.";
+  imageInspectorAction = typeof action === "function" ? action : null;
+  if (actions) actions.hidden = !imageInspectorAction;
+  if (actionBtn && actionLabel) actionBtn.textContent = actionLabel;
+  modal.classList.add("active");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImageInspector() {
+  const modal = document.getElementById("imageInspectorModal");
+  if (!modal) return;
+  modal.classList.remove("active");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  imageInspectorAction = null;
+}
+
+function attachQuestionImageInspector(container, caption) {
+  container?.querySelectorAll(".image-inspector-trigger").forEach((trigger) => {
+    const image = trigger.querySelector("img");
+    if (!image) return;
+    trigger.addEventListener("click", () => {
+      openImageInspector(image.currentSrc || image.src, caption);
+    });
+  });
+
+  container?.querySelectorAll("img").forEach((image) => {
+    if (image.closest(".image-inspector-trigger")) return;
+    image.tabIndex = 0;
+    image.setAttribute("role", "button");
+    image.setAttribute("aria-label", `Open enlarged image for ${caption}`);
+    image.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openImageInspector(image.currentSrc || image.src, caption);
+    });
+    image.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+        openImageInspector(image.currentSrc || image.src, caption);
+      }
+    });
+  });
+}
+
+function getChoiceImageDetails(question, choice, index) {
+  const detail =
+    question?.choiceDefinitions?.[index] ||
+    question?.choiceDetails?.[index] ||
+    question?.choiceDescriptions?.[index] ||
+    "";
+
+  if (detail) {
+    return detail;
+  }
+
+  return `Part: ${choice}. Review the enlarged image, then use this option as your answer if it matches the question.`;
+}
+
+function selectChoice(choice, button) {
+  document.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
+  button.classList.add("selected");
+  selectedChoice = choice;
+  updateNextButtonState();
+  saveQuizLevelResumeState().catch((error) => {
+    console.warn("Unable to save quiz level resume state.", error);
+  });
+}
+
+function openChoiceImagePreview(question, choice, index, button) {
+  const imageSrc = question?.choiceImages?.[index];
+  openImageInspector(
+    imageSrc,
+    choice,
+    getChoiceImageDetails(question, choice, index),
+    "Use This Answer",
+    () => selectChoice(choice, button)
+  );
 }
 
 function startSlowQuizNotice() {
@@ -555,6 +693,8 @@ async function saveQuizLevelResumeState() {
     title: `Level ${quizLevel}`,
     detail: `${subject === "hardware" ? "Computer Hardware" : "Electrical"} • ${difficulty} quiz`,
     currentIndex,
+    total: questions.length,
+    progressPercent: Math.round((currentIndex / Math.max(questions.length, 1)) * 100),
     score,
     selectedChoice,
     selectedConfidence,
@@ -1024,17 +1164,21 @@ function renderQuestion() {
   media.innerHTML = currentQuestion.image
     ? `
       <div class="level-question-image-frame">
-        <img
-          src="${currentQuestion.image}"
-          alt="Question visual"
-          loading="lazy"
-          decoding="async"
-          class="level-question-image${currentQuestion.imageCropBottom ? " is-cropped" : ""}"
-          style="${currentQuestion.imageCropBottom ? `--question-image-crop-bottom: ${currentQuestion.imageCropBottom}px;` : ""}"
-        >
+        <button type="button" class="image-inspector-trigger" aria-label="Open enlarged question image">
+          <img
+            src="${currentQuestion.image}"
+            alt="Question visual"
+            loading="lazy"
+            decoding="async"
+            class="level-question-image${currentQuestion.imageCropBottom ? " is-cropped" : ""}"
+            style="${currentQuestion.imageCropBottom ? `--question-image-crop-bottom: ${currentQuestion.imageCropBottom}px;` : ""}"
+          >
+          <span>Enlarge Image</span>
+        </button>
       </div>
     `
     : "";
+  attachQuestionImageInspector(media, "Question visual");
 
   const container = document.getElementById("choicesContainer");
   container.innerHTML = "";
@@ -1043,26 +1187,45 @@ function renderQuestion() {
     const button = document.createElement("button");
     button.className = "choice-btn";
     button.type = "button";
+    let lastPreviewOpenAt = 0;
 
     if (currentQuestion.choiceImages?.[index]) {
+      button.classList.add("choice-media-btn");
+      button.setAttribute("aria-label", `View enlarged image and details for ${choice}`);
       button.innerHTML = `
-        <span class="choice-media-wrap">
-          <img src="${currentQuestion.choiceImages[index]}" alt="Choice ${index + 1}" class="choice-media-image" loading="lazy" decoding="async">
-        </span>
         <span class="choice-media-label">${choice}</span>
+        <span class="choice-media-hint">Click to view image and details</span>
       `;
     } else {
       button.textContent = choice;
     }
 
-    button.addEventListener("click", () => {
-      document.querySelectorAll(".choice-btn").forEach((item) => item.classList.remove("selected"));
-      button.classList.add("selected");
-      selectedChoice = choice;
-      updateNextButtonState();
-      saveQuizLevelResumeState().catch((error) => {
-        console.warn("Unable to save quiz level resume state.", error);
-      });
+    function openPreviewFromChoice(event) {
+      if (!button.classList.contains("choice-media-btn")) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      const now = Date.now();
+      if (now - lastPreviewOpenAt < 350) return true;
+      lastPreviewOpenAt = now;
+      openChoiceImagePreview(currentQuestion, choice, index, button);
+      return true;
+    }
+
+    button.addEventListener("pointerup", (event) => {
+      openPreviewFromChoice(event);
+    });
+
+    button.addEventListener("keydown", (event) => {
+      if ((event.key === "Enter" || event.key === " ") && openPreviewFromChoice(event)) {
+        return;
+      }
+    });
+
+    button.addEventListener("click", (event) => {
+      if (openPreviewFromChoice(event)) {
+        return;
+      }
+      selectChoice(choice, button);
     });
 
     container.appendChild(button);

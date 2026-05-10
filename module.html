@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/styles.css">
-  <link rel="stylesheet" href="styles/module.css?v=20260423b">
+  <link rel="stylesheet" href="styles/module.css?v=20260510e">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -212,6 +212,37 @@
       <p id="studyTip">
         Read carefully, take notes on key terms, and finish the lesson before moving to the next activity.
       </p>
+    </section>
+
+    <section class="module-matching card" id="moduleMatchingSection" hidden>
+      <div class="module-content-head">
+        <h2 id="moduleMatchingTitle">Match the Concept</h2>
+        <span class="module-content-chip" id="moduleMatchingChip">Interactive Practice</span>
+      </div>
+      <p class="module-matching-prompt" id="moduleMatchingPrompt">
+        Match each item to its correct function before continuing.
+      </p>
+      <div class="module-matching-board" id="moduleMatchingBoard"></div>
+      <div class="module-matching-footer">
+        <p id="moduleMatchingStatus">Select a term, then choose the matching function.</p>
+        <button type="button" class="module-matching-reset" id="moduleMatchingReset">Reset Matching</button>
+      </div>
+    </section>
+
+    <section class="module-dragdrop card" id="moduleDragDropSection" hidden>
+      <div class="module-content-head">
+        <h2 id="moduleDragDropTitle">Drag-and-Drop Practice</h2>
+        <span class="module-content-chip" id="moduleDragDropChip">Interactive Sorting</span>
+      </div>
+      <p class="module-dragdrop-prompt" id="moduleDragDropPrompt">
+        Drag each item into the correct category. On mobile, tap an item then tap a category.
+      </p>
+      <div class="module-dragdrop-bank" id="moduleDragDropBank"></div>
+      <div class="module-dragdrop-zones" id="moduleDragDropZones"></div>
+      <div class="module-matching-footer">
+        <p id="moduleDragDropStatus">Place each item into the correct category.</p>
+        <button type="button" class="module-matching-reset" id="moduleDragDropReset">Reset Sorting</button>
+      </div>
     </section>
 
     <section class="module-challenge card" id="moduleChallengeSection">
@@ -1537,7 +1568,7 @@
       figure.innerHTML = `
         <div class="module-figure-media">
           <img src="${image.src}" alt="${image.alt || title}">
-          ${enableExpandedProfile ? `<span class="module-figure-zoom">View</span>` : ""}
+          <span class="module-figure-zoom">${enableExpandedProfile ? "View" : "Enlarge"}</span>
         </div>
         <figcaption>
           <span class="module-figure-title">${title}</span>
@@ -1545,13 +1576,9 @@
         </figcaption>
       `;
 
-      if (!enableExpandedProfile) {
-        return figure;
-      }
-
       figure.tabIndex = 0;
       figure.setAttribute("role", "button");
-      figure.setAttribute("aria-label", `Open details for ${title}`);
+      figure.setAttribute("aria-label", `Open enlarged image for ${title}`);
 
       figure.addEventListener("click", () => {
         openModuleImageModal(image, index);
@@ -1846,7 +1873,7 @@
     }
   </script>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/module.js?v=20260423b"></script>
+  <script type="module" src="scripts/module.js?v=20260510d"></script>
   <script type="module" src="scripts/item-feedback-loader.js?v=20260510a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>

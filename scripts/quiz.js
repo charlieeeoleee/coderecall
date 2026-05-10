@@ -80,6 +80,93 @@ const XP_RULES = {
   quizLevel: 6
 };
 
+function ensureImageInspectorModal() {
+  let modal = document.getElementById("imageInspectorModal");
+  if (modal) return modal;
+
+  modal = document.createElement("div");
+  modal.id = "imageInspectorModal";
+  modal.className = "image-inspector-modal";
+  modal.setAttribute("aria-hidden", "true");
+  modal.innerHTML = `
+    <div class="image-inspector-dialog" role="dialog" aria-modal="true" aria-labelledby="imageInspectorTitle">
+      <div class="image-inspector-head">
+        <h2 id="imageInspectorTitle">Image Preview</h2>
+        <button type="button" class="image-inspector-close" id="imageInspectorClose" aria-label="Close image preview">&times;</button>
+      </div>
+      <figure class="image-inspector-figure">
+        <img id="imageInspectorImg" src="" alt="">
+        <figcaption id="imageInspectorCaption"></figcaption>
+      </figure>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeImageInspector();
+  });
+  document.getElementById("imageInspectorClose")?.addEventListener("click", closeImageInspector);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeImageInspector();
+  });
+
+  return modal;
+}
+
+function openImageInspector(src, caption = "Question visual") {
+  if (!src) return;
+  const modal = ensureImageInspectorModal();
+  const image = document.getElementById("imageInspectorImg");
+  const title = document.getElementById("imageInspectorTitle");
+  const captionEl = document.getElementById("imageInspectorCaption");
+
+  if (image) {
+    image.src = src;
+    image.alt = caption;
+  }
+  if (title) title.textContent = caption;
+  if (captionEl) captionEl.textContent = "Use this enlarged view to inspect details before answering.";
+  modal.classList.add("active");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImageInspector() {
+  const modal = document.getElementById("imageInspectorModal");
+  if (!modal) return;
+  modal.classList.remove("active");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+function attachQuestionImageInspector(container, caption) {
+  container?.querySelectorAll(".image-inspector-trigger").forEach((trigger) => {
+    const image = trigger.querySelector("img");
+    if (!image) return;
+    trigger.addEventListener("click", () => {
+      openImageInspector(image.currentSrc || image.src, caption);
+    });
+  });
+
+  container?.querySelectorAll("img").forEach((image) => {
+    if (image.closest(".image-inspector-trigger")) return;
+    image.tabIndex = 0;
+    image.setAttribute("role", "button");
+    image.setAttribute("aria-label", `Open enlarged image for ${caption}`);
+    image.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openImageInspector(image.currentSrc || image.src, caption);
+    });
+    image.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+        openImageInspector(image.currentSrc || image.src, caption);
+      }
+    });
+  });
+}
+
 function getQuizResumeStateKey() {
   return `resume_quiz_state_${subject}_${type}_${level}`;
 }
@@ -292,6 +379,8 @@ async function saveQuizResumeState() {
     title: currentMeta.title,
     detail: `${currentMeta.tag} • ${level}`,
     currentIndex,
+    total: quizQuestions.length,
+    progressPercent: Math.round((currentIndex / Math.max(quizQuestions.length, 1)) * 100),
     score,
     selectedChoice,
     selectedConfidence,
@@ -973,8 +1062,14 @@ function renderQuestion() {
   }
 
   media.innerHTML = currentQuestion.image
-    ? `<img src="${currentQuestion.image}" alt="Question visual" class="quiz-question-image" loading="lazy" decoding="async">`
+    ? `
+      <button type="button" class="image-inspector-trigger" aria-label="Open enlarged question image">
+        <img src="${currentQuestion.image}" alt="Question visual" class="quiz-question-image" loading="lazy" decoding="async">
+        <span>Enlarge Image</span>
+      </button>
+    `
     : "";
+  attachQuestionImageInspector(media, "Question visual");
 
   const choicesContainer = document.getElementById("choicesContainer");
   choicesContainer.innerHTML = "";

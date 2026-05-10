@@ -237,6 +237,39 @@ function chooseLatestActivity(...items) {
   })[0];
 }
 
+function formatResumeSavedAt(activity) {
+  const rawDate = activity?.updatedAt || activity?.timestamp || "";
+  const time = rawDate ? new Date(rawDate).getTime() : 0;
+  if (!time) return "Progress will save as you learn";
+
+  const elapsedMs = Date.now() - time;
+  const elapsedMinutes = Math.max(0, Math.round(elapsedMs / 60000));
+  if (elapsedMinutes < 1) return "Saved just now";
+  if (elapsedMinutes < 60) return `Saved ${elapsedMinutes} min ago`;
+
+  const elapsedHours = Math.round(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Saved ${elapsedHours} hr ago`;
+
+  return `Saved ${new Date(time).toLocaleDateString([], { month: "short", day: "numeric" })}`;
+}
+
+function formatResumeProgress(activity) {
+  const total = Number(activity?.total || activity?.totalQuestions || 0);
+  const currentIndex = Number(activity?.currentIndex || 0);
+  const percent = Number(activity?.progressPercent || 0);
+
+  if (activity?.kind === "module") {
+    if (percent > 0) return `${Math.min(100, Math.max(0, percent))}% read`;
+    return "Scroll position saved";
+  }
+
+  if (total > 0) {
+    return `Question ${Math.min(total, currentIndex + 1)} of ${total}`;
+  }
+
+  return activity?.resumeUrl ? "Resume point saved" : "";
+}
+
 function getAssessmentXP(type, result = null) {
   if (type === "pretest") {
     return Math.max(0, Number(result?.score || 0) || 0);
@@ -998,10 +1031,11 @@ async function renderMemoryReviewInsights(userData = {}) {
   textEl.textContent = `${title} • ${subject} • ${dueItems.length} due • ${stageDays ? `${stageDays}-day review` : "review due"}`;
 }
 
-function renderContinueLearning(items = []) {
+function renderContinueLearning(items = [], userData = {}) {
   const titleEl = document.getElementById("continueLearningTitle");
   const detailEl = document.getElementById("continueLearningDetail");
   const kindEl = document.getElementById("continueLearningKind");
+  const savedAtEl = document.getElementById("continueLearningSavedAt");
   const buttonEl = document.getElementById("continueLearningBtn");
   const cardEl = document.getElementById("continueLearningCard");
   if (!titleEl || !detailEl || !kindEl || !buttonEl || !cardEl) return;
@@ -1010,21 +1044,27 @@ function renderContinueLearning(items = []) {
 
   const latestHistory = items[0] || null;
   const latestResume = chooseLatestActivity(readLocalResumeActivity());
-  const latest = chooseLatestActivity(latestResume, latestHistory);
+  const remoteResume = chooseLatestActivity(userData?.resumeActivity);
+  const latest = chooseLatestActivity(latestResume, remoteResume, latestHistory);
 
   if (!latest) {
     latestHistoryActionUrl = "";
     titleEl.textContent = "No recent activity yet";
     detailEl.textContent = "Start a module, quiz, or test and your latest activity will appear here.";
     kindEl.textContent = "start here";
+    if (savedAtEl) savedAtEl.textContent = "No saved activity yet";
     buttonEl.textContent = "Go to Subjects";
     return;
   }
 
   latestHistoryActionUrl = latest.resumeUrl || latest.actionUrl || "";
+  const progressLabel = formatResumeProgress(latest);
   titleEl.textContent = latest.title || "Continue Learning";
-  detailEl.textContent = latest.detail || "Resume your latest activity.";
+  detailEl.textContent = [latest.detail || "Resume your latest activity.", progressLabel]
+    .filter(Boolean)
+    .join(" • ");
   kindEl.textContent = latest.resumeUrl ? "resume ready" : prettifySourceLabel(latest);
+  if (savedAtEl) savedAtEl.textContent = formatResumeSavedAt(latest);
   buttonEl.textContent = latestHistoryActionUrl ? "Resume Now" : "Open History";
 }
 
@@ -1044,14 +1084,14 @@ async function renderStudyHistoryInsights(userData = {}) {
   document.getElementById("studyHistoryCard")?.classList.remove("is-loading");
   if (!mergedItems.length) {
     textEl.textContent = "Your recent modules and quizzes will appear here.";
-    renderContinueLearning(mergedItems);
+    renderContinueLearning(mergedItems, userData);
     setInsightLoadingState(false);
     return;
   }
 
   const latest = mergedItems[0];
   textEl.textContent = `${latest.title} • ${latest.detail || "Recent activity"}`;
-  renderContinueLearning(mergedItems);
+  renderContinueLearning(mergedItems, userData);
   setInsightLoadingState(false);
 }
 

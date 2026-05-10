@@ -1289,7 +1289,10 @@ body.light-mode .view-full-btn{
 
 .insight-meta{
   display:flex;
+  flex-direction:column;
+  align-items:flex-end;
   justify-content:flex-end;
+  gap:8px;
 }
 
 .insight-pill{
@@ -1304,6 +1307,18 @@ body.light-mode .view-full-btn{
   font-weight:800;
   text-transform:uppercase;
   letter-spacing:0.04em;
+}
+
+.resume-save-meta{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  max-width:180px;
+  text-align:right;
+  color:#d7d2f6;
+  font-size:12px;
+  line-height:1.35;
+  opacity:0.84;
 }
 
 .missed-topics-list{
@@ -1843,6 +1858,10 @@ body.light-mode .missed-topic-card{
   border-color:rgba(60, 40, 120, 0.08);
 }
 
+body.light-mode .resume-save-meta{
+  color:#4b5563;
+}
+
 body.light-mode .subject-progress-percent{
   background:rgba(0,134,176,0.12);
   color:#007ca6;
@@ -1952,7 +1971,14 @@ body.light-mode .flashcard-empty-state{
   }
 
   .insight-meta{
+    align-items:flex-start;
     justify-content:flex-start;
+    width:100%;
+  }
+
+  .resume-save-meta{
+    max-width:none;
+    text-align:left;
   }
 
   .missed-topics-list{
