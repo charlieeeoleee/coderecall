@@ -28,7 +28,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { enforcePrivilegedMfa, hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
+import { enforcePrivilegedMfa, getFirebaseSecondFactorProvider, signedInWithSecondFactor } from "./firebase-native-mfa.js";
 import { syncNativeMfaProfile } from "./native-mfa-profile.js";
 import { writeSecurityAudit } from "./security-audit.js";
 import {
@@ -529,7 +529,8 @@ function summarizeTwoFactorOversight(users, profiles) {
 
 async function addCurrentSessionMfaProfile(profiles) {
   if (!currentUser || !["admin", "super_admin"].includes(currentRole)) return profiles;
-  if (!hasTotpFactor(currentUser) || !await signedInWithSecondFactor(currentUser)) return profiles;
+  const secondFactorProvider = await getFirebaseSecondFactorProvider(currentUser);
+  if (!secondFactorProvider && !await signedInWithSecondFactor(currentUser)) return profiles;
 
   const currentEmail = normalizeEmail(currentUser.email);
   const existingIndex = profiles.findIndex((profile) => {
@@ -543,7 +544,7 @@ async function addCurrentSessionMfaProfile(profiles) {
     email: currentUser.email || "",
     role: currentRole,
     firebaseMfaEnrolled: true,
-    firebaseMfaProvider: "TOTP",
+    firebaseMfaProvider: secondFactorProvider || "TOTP",
     firebaseMfaSource: "firebase_auth",
     lastVerifiedAt: Date.now(),
     lastVerificationMethod: "firebase_totp_current_session",

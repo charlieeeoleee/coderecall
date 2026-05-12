@@ -167,7 +167,52 @@
   </button>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/landing.js"></script>
-  <script src="scripts/loading.js" defer></script>
+  <script>
+    (function () {
+      function syncMobileNavButton() {
+        const navbar = document.querySelector(".navbar");
+        const toggle = document.querySelector(".nav-toggle");
+        if (!navbar || !toggle) return;
+
+        const isOpen = navbar.classList.contains("mobile-open");
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        toggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
+      }
+
+      function closeMobileNav() {
+        const navbar = document.querySelector(".navbar");
+        if (!navbar) return;
+
+        navbar.classList.remove("mobile-open");
+        syncMobileNavButton();
+      }
+
+      window.toggleMobileNav = window.toggleMobileNav || function () {
+        const navbar = document.querySelector(".navbar");
+        if (!navbar) return;
+
+        navbar.classList.toggle("mobile-open");
+        syncMobileNavButton();
+      };
+
+      window.goToAuth = window.goToAuth || function () {
+        closeMobileNav();
+        window.location.href = "auth.html";
+      };
+
+      window.playGuest = window.playGuest || function () {
+        closeMobileNav();
+        localStorage.setItem("guest", "true");
+        window.location.href = "dashboard.html";
+      };
+
+      window.goToAbout = window.goToAbout || function () {
+        closeMobileNav();
+        window.location.href = "about.html";
+      };
+    })();
+  </script>
+  <script type="module" src="scripts/landing.js?v=20260511a"></script>
+  <script src="scripts/loading.js?v=20260511a" defer></script>
 </body>
 </html>

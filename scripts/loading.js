@@ -945,6 +945,10 @@
   function isNavigationClick(target) {
     if (!(target instanceof HTMLElement)) return false;
 
+    if (target.closest(".nav-toggle, .sidebar-toggle")) {
+      return false;
+    }
+
     const anchor = target.closest("a[href]");
     if (anchor instanceof HTMLAnchorElement) {
       const href = anchor.getAttribute("href") || "";
@@ -959,6 +963,9 @@
 
     const handler = clickable.getAttribute("onclick") || "";
     if (!handler) return false;
+    if (handler.includes("toggleMobileNav") || handler.includes("toggleMobileSidebar")) {
+      return false;
+    }
 
     return NAVIGATION_ACTIONS.some((action) => handler.includes(action)) ||
       handler.includes("window.location") ||

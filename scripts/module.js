@@ -3966,13 +3966,20 @@ function openModuleImageModal(profile) {
     return;
   }
 
+  const isHistoryProfile = Boolean(profile.personalDetails);
+  const title = profile.name || profile.caption || "Module image";
+  const description =
+    profile.text ||
+    profile.info ||
+    profile.description ||
+    "Review this enlarged visual and connect it to the lesson content.";
   const detailRows = buildProfileRows(profile.personalDetails);
   modalImg.src = profile.portrait || profile.src || "";
-  modalImg.alt = profile.name || profile.caption || "History profile";
-  modalCaption.textContent = profile.name || profile.caption || "History profile";
-  modalKicker.textContent = "History Profile";
-  modalTitle.textContent = profile.name || profile.caption || "Profile";
-  modalDescription.textContent = profile.text || profile.info || "This profile connects the image to the computer history timeline.";
+  modalImg.alt = profile.alt || title;
+  modalCaption.textContent = profile.caption || title;
+  modalKicker.textContent = isHistoryProfile ? "History Profile" : "Image Detail";
+  modalTitle.textContent = title;
+  modalDescription.textContent = description;
   modalDetails.hidden = detailRows.length === 0;
   modalDetails.innerHTML = detailRows.map((item) => `
     <div class="module-image-detail">
@@ -4666,15 +4673,28 @@ function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleDat
   }
 
   galleryImages.forEach((image) => {
+    const title = image.caption || image.alt || "Module image";
     const figure = document.createElement("figure");
-    figure.className = "module-figure";
+    figure.className = "module-figure compact-image-card";
     figure.innerHTML = `
-      <img src="${image.src}" alt="${image.alt || "Module image"}" loading="lazy" decoding="async">
+      <div class="module-figure-media">
+        <img src="${image.src}" alt="${image.alt || title}" loading="lazy" decoding="async">
+        <span class="module-figure-zoom">Enlarge</span>
+      </div>
       <figcaption>
-        <span class="module-figure-title">${image.caption || ""}</span>
-        <span class="module-figure-info">${image.info || ""}</span>
+        <span class="module-figure-title">${title}</span>
       </figcaption>
     `;
+    figure.tabIndex = 0;
+    figure.setAttribute("role", "button");
+    figure.setAttribute("aria-label", `Open enlarged image for ${title}`);
+    figure.addEventListener("click", () => openModuleImageModal(image));
+    figure.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openModuleImageModal(image);
+      }
+    });
     gallery.appendChild(figure);
   });
 }

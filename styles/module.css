@@ -736,6 +736,11 @@ body {
   gap: 6px;
 }
 
+.module-figure.compact-image-card figcaption {
+  min-height: 60px;
+  justify-content: center;
+}
+
 .module-figure-title {
   font-size: 14px;
   font-weight: 800;
@@ -2068,8 +2073,18 @@ body.light-mode .module-btn.success-btn:disabled {
     grid-template-columns: 1fr;
   }
 
+  .module-figure-media {
+    min-height: 220px;
+  }
+
+  .module-figure.compact-image-card figcaption {
+    min-height: 54px;
+  }
+
   .module-image-modal {
     padding: 16px;
+    align-items: flex-start;
+    overflow-y: auto;
   }
 
   .module-image-modal-layout {
@@ -2079,6 +2094,11 @@ body.light-mode .module-btn.success-btn:disabled {
   .module-image-modal-media {
     border-right: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 16px;
+  }
+
+  .module-image-modal-media img {
+    max-height: 46vh;
   }
 
   body.light-mode .module-image-modal-media {

@@ -15,6 +15,11 @@ export async function signedInWithSecondFactor(user) {
   return Boolean(token.claims?.firebase?.sign_in_second_factor);
 }
 
+export async function getFirebaseSecondFactorProvider(user) {
+  const token = await getIdTokenResult(user, true);
+  return token.claims?.firebase?.sign_in_second_factor || "";
+}
+
 export async function enforcePrivilegedMfa({ auth, user, setupPath }) {
   if (!hasTotpFactor(user)) {
     window.location.replace(setupPath);
