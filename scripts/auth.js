@@ -38,6 +38,7 @@ let isHandlingAuthFlow = false;
 let activeMfaResolver = null;
 let activeMfaProvider = "password";
 let googleSignInInFlight = false;
+let hasCheckedGoogleRedirectResult = false;
 
 if (sessionStorage.getItem(googleRedirectPendingKey) === "true") {
   isHandlingAuthFlow = true;
@@ -344,11 +345,16 @@ function shouldUseGoogleRedirect() {
 }
 
 async function handleGoogleRedirectResult() {
+  if (hasCheckedGoogleRedirectResult) return;
+  hasCheckedGoogleRedirectResult = true;
+
   const wasRedirectPending = sessionStorage.getItem(googleRedirectPendingKey) === "true";
-  if (!wasRedirectPending) return;
 
   try {
-    setGoogleButtonsLoading(true, "Finishing Google sign-in...");
+    if (wasRedirectPending) {
+      setGoogleButtonsLoading(true, "Finishing Google sign-in...");
+    }
+
     const result = await getRedirectResult(auth);
     sessionStorage.removeItem(googleRedirectPendingKey);
 
@@ -358,6 +364,10 @@ async function handleGoogleRedirectResult() {
         clearAdminMfaSession();
         await finishGoogleSignIn(auth.currentUser);
         return;
+      }
+
+      if (wasRedirectPending) {
+        showPopup("Google Login Error", "Google returned to Code Recall, but Firebase did not complete the sign-in session. Please try again in an incognito window or clear site data for coderecall.online.");
       }
 
       isHandlingAuthFlow = false;

@@ -41,17 +41,7 @@ function readRuntimeFirebaseConfig() {
     return nextConfig;
   }, {});
 
-  sanitizedConfig.authDomain = resolveAuthDomainForCurrentHost(sanitizedConfig.authDomain);
   return sanitizedConfig;
-}
-
-function resolveAuthDomainForCurrentHost(configuredAuthDomain) {
-  const host = self.location?.hostname || "";
-  const isLocalHost = host === "localhost" || host === "127.0.0.1";
-  const isFirebaseHost = host.endsWith(".firebaseapp.com") || host.endsWith(".web.app");
-
-  if (!host || isLocalHost || isFirebaseHost) return configuredAuthDomain;
-  return host;
 }
 
 function readRuntimeAppCheckSiteKey() {
