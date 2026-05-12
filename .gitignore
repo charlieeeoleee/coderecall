@@ -1,4 +1,5 @@
 node_modules/
+.firebase/
 .firebase-cli-config/
 firestore-debug.log
 scripts/firebase-config.local.js
