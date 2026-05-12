@@ -353,6 +353,13 @@ async function handleGoogleRedirectResult() {
     sessionStorage.removeItem(googleRedirectPendingKey);
 
     if (!result?.user) {
+      if (auth.currentUser) {
+        clearSuperAdminMfaSession();
+        clearAdminMfaSession();
+        await finishGoogleSignIn(auth.currentUser);
+        return;
+      }
+
       isHandlingAuthFlow = false;
       googleSignInInFlight = false;
       setGoogleButtonsLoading(false);
