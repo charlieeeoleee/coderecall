@@ -5,6 +5,8 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -31,9 +33,15 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const pendingGoogleKey = "pendingGoogleRegistration";
+const googleRedirectPendingKey = "codeRecallGoogleRedirectPending";
 let isHandlingAuthFlow = false;
 let activeMfaResolver = null;
 let activeMfaProvider = "password";
+let googleSignInInFlight = false;
+
+if (sessionStorage.getItem(googleRedirectPendingKey) === "true") {
+  isHandlingAuthFlow = true;
+}
 
 async function getLandingPageForUser(user) {
   const role = await resolveUserRole(db, user);
@@ -56,13 +64,13 @@ async function getLandingPageForUser(user) {
 
 /* AUTH STATE */
 onAuthStateChanged(auth, async (user) => {
-  const pendingGoogle = localStorage.getItem(pendingGoogleKey);
+  const pendingGoogle = readPendingGoogleRegistration();
 
   if (!user) return;
   if (isHandlingAuthFlow) return;
 
   if (pendingGoogle && window.location.pathname.includes("auth.html")) {
-    showPendingGoogleRegistration(JSON.parse(pendingGoogle));
+    showPendingGoogleRegistration(pendingGoogle);
     return;
   }
 
@@ -151,7 +159,7 @@ window.register = async function(){
     const email = document.getElementById("registerEmail").value.trim();
     const passwordInput = document.getElementById("registerPassword");
     const password = passwordInput ? passwordInput.value : "";
-    const pendingGoogle = localStorage.getItem(pendingGoogleKey);
+    const pendingGoogle = readPendingGoogleRegistration();
 
     if (!name || !email) {
       showPopup("Missing Fields", "Please complete the required fields.");
@@ -165,7 +173,7 @@ window.register = async function(){
 
     /* COMPLETE GOOGLE REGISTRATION */
     if (pendingGoogle) {
-      const pending = JSON.parse(pendingGoogle);
+      const pending = pendingGoogle;
       const userRef = doc(db, "users", pending.uid);
 
       isHandlingAuthFlow = true;
@@ -285,41 +293,128 @@ window.register = async function(){
 
 /* GOOGLE LOGIN */
 window.googleLogin = async function(){
+  if (googleSignInInFlight) return;
+
   try{
-    const provider = new GoogleAuthProvider();
+    googleSignInInFlight = true;
+    setGoogleButtonsLoading(true, "Opening Google...");
+    const provider = createGoogleProvider();
 
     isHandlingAuthFlow = true;
-    const result = await signInWithPopup(auth, provider);
-    const user = result.user;
-    clearSuperAdminMfaSession();
-    clearAdminMfaSession();
 
-    const userRef = doc(db, "users", user.uid);
-    const docSnap = await getDoc(userRef);
-
-    if (docSnap.exists()) {
-      await transferGuestProgressIfNeeded(user.uid);
-      localStorage.removeItem(pendingGoogleKey);
-      window.location.replace(await getLandingPageForUser(user));
+    if (shouldUseGoogleRedirect()) {
+      sessionStorage.setItem(googleRedirectPendingKey, "true");
+      setGoogleButtonsLoading(true, "Redirecting to Google...");
+      await signInWithRedirect(auth, provider);
       return;
     }
 
-    const pending = {
-      uid: user.uid,
-      email: user.email || "",
-      name: user.displayName || "",
-      photo: user.photoURL || ""
-    };
-
-    localStorage.setItem(pendingGoogleKey, JSON.stringify(pending));
-    isHandlingAuthFlow = false;
-    showPendingGoogleRegistration(pending);
+    const result = await signInWithPopup(auth, provider);
+    clearSuperAdminMfaSession();
+    clearAdminMfaSession();
+    await finishGoogleSignIn(result.user);
   }catch(error){
     isHandlingAuthFlow = false;
+    googleSignInInFlight = false;
+    setGoogleButtonsLoading(false);
     if (handleMfaRequired(error, "google")) return;
-    showPopup("Google Login Error", error.message);
+    showPopup("Google Login Error", getGoogleAuthErrorMessage(error));
   }
 };
+
+function createGoogleProvider() {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: "select_account"
+  });
+  return provider;
+}
+
+function shouldUseGoogleRedirect() {
+  const userAgent = navigator.userAgent || "";
+  const isMobileBrowser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  const isTouchSmallScreen = Boolean(
+    window.matchMedia?.("(pointer: coarse)")?.matches &&
+    window.matchMedia?.("(max-width: 900px)")?.matches
+  );
+
+  return isMobileBrowser || isTouchSmallScreen;
+}
+
+async function handleGoogleRedirectResult() {
+  const wasRedirectPending = sessionStorage.getItem(googleRedirectPendingKey) === "true";
+  if (!wasRedirectPending) return;
+
+  try {
+    setGoogleButtonsLoading(true, "Finishing Google sign-in...");
+    const result = await getRedirectResult(auth);
+    sessionStorage.removeItem(googleRedirectPendingKey);
+
+    if (!result?.user) {
+      isHandlingAuthFlow = false;
+      googleSignInInFlight = false;
+      setGoogleButtonsLoading(false);
+      return;
+    }
+
+    clearSuperAdminMfaSession();
+    clearAdminMfaSession();
+    await finishGoogleSignIn(result.user);
+  } catch (error) {
+    sessionStorage.removeItem(googleRedirectPendingKey);
+    isHandlingAuthFlow = false;
+    googleSignInInFlight = false;
+    setGoogleButtonsLoading(false);
+    if (handleMfaRequired(error, "google")) return;
+    showPopup("Google Login Error", getGoogleAuthErrorMessage(error));
+  }
+}
+
+function readPendingGoogleRegistration() {
+  const raw = localStorage.getItem(pendingGoogleKey);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    localStorage.removeItem(pendingGoogleKey);
+    return null;
+  }
+}
+
+function setGoogleButtonsLoading(isLoading, labelText = "") {
+  document.querySelectorAll(".google-btn").forEach((button) => {
+    const label = button.querySelector("span:last-child");
+    if (label && !label.dataset.defaultText) {
+      label.dataset.defaultText = label.textContent;
+    }
+
+    button.disabled = isLoading;
+    if (label) {
+      label.textContent = isLoading ? labelText : label.dataset.defaultText;
+    }
+  });
+}
+
+function getGoogleAuthErrorMessage(error) {
+  if (error?.code === "auth/cancelled-popup-request") {
+    return "A Google sign-in window is already open. Finish that window, or close it and try again.";
+  }
+
+  if (error?.code === "auth/popup-blocked") {
+    return "Your browser blocked the Google sign-in window. Allow popups for this site or try again on mobile redirect sign-in.";
+  }
+
+  if (error?.code === "auth/popup-closed-by-user") {
+    return "The Google sign-in window was closed before login finished.";
+  }
+
+  if (error?.code === "auth/redirect-cancelled-by-user") {
+    return "Google sign-in was cancelled before it finished.";
+  }
+
+  return error?.message || "Google sign-in could not be completed. Please try again.";
+}
 
 function handleMfaRequired(error, provider) {
   if (error?.code !== "auth/multi-factor-auth-required") return false;
@@ -452,6 +547,8 @@ async function finishGoogleSignIn(user) {
 
   localStorage.setItem(pendingGoogleKey, JSON.stringify(pending));
   isHandlingAuthFlow = false;
+  googleSignInInFlight = false;
+  setGoogleButtonsLoading(false);
   showPendingGoogleRegistration(pending);
 }
 
@@ -701,4 +798,4 @@ window.togglePassword = function(id){
 
 loadSavedTheme();
 showDeferredMfaNotice();
-
+handleGoogleRedirectResult();
