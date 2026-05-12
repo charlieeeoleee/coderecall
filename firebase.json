@@ -12,6 +12,7 @@
     "singleProjectMode": true
   },
   "hosting": {
+    "site": "gamifiedlearningsystem",
     "public": ".",
     "ignore": [
       "firebase.json",
