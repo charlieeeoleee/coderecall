@@ -581,7 +581,8 @@ body.light-mode .footer {
     padding-top: 8px;
   }
 
-  .navbar.mobile-nav-open .nav-links {
+  .navbar.mobile-nav-open .nav-links,
+  .navbar.mobile-open .nav-links {
     display: flex;
   }
 
@@ -623,6 +624,15 @@ body.light-mode .footer {
   .ghost-btn,
   .cta-link {
     width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cta-links {
+    gap: 14px;
+  }
+
+  .cta-card {
+    overflow: hidden;
   }
 
   .theme-toggle {

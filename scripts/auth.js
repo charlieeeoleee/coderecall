@@ -413,6 +413,10 @@ function getGoogleAuthErrorMessage(error) {
     return "Google sign-in was cancelled before it finished.";
   }
 
+  if (error?.code === "auth/unauthorized-domain") {
+    return "This published domain is not authorized in Firebase Authentication yet. Add this site domain in Firebase Console > Authentication > Settings > Authorized domains.";
+  }
+
   return error?.message || "Google sign-in could not be completed. Please try again.";
 }
 

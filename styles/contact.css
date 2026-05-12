@@ -988,7 +988,8 @@ body.light-mode .learner-status-chip.resolved {
     padding-top: 8px;
   }
 
-  .navbar.mobile-nav-open .nav-links {
+  .navbar.mobile-nav-open .nav-links,
+  .navbar.mobile-open .nav-links {
     display: flex;
   }
 

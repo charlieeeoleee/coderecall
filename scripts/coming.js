@@ -1,12 +1,15 @@
 function goHome() {
+  closeMobileNav();
   window.location.href = "index.html";
 }
 
 function goDashboard() {
+  closeMobileNav();
   window.location.href = "dashboard.html";
 }
 
 function goToAuth() {
+  closeMobileNav();
   window.location.href = "auth.html";
 }
 
@@ -25,8 +28,26 @@ function toggleMobileNav() {
   if (!navbar || !toggle) return;
 
   const isOpen = navbar.classList.toggle("mobile-nav-open");
+  navbar.classList.toggle("mobile-open", isOpen);
   toggle.setAttribute("aria-expanded", String(isOpen));
+  toggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
 }
+
+function closeMobileNav() {
+  const navbar = document.querySelector(".navbar");
+  const toggle = document.querySelector(".nav-toggle");
+  if (!navbar) return;
+
+  navbar.classList.remove("mobile-nav-open", "mobile-open");
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "Open navigation");
+  }
+}
+
+document.querySelectorAll(".nav-links a").forEach((link) => {
+  link.addEventListener("click", closeMobileNav);
+});
 
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
