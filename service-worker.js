@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260512f";
+const CACHE_VERSION = "code-recall-v20260512g";
 const APP_SHELL = [
   "./",
   "./offline.html",

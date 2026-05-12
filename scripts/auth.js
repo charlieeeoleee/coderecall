@@ -333,15 +333,13 @@ function createGoogleProvider() {
 
 function shouldUseGoogleRedirect() {
   const userAgent = navigator.userAgent || "";
-  const host = window.location.hostname;
-  const isLocalHost = host === "localhost" || host === "127.0.0.1";
   const isMobileBrowser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
   const isTouchSmallScreen = Boolean(
     window.matchMedia?.("(pointer: coarse)")?.matches &&
     window.matchMedia?.("(max-width: 900px)")?.matches
   );
 
-  return !isLocalHost || isMobileBrowser || isTouchSmallScreen;
+  return isMobileBrowser || isTouchSmallScreen;
 }
 
 async function handleGoogleRedirectResult() {
