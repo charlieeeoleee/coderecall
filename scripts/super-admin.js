@@ -486,16 +486,16 @@ function summarizeTwoFactorOversight(users, profiles) {
   const rows = privilegedUsers.map((user) => {
     const role = getRoleFromUserData(user);
     const profile = getSecurityProfileForUser(user, profileIndex);
-    const nativeEnrolled = Boolean(profile?.firebaseMfaEnrolled);
+    const nativeEnrolled = Boolean(profile?.firebaseMfaEnrolled || user.firebaseMfaEnrolled);
     const legacyEnrolled = Boolean(profile?.totpEnabled && profile?.totpSecret);
     const enrolled = nativeEnrolled || legacyEnrolled;
     const backupCodesRemaining = legacyEnrolled && Array.isArray(profile?.backupCodeHashes)
       ? profile.backupCodeHashes.length
       : null;
-    const lastVerifiedMs = toTimestampMs(profile?.lastVerifiedAt);
+    const lastVerifiedMs = toTimestampMs(profile?.lastVerifiedAt || user.firebaseMfaSyncedAt);
     const enrolledMs = toTimestampMs(profile?.enrolledAt);
     const providerLabel = nativeEnrolled
-      ? `Firebase Auth ${profile?.firebaseMfaProvider || "TOTP"}`
+      ? `Firebase Auth ${profile?.firebaseMfaProvider || user.firebaseMfaProvider || "TOTP"}`
       : "Legacy app 2FA";
 
     return {
@@ -509,7 +509,7 @@ function summarizeTwoFactorOversight(users, profiles) {
       providerLabel,
       backupCodesRemaining,
       backupCodeUseCount: Math.max(0, Number(profile?.backupCodeUseCount || 0)),
-      lastVerificationMethod: String(profile?.lastVerificationMethod || ""),
+      lastVerificationMethod: String(profile?.lastVerificationMethod || (user.firebaseMfaEnrolled ? "firebase_totp_admin_sync" : "")),
       lastVerifiedMs,
       lastVerifiedLabel: lastVerifiedMs ? formatAdminDateTime(lastVerifiedMs) : "Not verified yet",
       enrolledLabel: enrolledMs ? formatAdminDateTime(enrolledMs) : "Not enrolled yet",

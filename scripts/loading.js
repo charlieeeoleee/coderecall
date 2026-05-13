@@ -144,7 +144,7 @@
       }
 
       body.access-high-contrast {
-        filter: contrast(1.12);
+        color: #fff;
       }
 
       body.access-high-contrast a:focus-visible,
@@ -281,12 +281,16 @@
     const screenReaderAssist = readBooleanPreference("screenReaderAssist", false);
     const reducedMotion = readBooleanPreference("reducedMotion", false);
     const narrationSpeed = readNumberPreference("narrationSpeed", 1, 0.5, 2.5);
+    const visualBrightness = readNumberPreference("visualBrightness", 1, 0.75, 1.1);
+    const visualContrast = readNumberPreference("visualContrast", 1, 0.8, 1.2);
+    const effectiveContrast = highContrast ? Math.max(visualContrast, 1.12) : visualContrast;
 
     document.body.classList.toggle("access-high-contrast", highContrast);
     document.body.classList.toggle("access-screen-reader-assist", screenReaderAssist);
     document.body.classList.toggle("access-reduced-motion", reducedMotion);
     document.body.classList.toggle("access-text-large", textSize === "large");
     document.body.classList.toggle("access-text-extra-large", textSize === "extra-large");
+    document.body.style.filter = `brightness(${visualBrightness}) contrast(${effectiveContrast})`;
     window.codeRecallNarrationSpeed = narrationSpeed;
     window.getCodeRecallNarrationSpeed = function () {
       return window.codeRecallNarrationSpeed || 1;

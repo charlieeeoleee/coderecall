@@ -99,7 +99,11 @@ service cloud.firestore {
     function userAccessFieldsUnchanged() {
       return request.resource.data.get("role", "user") == resource.data.get("role", "user")
         && request.resource.data.get("status", "active") == resource.data.get("status", "active")
-        && progressRole(request.resource.data) == progressRole(resource.data);
+        && progressRole(request.resource.data) == progressRole(resource.data)
+        && request.resource.data.get("firebaseMfaEnrolled", false) == resource.data.get("firebaseMfaEnrolled", false)
+        && request.resource.data.get("firebaseMfaProvider", "") == resource.data.get("firebaseMfaProvider", "")
+        && request.resource.data.get("firebaseMfaSource", "") == resource.data.get("firebaseMfaSource", "")
+        && request.resource.data.get("firebaseMfaSyncedAt", null) == resource.data.get("firebaseMfaSyncedAt", null);
     }
 
     function userDocumentHasAllowedKeys(data) {
@@ -124,7 +128,11 @@ service cloud.firestore {
         "retentionQueue",
         "wrongAnswerReview",
         "resumeActivity",
-        "privacyConsent"
+        "privacyConsent",
+        "firebaseMfaEnrolled",
+        "firebaseMfaProvider",
+        "firebaseMfaSource",
+        "firebaseMfaSyncedAt"
       ]);
     }
 

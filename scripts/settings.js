@@ -67,7 +67,9 @@ const ACCESSIBILITY_DEFAULTS = {
   screenReaderAssist: false,
   reducedMotion: false,
   textSize: "normal",
-  narrationSpeed: 1
+  narrationSpeed: 1,
+  visualBrightness: 1,
+  visualContrast: 1
 };
 const TEXT_SIZE_OPTIONS = new Set(["normal", "large", "extra-large"]);
 const SETTINGS_STATUS_DEFAULT = "Manage your account, preferences, and system actions.";
@@ -197,6 +199,16 @@ function getAccessibilityPreferences() {
       "narrationSpeed",
       ACCESSIBILITY_DEFAULTS.narrationSpeed,
       { min: 0.5, max: 2.5 }
+    ),
+    visualBrightness: readNumberPreference(
+      "visualBrightness",
+      ACCESSIBILITY_DEFAULTS.visualBrightness,
+      { min: 0.75, max: 1.1 }
+    ),
+    visualContrast: readNumberPreference(
+      "visualContrast",
+      ACCESSIBILITY_DEFAULTS.visualContrast,
+      { min: 0.8, max: 1.2 }
     )
   };
 }
@@ -211,6 +223,10 @@ function applyAccessibilityPreferences() {
   target.classList.toggle("access-reduced-motion", prefs.reducedMotion);
   target.classList.toggle("access-text-large", prefs.textSize === "large");
   target.classList.toggle("access-text-extra-large", prefs.textSize === "extra-large");
+  const effectiveContrast = prefs.highContrast
+    ? Math.max(prefs.visualContrast, 1.12)
+    : prefs.visualContrast;
+  target.style.filter = `brightness(${prefs.visualBrightness}) contrast(${effectiveContrast})`;
   window.codeRecallNarrationSpeed = prefs.narrationSpeed;
   if (typeof window.applyAccessibilityPreferences === "function") {
     window.applyAccessibilityPreferences();
@@ -220,6 +236,10 @@ function applyAccessibilityPreferences() {
 
 function formatNarrationSpeed(speed) {
   return `${speed.toFixed(2)}x`;
+}
+
+function formatVisualPercent(value) {
+  return `${Math.round(value * 100)}%`;
 }
 
 window.getCodeRecallNarrationSpeed = function() {
@@ -560,6 +580,10 @@ function loadPreferences() {
   const screenReaderAssistToggle = document.getElementById("screenReaderAssistToggle");
   const reducedMotionToggle = document.getElementById("reducedMotionToggle");
   const textSizeSelect = document.getElementById("textSizeSelect");
+  const visualBrightnessInput = document.getElementById("visualBrightnessInput");
+  const visualBrightnessValue = document.getElementById("visualBrightnessValue");
+  const visualContrastInput = document.getElementById("visualContrastInput");
+  const visualContrastValue = document.getElementById("visualContrastValue");
   const narrationSpeedInput = document.getElementById("narrationSpeedInput");
   const narrationSpeedValue = document.getElementById("narrationSpeedValue");
   const readAloudPageBtn = document.getElementById("readAloudPageBtn");
@@ -596,6 +620,32 @@ function loadPreferences() {
     textSizeSelect.addEventListener("change", (e) => {
       const nextSize = TEXT_SIZE_OPTIONS.has(e.target.value) ? e.target.value : ACCESSIBILITY_DEFAULTS.textSize;
       localStorage.setItem("textSizePreference", nextSize);
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (visualBrightnessInput && visualBrightnessValue) {
+    const savedBrightness = Math.round(accessibilityPrefs.visualBrightness * 100);
+    visualBrightnessInput.value = String(savedBrightness);
+    visualBrightnessValue.textContent = formatVisualPercent(savedBrightness / 100);
+
+    visualBrightnessInput.addEventListener("input", (e) => {
+      const nextBrightness = Math.round(Number(e.target.value || 100)) / 100;
+      localStorage.setItem("visualBrightness", String(nextBrightness));
+      visualBrightnessValue.textContent = formatVisualPercent(nextBrightness);
+      applyAccessibilityPreferences();
+    });
+  }
+
+  if (visualContrastInput && visualContrastValue) {
+    const savedContrast = Math.round(accessibilityPrefs.visualContrast * 100);
+    visualContrastInput.value = String(savedContrast);
+    visualContrastValue.textContent = formatVisualPercent(savedContrast / 100);
+
+    visualContrastInput.addEventListener("input", (e) => {
+      const nextContrast = Math.round(Number(e.target.value || 100)) / 100;
+      localStorage.setItem("visualContrast", String(nextContrast));
+      visualContrastValue.textContent = formatVisualPercent(nextContrast);
       applyAccessibilityPreferences();
     });
   }

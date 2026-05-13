@@ -123,18 +123,28 @@ async function main() {
 
     const factors = authUser.multiFactor?.enrolledFactors || [];
     const enrolled = factors.length > 0;
+    const provider = getFactorProvider(factors);
     const ref = db.collection("securityProfiles").doc(authUser.uid);
     batch.set(ref, {
       uid: authUser.uid,
       email: authUser.email || firestoreUser?.email || "",
       role,
       firebaseMfaEnrolled: enrolled,
-      firebaseMfaProvider: getFactorProvider(factors),
+      firebaseMfaProvider: provider,
       firebaseMfaSource: "firebase_auth",
       enrolledAt: enrolled ? FieldValue.serverTimestamp() : FieldValue.delete(),
       lastVerificationMethod: enrolled ? "firebase_totp_admin_sync" : "firebase_totp_admin_sync_missing",
       updatedAt: FieldValue.serverTimestamp()
     }, { merge: true });
+
+    if (firestoreUser?.id) {
+      batch.set(db.collection("users").doc(firestoreUser.id), {
+        firebaseMfaEnrolled: enrolled,
+        firebaseMfaProvider: provider,
+        firebaseMfaSource: "firebase_auth",
+        firebaseMfaSyncedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
 
     synced.push({
       uid: authUser.uid,

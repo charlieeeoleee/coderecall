@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles/settings.css?v=20260510a">
+  <link rel="stylesheet" href="styles/settings.css?v=20260513a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -160,6 +160,30 @@
             <label class="switch" aria-label="Toggle high contrast mode">
               <input type="checkbox" id="highContrastToggle">
               <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row volume-setting-row">
+            <div>
+              <strong>Screen Brightness</strong>
+              <p>Dim or brighten the interface to reduce eye strain.</p>
+            </div>
+
+            <label class="volume-control" for="visualBrightnessInput">
+              <input type="range" id="visualBrightnessInput" min="75" max="110" step="1">
+              <span id="visualBrightnessValue">100%</span>
+            </label>
+          </div>
+
+          <div class="setting-row volume-setting-row">
+            <div>
+              <strong>Contrast Level</strong>
+              <p>Soften or sharpen the difference between text, cards, and backgrounds.</p>
+            </div>
+
+            <label class="volume-control" for="visualContrastInput">
+              <input type="range" id="visualContrastInput" min="80" max="120" step="1">
+              <span id="visualContrastValue">100%</span>
             </label>
           </div>
 
@@ -592,8 +616,8 @@
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/settings.js?v=20260510d"></script>
-  <script src="scripts/loading.js?v=20260510a" defer></script>
+  <script type="module" src="scripts/settings.js?v=20260513a"></script>
+  <script src="scripts/loading.js?v=20260513a" defer></script>
 </body>
 </html>
 

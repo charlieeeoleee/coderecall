@@ -525,6 +525,14 @@ window.confirmMfaChallenge = async function() {
   }
 };
 
+document.getElementById("mfaChallengeCode")?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  const button = document.getElementById("mfaChallengeBtn");
+  if (button?.disabled) return;
+  window.confirmMfaChallenge();
+});
+
 async function finishPasswordSignIn(user) {
   if (!user.emailVerified) {
     await signOut(auth);
