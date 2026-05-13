@@ -9,6 +9,29 @@ import {
 
 const PRIVILEGED_ROLES = new Set(["admin", "super_admin"]);
 
+export async function markNativeMfaEnrolled(db, user, role, options = {}) {
+  if (!db || !user || !PRIVILEGED_ROLES.has(role)) return false;
+
+  try {
+    await setDoc(doc(db, "securityProfiles", user.uid), {
+      uid: user.uid,
+      email: user.email || "",
+      role,
+      firebaseMfaEnrolled: true,
+      firebaseMfaProvider: options.provider || "totp",
+      firebaseMfaSource: "firebase_auth",
+      enrolledAt: serverTimestamp(),
+      lastVerificationMethod: options.method || "firebase_totp_enrollment",
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    return true;
+  } catch (error) {
+    console.warn("Unable to mark native Firebase MFA enrollment.", error);
+    return false;
+  }
+}
+
 export async function syncNativeMfaProfile(db, user, role, options = {}) {
   if (!db || !user || !PRIVILEGED_ROLES.has(role)) return false;
 

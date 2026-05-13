@@ -1,6 +1,7 @@
 import { app } from "./firebase-config.js";
 import {
   getAuth,
+  multiFactor,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -1353,6 +1354,59 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
+function describeMfaResetError(error) {
+  if (error?.code === "auth/requires-recent-login") {
+    return "Please log out, sign in again, then reset 2FA right away.";
+  }
+  return `Unable to reset your 2FA right now. ${error?.message || "Please try again."}`;
+}
+
+async function markOwnMfaProfileReset(role) {
+  if (!currentUser) return;
+  await setDoc(doc(db, "securityProfiles", currentUser.uid), {
+    uid: currentUser.uid,
+    email: currentUser.email || "",
+    role,
+    firebaseMfaEnrolled: false,
+    firebaseMfaProvider: "",
+    firebaseMfaSource: "firebase_auth",
+    lastVerificationMethod: "firebase_totp_reset",
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+async function resetOwnFirebaseMfa(role, setupPath) {
+  if (!currentUser) return;
+  const factorUser = multiFactor(currentUser);
+  const enrolledFactors = factorUser.enrolledFactors || [];
+
+  clearSuperAdminMfaSession();
+  if (!enrolledFactors.length) {
+    await markOwnMfaProfileReset(role);
+    setMfaStatus("No Firebase 2FA factor was found. Opening setup so you can enroll again.");
+    window.location.href = setupPath;
+    return;
+  }
+
+  setMfaStatus("Resetting your Firebase 2FA. Please wait...");
+  for (const factor of enrolledFactors) {
+    await factorUser.unenroll(factor.uid || factor);
+  }
+
+  await currentUser.reload();
+  await markOwnMfaProfileReset(role);
+  await writeSecurityAudit(
+    db,
+    currentUser,
+    "reset_own_super_admin_mfa",
+    "Super admin reset their own Firebase Auth multi-factor enrollment."
+  );
+
+  setMfaStatus("2FA reset. Signing out so you can enroll a fresh authenticator.");
+  await signOut(auth);
+  window.location.href = "auth.html";
+}
+
 async function updateUserUI(user) {
   let profile = {};
   try {
@@ -1468,16 +1522,26 @@ window.logout = async function() {
 
 window.resetMySuperAdminMfa = function() {
   if (!currentUser) return;
+  const enrolledCount = multiFactor(currentUser).enrolledFactors?.length || 0;
   openSystemPopup(
-    "Manage Super Admin 2FA",
-    "Firebase Auth now manages super-admin 2FA. To reset an existing factor, remove it from Firebase Console or the Admin SDK, then return to the setup page.",
+    "Reset Super Admin 2FA",
+    enrolledCount
+      ? "This will remove your current authenticator enrollment, clear this privileged session, and sign you out. After signing in again, you can set up a new authenticator."
+      : "No Firebase 2FA factor is recorded on this session. This will clear your privileged session and open the setup page.",
     async () => {
-      clearSuperAdminMfaSession();
-      setMfaStatus("2FA session cleared. Existing Firebase Auth factors are managed outside Firestore.");
-      closeSystemPopup();
+      const resetBtn = document.getElementById("superAdminMfaResetBtn");
+      if (resetBtn) resetBtn.disabled = true;
+      try {
+        await resetOwnFirebaseMfa(currentRole, "super-admin-mfa.html");
+      } catch (error) {
+        console.error("Unable to reset super-admin MFA.", error);
+        setMfaStatus(describeMfaResetError(error));
+        if (resetBtn) resetBtn.disabled = false;
+        closeSystemPopup();
+      }
     },
     {
-      confirmLabel: "Clear Session"
+      confirmLabel: enrolledCount ? "Reset My 2FA" : "Open Setup"
     }
   );
 };

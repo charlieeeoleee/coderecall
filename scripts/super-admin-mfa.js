@@ -12,7 +12,7 @@ import {
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
-import { syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { markNativeMfaEnrolled, syncNativeMfaProfile } from "./native-mfa-profile.js";
 import { renderQrSvgMarkup } from "./local-qr.js";
 
 const auth = getAuth(app);
@@ -123,6 +123,10 @@ async function completeEnrollment(code) {
 
   const assertion = TotpMultiFactorGenerator.assertionForEnrollment(pendingTotpSecret, code);
   await multiFactor(currentUser).enroll(assertion, "Code Recall Super Admin");
+  await markNativeMfaEnrolled(db, currentUser, "super_admin", {
+    method: "firebase_totp_enrollment",
+    provider: "totp"
+  });
   clearSuperAdminMfaSession();
   setStatus("Super-admin 2FA is now enabled. Checking your secure session...");
 
@@ -246,6 +250,10 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   if (hasTotpFactor(user)) {
+    await markNativeMfaEnrolled(db, user, "super_admin", {
+      method: "firebase_totp_existing_factor",
+      provider: "totp"
+    });
     showAlreadyEnrolledUi();
     return;
   }

@@ -230,11 +230,11 @@
           <div class="panel-header">
             <div>
               <h3>Super Admin 2FA</h3>
-              <p>Firebase Auth authenticator enrollment is required before super-admin controls open.</p>
+              <p>Reset your authenticator enrollment if you changed phones or need to set up 2FA again.</p>
             </div>
           </div>
           <div class="shortcut-actions">
-            <button type="button" class="danger-action" onclick="resetMySuperAdminMfa()">Clear Legacy Session</button>
+            <button type="button" id="superAdminMfaResetBtn" class="danger-action" onclick="resetMySuperAdminMfa()">Reset My 2FA</button>
           </div>
           <p id="superAdminMfaStatus" class="form-status"></p>
         </section>
@@ -353,7 +353,7 @@
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/super-admin.js?v=20260510b"></script>
+  <script type="module" src="scripts/super-admin.js?v=20260512a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

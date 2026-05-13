@@ -169,11 +169,11 @@
           <div class="panel-header">
             <div>
               <h3>Admin 2FA</h3>
-              <p>Firebase Auth authenticator enrollment is required before privileged controls open.</p>
+              <p>Reset your authenticator enrollment if you changed phones or need to set up 2FA again.</p>
             </div>
           </div>
           <div class="shortcut-actions">
-            <button type="button" class="danger-action" onclick="resetMyAdminMfa()">Clear Legacy Session</button>
+            <button type="button" id="adminMfaResetBtn" class="danger-action" onclick="resetMyAdminMfa()">Reset My 2FA</button>
           </div>
           <p id="adminMfaStatus" class="form-status"></p>
         </section>
@@ -303,7 +303,7 @@
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/admin.js?v=20260505b"></script>
+  <script type="module" src="scripts/admin.js?v=20260512a"></script>
   <script src="scripts/loading.js?v=20260420a" defer></script>
 </body>
 </html>

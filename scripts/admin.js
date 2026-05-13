@@ -1,6 +1,7 @@
 import { app } from "./firebase-config.js";
 import {
   getAuth,
+  multiFactor,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -10,6 +11,7 @@ import {
   getDocs,
   addDoc,
   doc,
+  setDoc,
   query,
   where,
   onSnapshot,
@@ -43,6 +45,7 @@ const QUIZ_LEVELS_PER_DIFFICULTY = 25;
 const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 
 let currentUser = null;
+let currentRole = "user";
 let learnersCache = [];
 let contactInboxUnsubscribe = null;
 
@@ -79,7 +82,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   currentUser = user;
-  const currentRole = await resolveUserRole(db, user);
+  currentRole = await resolveUserRole(db, user);
   await syncUserRole(db, user, currentRole);
   applyRoleNavigation(currentRole, "admin.html");
 
@@ -1439,9 +1442,68 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
-window.resetMyAdminMfa = function() {
+function describeMfaResetError(error) {
+  if (error?.code === "auth/requires-recent-login") {
+    return "Please log out, sign in again, then reset 2FA right away.";
+  }
+  return `Unable to reset your 2FA right now. ${error?.message || "Please try again."}`;
+}
+
+async function markOwnMfaProfileReset() {
+  if (!currentUser) return;
+  await setDoc(doc(db, "securityProfiles", currentUser.uid), {
+    uid: currentUser.uid,
+    email: currentUser.email || "",
+    role: currentRole,
+    firebaseMfaEnrolled: false,
+    firebaseMfaProvider: "",
+    firebaseMfaSource: "firebase_auth",
+    lastVerificationMethod: "firebase_totp_reset",
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
+window.resetMyAdminMfa = async function() {
+  if (!currentUser) return;
+  const enrolledCount = multiFactor(currentUser).enrolledFactors?.length || 0;
+  const message = enrolledCount
+    ? "Reset your current authenticator enrollment? You will be signed out and asked to set up 2FA again on your next login."
+    : "No Firebase 2FA factor is recorded on this session. Open the setup page so you can enroll again?";
+  if (!window.confirm(message)) return;
+
+  const resetBtn = document.getElementById("adminMfaResetBtn");
+  if (resetBtn) resetBtn.disabled = true;
+  setMfaStatus(enrolledCount ? "Resetting your Firebase 2FA. Please wait..." : "Opening 2FA setup...");
+
   clearAdminMfaSession();
-  window.location.href = "admin-mfa.html";
+  try {
+    const factorUser = multiFactor(currentUser);
+    for (const factor of factorUser.enrolledFactors || []) {
+      await factorUser.unenroll(factor.uid || factor);
+    }
+
+    await currentUser.reload();
+    await markOwnMfaProfileReset();
+    await writeSecurityAudit(
+      db,
+      currentUser,
+      "reset_own_admin_mfa",
+      "Admin reset their own Firebase Auth multi-factor enrollment."
+    );
+
+    if (!enrolledCount) {
+      window.location.href = currentRole === "super_admin" ? "super-admin-mfa.html" : "admin-mfa.html";
+      return;
+    }
+
+    setMfaStatus("2FA reset. Signing out so you can enroll a fresh authenticator.");
+    await signOut(auth);
+    window.location.href = "auth.html";
+  } catch (error) {
+    console.error("Unable to reset admin MFA.", error);
+    setMfaStatus(describeMfaResetError(error));
+    if (resetBtn) resetBtn.disabled = false;
+  }
 };
 
 function loadTheme() {

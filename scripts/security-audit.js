@@ -8,7 +8,9 @@ const SECURITY_AUDIT_ACTIONS = new Set([
   "denied_admin_route",
   "denied_super_admin_route",
   "mfa_required_privileged_route",
-  "mfa_enrollment_required"
+  "mfa_enrollment_required",
+  "reset_own_admin_mfa",
+  "reset_own_super_admin_mfa"
 ]);
 
 export async function writeSecurityAudit(db, user, action, details = "") {
