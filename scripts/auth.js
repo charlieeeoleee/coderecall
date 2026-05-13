@@ -520,17 +520,35 @@ window.confirmMfaChallenge = async function() {
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = "Verify";
+      button.textContent = "Verify and Continue";
     }
   }
 };
 
-document.getElementById("mfaChallengeCode")?.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
+function isMfaChallengeOpen() {
+  return document.getElementById("mfaChallengePopup")?.classList.contains("active");
+}
+
+function submitMfaChallenge() {
   const button = document.getElementById("mfaChallengeBtn");
-  if (button?.disabled) return;
+  if (!isMfaChallengeOpen() || button?.disabled) return;
   window.confirmMfaChallenge();
+}
+
+document.getElementById("mfaChallengeForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitMfaChallenge();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.code !== "Enter" && event.code !== "NumpadEnter") return;
+  if (!isMfaChallengeOpen()) return;
+
+  const popup = document.getElementById("mfaChallengePopup");
+  if (!popup?.contains(document.activeElement)) return;
+
+  event.preventDefault();
+  submitMfaChallenge();
 });
 
 async function finishPasswordSignIn(user) {

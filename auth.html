@@ -185,22 +185,22 @@
         </div>
       </div>
 
-      <div class="mfa-form">
+      <form id="mfaChallengeForm" class="mfa-form">
         <label for="mfaChallengeCode">Authenticator Code</label>
         <input type="text" id="mfaChallengeCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter 6-digit code">
-      </div>
 
-      <div class="action-row">
-        <button id="mfaChallengeBtn" type="button" class="primary-btn" onclick="confirmMfaChallenge()">Verify and Continue</button>
-        <button type="button" class="secondary-btn" onclick="closeMfaChallenge()">Cancel</button>
-      </div>
+        <div class="action-row">
+          <button id="mfaChallengeBtn" type="submit" class="primary-btn">Verify and Continue</button>
+          <button type="button" class="secondary-btn" onclick="closeMfaChallenge()">Cancel</button>
+        </div>
+      </form>
 
       <p id="mfaChallengeStatus" class="status-text"></p>
     </section>
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/auth.js?v=20260513a"></script>
+  <script type="module" src="scripts/auth.js?v=20260513b"></script>
   <script src="scripts/loading.js?v=20260512b" defer></script>
 </body>
 </html>
