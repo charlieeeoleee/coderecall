@@ -6,6 +6,7 @@
     "firebase:deploy:hosting": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only hosting",
     "auth:enable-totp": "node scripts/enable-firebase-totp-mfa.mjs --project=gamifiedlearningsystem",
     "auth:reset-mfa": "node scripts/reset-firebase-mfa.mjs --project=gamifiedlearningsystem",
+    "auth:sync-mfa-profiles": "node scripts/sync-firebase-mfa-profiles.mjs --project=gamifiedlearningsystem",
     "roles:set": "node scripts/manage-role-claims.mjs",
     "roles:audit-mfa": "node scripts/audit-privileged-mfa.mjs",
     "roles:audit-fallbacks": "node scripts/audit-role-fallbacks.mjs",
