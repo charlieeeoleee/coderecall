@@ -1444,9 +1444,9 @@ function setMfaStatus(message) {
 
 function describeMfaResetError(error) {
   if (error?.code === "auth/requires-recent-login") {
-    return "Please log out, sign in again, then reset 2FA right away.";
+    return `Firebase needs a fresher sign-in before the browser can reset 2FA. If it still asks for your authenticator code, run: npm.cmd run auth:reset-mfa -- --email=${currentUser?.email || "you@example.com"}`;
   }
-  return `Unable to reset your 2FA right now. ${error?.message || "Please try again."}`;
+  return `Firebase did not remove your 2FA factor. Run: npm.cmd run auth:reset-mfa -- --email=${currentUser?.email || "you@example.com"}`;
 }
 
 async function markOwnMfaProfileReset() {
