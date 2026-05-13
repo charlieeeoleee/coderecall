@@ -7,6 +7,9 @@
     "auth:enable-totp": "node scripts/enable-firebase-totp-mfa.mjs --project=gamifiedlearningsystem",
     "auth:reset-mfa": "node scripts/reset-firebase-mfa.mjs --project=gamifiedlearningsystem",
     "auth:sync-mfa-profiles": "node scripts/sync-firebase-mfa-profiles.mjs --project=gamifiedlearningsystem",
+    "firestore:backup:postgres": "node scripts/backup-firestore-to-postgres.mjs --project=gamifiedlearningsystem",
+    "firestore:backup:postgres:local": "powershell -ExecutionPolicy Bypass -File scripts/run-postgres-backup.ps1",
+    "firestore:backup:postgres:schedule": "powershell -ExecutionPolicy Bypass -File scripts/register-postgres-backup-task.ps1",
     "roles:set": "node scripts/manage-role-claims.mjs",
     "roles:audit-mfa": "node scripts/audit-privileged-mfa.mjs",
     "roles:audit-fallbacks": "node scripts/audit-role-fallbacks.mjs",
@@ -19,6 +22,7 @@
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",
     "firebase-admin": "^13.8.0",
-    "firebase-tools": "^15.17.0"
+    "firebase-tools": "^15.17.0",
+    "pg": "^8.16.3"
   }
 }

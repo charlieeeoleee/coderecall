@@ -9,4 +9,5 @@ scripts/firebase-config.runtime.js
 service-account*.json
 .env
 .env.*
+.postgres-backup.env
 *.local
