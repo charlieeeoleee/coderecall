@@ -48,6 +48,7 @@ let currentUser = null;
 let currentRole = "user";
 let learnersCache = [];
 let contactInboxUnsubscribe = null;
+let studentProfileScrollHandler = null;
 
 applyRoleNavigation("guest", "admin.html");
 
@@ -1025,7 +1026,52 @@ async function openStudentProfile(learner) {
   if (hiddenField) hiddenField.value = learner.id;
 
   await loadFeedbackNotes(learner.id);
-  document.getElementById("studentProfileModal")?.classList.add("active");
+  openStudentProfileModal();
+}
+
+function syncStudentProfileModalPosition() {
+  const modal = document.getElementById("studentProfileModal");
+  if (!modal?.classList.contains("active")) return;
+
+  const topOffset = window.innerWidth <= 720 ? 14 : 32;
+  const bottomOffset = window.innerWidth <= 720 ? 88 : 120;
+  const pageHeight = Math.max(
+    document.documentElement.scrollHeight,
+    document.body.scrollHeight,
+    window.innerHeight
+  );
+  const modalBox = modal.querySelector(".admin-modal-box");
+  const modalHeight = modalBox?.offsetHeight || Math.min(window.innerHeight - topOffset - bottomOffset, 700);
+  const desiredTop = window.scrollY + topOffset;
+  const maxTop = Math.max(topOffset, pageHeight - modalHeight - bottomOffset);
+  const safeTop = Math.min(desiredTop, maxTop);
+
+  modal.style.setProperty("--admin-modal-page-height", `${pageHeight + bottomOffset}px`);
+  modal.style.setProperty("--student-profile-modal-top", `${safeTop}px`);
+}
+
+function openStudentProfileModal() {
+  const modal = document.getElementById("studentProfileModal");
+  if (!modal) return;
+
+  modal.classList.add("active");
+  document.body.classList.add("student-profile-open");
+  const modalBox = modal.querySelector(".admin-modal-box");
+  if (modalBox) modalBox.scrollTop = 0;
+  syncStudentProfileModalPosition();
+
+  if (!studentProfileScrollHandler) {
+    studentProfileScrollHandler = () => syncStudentProfileModalPosition();
+    window.addEventListener("scroll", studentProfileScrollHandler, { passive: true });
+    window.addEventListener("resize", studentProfileScrollHandler);
+  }
+}
+
+function stopStudentProfileModalFollow() {
+  if (!studentProfileScrollHandler) return;
+  window.removeEventListener("scroll", studentProfileScrollHandler);
+  window.removeEventListener("resize", studentProfileScrollHandler);
+  studentProfileScrollHandler = null;
 }
 
 function buildProgressRows(progress) {
@@ -1328,6 +1374,8 @@ async function saveFeedbackNote(event) {
 
 window.closeStudentProfile = function() {
   document.getElementById("studentProfileModal")?.classList.remove("active");
+  document.body.classList.remove("student-profile-open");
+  stopStudentProfileModalFollow();
   const status = document.getElementById("feedbackNoteStatus");
   if (status) status.textContent = "";
 };

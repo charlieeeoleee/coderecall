@@ -86,6 +86,18 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  function normalizeVisualDisplayPreferences() {
+    const migrationKey = "visualPreferencesVersion";
+    const currentVersion = "normal-default-20260515";
+    if (localStorage.getItem(migrationKey) === currentVersion) return;
+
+    if (localStorage.getItem("visualBrightness") != null || localStorage.getItem("visualContrast") != null) {
+      localStorage.setItem("visualBrightness", "1");
+      localStorage.setItem("visualContrast", "1");
+    }
+    localStorage.setItem(migrationKey, currentVersion);
+  }
+
   function getTextSizePreference() {
     const value = localStorage.getItem("textSizePreference") || "normal";
     return ["normal", "large", "extra-large"].includes(value) ? value : "normal";
@@ -275,6 +287,7 @@
 
   function applyAccessibilityPreferences() {
     ensureAccessibilityStyle();
+    normalizeVisualDisplayPreferences();
 
     const textSize = getTextSizePreference();
     const highContrast = readBooleanPreference("highContrastMode", false);
@@ -290,7 +303,8 @@
     document.body.classList.toggle("access-reduced-motion", reducedMotion);
     document.body.classList.toggle("access-text-large", textSize === "large");
     document.body.classList.toggle("access-text-extra-large", textSize === "extra-large");
-    document.body.style.filter = `brightness(${visualBrightness}) contrast(${effectiveContrast})`;
+    const hasNeutralVisuals = visualBrightness === 1 && effectiveContrast === 1;
+    document.body.style.filter = hasNeutralVisuals ? "" : `brightness(${visualBrightness}) contrast(${effectiveContrast})`;
     window.codeRecallNarrationSpeed = narrationSpeed;
     window.getCodeRecallNarrationSpeed = function () {
       return window.codeRecallNarrationSpeed || 1;

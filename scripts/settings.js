@@ -71,6 +71,7 @@ const ACCESSIBILITY_DEFAULTS = {
   visualBrightness: 1,
   visualContrast: 1
 };
+const VISUAL_PREFERENCES_VERSION = "normal-default-20260515";
 const TEXT_SIZE_OPTIONS = new Set(["normal", "large", "extra-large"]);
 const SETTINGS_STATUS_DEFAULT = "Manage your account, preferences, and system actions.";
 const SLOW_LOAD_DELAY_MS = 4200;
@@ -187,7 +188,18 @@ function readNumberPreference(key, fallback, { min = 0, max = 1 } = {}) {
   return Math.min(max, Math.max(min, value));
 }
 
+function normalizeVisualDisplayPreferences() {
+  if (localStorage.getItem("visualPreferencesVersion") === VISUAL_PREFERENCES_VERSION) return;
+
+  if (localStorage.getItem("visualBrightness") != null || localStorage.getItem("visualContrast") != null) {
+    localStorage.setItem("visualBrightness", "1");
+    localStorage.setItem("visualContrast", "1");
+  }
+  localStorage.setItem("visualPreferencesVersion", VISUAL_PREFERENCES_VERSION);
+}
+
 function getAccessibilityPreferences() {
+  normalizeVisualDisplayPreferences();
   const textSize = localStorage.getItem("textSizePreference") || ACCESSIBILITY_DEFAULTS.textSize;
 
   return {
@@ -226,7 +238,8 @@ function applyAccessibilityPreferences() {
   const effectiveContrast = prefs.highContrast
     ? Math.max(prefs.visualContrast, 1.12)
     : prefs.visualContrast;
-  target.style.filter = `brightness(${prefs.visualBrightness}) contrast(${effectiveContrast})`;
+  const hasNeutralVisuals = prefs.visualBrightness === 1 && effectiveContrast === 1;
+  target.style.filter = hasNeutralVisuals ? "" : `brightness(${prefs.visualBrightness}) contrast(${effectiveContrast})`;
   window.codeRecallNarrationSpeed = prefs.narrationSpeed;
   if (typeof window.applyAccessibilityPreferences === "function") {
     window.applyAccessibilityPreferences();
@@ -631,6 +644,7 @@ function loadPreferences() {
 
     visualBrightnessInput.addEventListener("input", (e) => {
       const nextBrightness = Math.round(Number(e.target.value || 100)) / 100;
+      localStorage.setItem("visualPreferencesVersion", VISUAL_PREFERENCES_VERSION);
       localStorage.setItem("visualBrightness", String(nextBrightness));
       visualBrightnessValue.textContent = formatVisualPercent(nextBrightness);
       applyAccessibilityPreferences();
@@ -644,6 +658,7 @@ function loadPreferences() {
 
     visualContrastInput.addEventListener("input", (e) => {
       const nextContrast = Math.round(Number(e.target.value || 100)) / 100;
+      localStorage.setItem("visualPreferencesVersion", VISUAL_PREFERENCES_VERSION);
       localStorage.setItem("visualContrast", String(nextContrast));
       visualContrastValue.textContent = formatVisualPercent(nextContrast);
       applyAccessibilityPreferences();

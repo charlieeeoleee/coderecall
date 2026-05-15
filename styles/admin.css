@@ -147,10 +147,29 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .admin-modal { position: fixed; inset: 0; background: rgba(8, 10, 26, 0.72); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 80; }
 .admin-modal.active { display: flex; }
 .admin-modal-box { width: min(920px, 100%); max-height: 88vh; overflow: auto; border-radius: 24px; background: #2c1f5f; padding: 22px; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.08); }
+.student-scroll-modal {
+  position: absolute;
+  inset: 0 0 auto;
+  min-height: max(100vh, var(--admin-modal-page-height, 100vh));
+  padding-bottom: 120px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+.student-scroll-modal.active { display: flex; }
+.student-scroll-modal-box {
+  margin-top: var(--student-profile-modal-top, 32px);
+  pointer-events: auto;
+  max-height: min(82vh, calc(100vh - 160px));
+}
 .admin-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
 .admin-modal-head h3 { margin: 0; }
 .admin-modal-head p { margin: 6px 0 0; opacity: 0.8; }
 .modal-close-btn { padding: 10px 14px; border-radius: 14px; border: none; background: rgba(255,255,255,0.12); color: white; cursor: pointer; }
+body.student-profile-open .theme-toggle,
+body.student-profile-open .bottom-section {
+  opacity: 0;
+  pointer-events: none;
+}
 .upload-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
 .primary-action { padding: 12px 16px; background: linear-gradient(90deg, #ff2e97, #22d3ee); color: white; font-weight: 700; }
 .danger-action { padding: 8px 12px; background: rgba(255, 89, 94, 0.16); color: #ff9ca0; border: 1px solid rgba(255, 89, 94, 0.26); }
@@ -318,6 +337,12 @@ body.light-mode .secondary-btn {
   .user-top img { width: 34px; height: 34px; }
   .sidebar { top: 72px; left: 10px; right: 10px; padding: 18px; }
   .menu { gap: 20px; padding-top: 8px; }
+  .admin-modal { padding: 14px; }
+  .student-scroll-modal-box {
+    width: 100%;
+    max-height: calc(100vh - 104px);
+    margin-top: var(--student-profile-modal-top, 14px);
+  }
   .profile-row {
     grid-template-columns: 1fr;
     gap: 6px;
