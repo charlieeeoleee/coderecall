@@ -506,13 +506,13 @@ async function loadQuestionBank() {
   }
 
   if (subject === "electrical") {
-    questionBankCache = import("../data/quiz-data-electrical.js?v=20260414perf").then((module) => ({
+    questionBankCache = import("../data/quiz-data-electrical.js?v=20260516a").then((module) => ({
       electrical: module.electricalQuizData?.electrical || {}
     }));
     return questionBankCache;
   }
 
-  questionBankCache = import("../data/quiz-data-hardware.js?v=20260414perf").then((module) => ({
+  questionBankCache = import("../data/quiz-data-hardware.js?v=20260516a").then((module) => ({
     hardware: module.hardwareQuizData?.hardware || {}
   }));
   return questionBankCache;
