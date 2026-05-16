@@ -32,6 +32,7 @@ import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { enforcePrivilegedMfa, getFirebaseSecondFactorProvider, signedInWithSecondFactor } from "./firebase-native-mfa.js";
 import { syncNativeMfaProfile } from "./native-mfa-profile.js";
 import { writeSecurityAudit } from "./security-audit.js";
+import { describeAutomaticMfaResetError, resetOwnMfaEnrollment } from "./privileged-mfa-reset.js";
 import {
   fetchModuleDrafts,
   fetchQuizDrafts
@@ -1354,13 +1355,6 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
-function describeMfaResetError(error) {
-  if (error?.code === "auth/requires-recent-login") {
-    return `Firebase needs a fresher sign-in before the browser can reset 2FA. If it still asks for your authenticator code, run: npm.cmd run auth:reset-mfa -- --email=${currentUser?.email || "you@example.com"}`;
-  }
-  return `Firebase did not remove your 2FA factor. Run: npm.cmd run auth:reset-mfa -- --email=${currentUser?.email || "you@example.com"}`;
-}
-
 async function markOwnMfaProfileReset(role) {
   if (!currentUser) return;
   await setDoc(doc(db, "securityProfiles", currentUser.uid), {
@@ -1389,10 +1383,7 @@ async function resetOwnFirebaseMfa(role, setupPath) {
   }
 
   setMfaStatus("Resetting your Firebase 2FA. Please wait...");
-  for (const factor of enrolledFactors) {
-    await factorUser.unenroll(factor.uid || factor);
-  }
-
+  await resetOwnMfaEnrollment();
   await currentUser.reload();
   await markOwnMfaProfileReset(role);
   await writeSecurityAudit(
@@ -1535,7 +1526,7 @@ window.resetMySuperAdminMfa = function() {
         await resetOwnFirebaseMfa(currentRole, "super-admin-mfa.html");
       } catch (error) {
         console.error("Unable to reset super-admin MFA.", error);
-        setMfaStatus(describeMfaResetError(error));
+        setMfaStatus(describeAutomaticMfaResetError(error));
         if (resetBtn) resetBtn.disabled = false;
         closeSystemPopup();
       }

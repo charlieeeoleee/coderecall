@@ -4,6 +4,7 @@
     "firebase:version": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase --version",
     "firebase:deploy:rules": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only firestore:rules",
     "firebase:deploy:hosting": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only hosting",
+    "firebase:deploy:functions": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only functions",
     "auth:enable-totp": "node scripts/enable-firebase-totp-mfa.mjs --project=gamifiedlearningsystem",
     "auth:reset-mfa": "node scripts/reset-firebase-mfa.mjs --project=gamifiedlearningsystem",
     "auth:sync-mfa-profiles": "node scripts/sync-firebase-mfa-profiles.mjs --project=gamifiedlearningsystem",

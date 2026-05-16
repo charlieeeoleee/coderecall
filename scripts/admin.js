@@ -37,6 +37,7 @@ import { clearAdminMfaSession } from "./admin-mfa-session.js";
 import { enforcePrivilegedMfa } from "./firebase-native-mfa.js";
 import { syncNativeMfaProfile } from "./native-mfa-profile.js";
 import { writeSecurityAudit } from "./security-audit.js";
+import { describeAutomaticMfaResetError, resetOwnMfaEnrollment } from "./privileged-mfa-reset.js";
 
 
 const auth = getAuth(app);
@@ -1490,13 +1491,6 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
-function describeMfaResetError(error) {
-  if (error?.code === "auth/requires-recent-login") {
-    return `Firebase needs a fresher sign-in before the browser can reset 2FA. If it still asks for your authenticator code, run: npm.cmd run auth:reset-mfa -- --email=${currentUser?.email || "you@example.com"}`;
-  }
-  return `Firebase did not remove your 2FA factor. Run: npm.cmd run auth:reset-mfa -- --email=${currentUser?.email || "you@example.com"}`;
-}
-
 async function markOwnMfaProfileReset() {
   if (!currentUser) return;
   await setDoc(doc(db, "securityProfiles", currentUser.uid), {
@@ -1525,11 +1519,7 @@ window.resetMyAdminMfa = async function() {
 
   clearAdminMfaSession();
   try {
-    const factorUser = multiFactor(currentUser);
-    for (const factor of factorUser.enrolledFactors || []) {
-      await factorUser.unenroll(factor.uid || factor);
-    }
-
+    await resetOwnMfaEnrollment();
     await currentUser.reload();
     await markOwnMfaProfileReset();
     await writeSecurityAudit(
@@ -1549,7 +1539,7 @@ window.resetMyAdminMfa = async function() {
     window.location.href = "auth.html";
   } catch (error) {
     console.error("Unable to reset admin MFA.", error);
-    setMfaStatus(describeMfaResetError(error));
+    setMfaStatus(describeAutomaticMfaResetError(error));
     if (resetBtn) resetBtn.disabled = false;
   }
 };

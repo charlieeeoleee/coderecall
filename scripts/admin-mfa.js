@@ -15,6 +15,7 @@ import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
 import { markNativeMfaEnrolled, syncNativeMfaProfile } from "./native-mfa-profile.js";
 import { renderQrSvgMarkup } from "./local-qr.js";
+import { describeAutomaticMfaResetError, resetOwnMfaEnrollment } from "./privileged-mfa-reset.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -47,6 +48,16 @@ function setStatus(message, isError = false) {
   if (!status) return;
   status.textContent = message;
   status.style.color = isError ? "#ff97b6" : "#8ef7cf";
+}
+
+function setSetupUnavailable(message) {
+  pendingTotpSecret = null;
+  currentMfaSetupUri = "";
+  const secretValue = document.getElementById("mfaSecretValue");
+  if (secretValue) secretValue.textContent = "Setup unavailable";
+  const qrImage = document.getElementById("mfaQrImage");
+  if (qrImage) qrImage.textContent = "QR unavailable";
+  setStatus(message, true);
 }
 
 function describeSetupError(error) {
@@ -110,9 +121,7 @@ async function prepareEnrollment(user) {
     setStatus("Scan the QR code, then enter the 6-digit code from your authenticator app.");
   } catch (error) {
     console.error("Unable to prepare Firebase MFA enrollment.", error);
-    const qrImage = document.getElementById("mfaQrImage");
-    if (qrImage) qrImage.textContent = "QR unavailable";
-    setStatus(describeSetupError(error), true);
+    setSetupUnavailable(describeSetupError(error));
   }
 }
 
@@ -225,8 +234,24 @@ async function copyText(value) {
   input.remove();
 }
 
-window.resetCurrentMfaEnrollment = function() {
-  setStatus("To change or remove this 2FA method, reset the enrolled factor from Firebase Console or the Admin SDK.", false);
+window.resetCurrentMfaEnrollment = async function() {
+  if (!currentUser) return;
+  if (!window.confirm("Reset your current 2FA setup and start enrollment again?")) return;
+  const button = document.getElementById("mfaResetBtn");
+  if (button) button.disabled = true;
+  try {
+    setStatus("Resetting your Firebase 2FA. Please wait...");
+    await resetOwnMfaEnrollment();
+    clearAdminMfaSession();
+    clearSuperAdminMfaSession();
+    setStatus("2FA reset. Signing out so you can enroll a fresh authenticator.");
+    await signOut(auth);
+    window.location.replace("auth.html");
+  } catch (error) {
+    console.error("Unable to reset admin MFA from setup page.", error);
+    setStatus(describeAutomaticMfaResetError(error), true);
+    if (button) button.disabled = false;
+  }
 };
 
 window.logoutMfa = async function() {
