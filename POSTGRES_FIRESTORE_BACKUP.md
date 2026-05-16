@@ -57,7 +57,7 @@ $env:PGSSL="false"
 This checks how many documents will be backed up without writing to PostgreSQL:
 
 ```powershell
-npm.cmd run firestore:backup:postgres -- --dry-run
+npm.cmd run firestore:backup:postgres:dry-run
 ```
 
 ## Run the Backup
@@ -94,6 +94,8 @@ Run the local backup runner once:
 ```powershell
 npm.cmd run firestore:backup:postgres:local
 ```
+
+The local runner writes a timestamped log to `logs/`. That folder is ignored by Git so backup output stays on this machine.
 
 Register a daily Windows scheduled task:
 

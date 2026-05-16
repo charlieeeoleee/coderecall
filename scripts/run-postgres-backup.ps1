@@ -11,6 +11,11 @@ if (-not (Test-Path $EnvFile)) {
   Write-Error "Missing $EnvFile. Copy postgres-backup.env.example to $EnvFile and fill in the private values first."
 }
 
+$logDir = Join-Path $repoRoot "logs"
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$logPath = Join-Path $logDir "postgres-backup-$timestamp.log"
+
 Get-Content $EnvFile | ForEach-Object {
   $line = $_.Trim()
   if (-not $line -or $line.StartsWith("#")) {
@@ -32,5 +37,10 @@ Get-Content $EnvFile | ForEach-Object {
   [Environment]::SetEnvironmentVariable($name, $value, "Process")
 }
 
-npm.cmd run firestore:backup:postgres
+if (-not $env:POSTGRES_URL -and -not $env:DATABASE_URL) {
+  Write-Error "Missing POSTGRES_URL or DATABASE_URL in $EnvFile."
+}
+
+Write-Host "Writing backup log to $logPath"
+npm.cmd run firestore:backup:postgres *>&1 | Tee-Object -FilePath $logPath
 exit $LASTEXITCODE

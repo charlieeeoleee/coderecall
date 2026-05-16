@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260513d";
+const CACHE_VERSION = "code-recall-v20260516b";
 const APP_SHELL = [
   "./",
   "./offline.html",
@@ -43,7 +43,6 @@ const APP_SHELL = [
   "./styles/contact.css",
   "./styles/privacy.css",
   "./scripts/loading.js",
-  "./scripts/firebase-config.runtime.js",
   "./scripts/sound.js",
   "./scripts/role-utils.js",
   "./scripts/career-path.js",
@@ -113,9 +112,19 @@ function isFreshAssetRequest(request) {
   return [".js", ".css"].some((extension) => url.pathname.endsWith(extension));
 }
 
+function isRuntimeConfigRequest(request) {
+  const url = new URL(request.url);
+  return url.pathname.endsWith("/scripts/firebase-config.runtime.js");
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (!isCacheableRequest(request)) return;
+
+  if (isRuntimeConfigRequest(request)) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (request.mode === "navigate" || isFreshAssetRequest(request)) {
     event.respondWith(networkFirstPage(request));

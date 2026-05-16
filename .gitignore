@@ -3,6 +3,7 @@ node_modules/
 .firebase-cli-config/
 firestore-debug.log
 firebase-debug.log
+logs/
 scripts/firebase-config.local.js
 scripts/firebase-config.runtime.js
 *.service-account.json

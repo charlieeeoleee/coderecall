@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260510a">
+  <link rel="stylesheet" href="styles/admin.css?v=20260516d">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -338,8 +338,8 @@
     </div>
   </div>
 
-  <div id="missedTopicModal" class="admin-modal">
-    <div class="admin-modal-box">
+  <div id="missedTopicModal" class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="missedTopicModalTitle">
+    <div class="admin-modal-box" tabindex="-1">
       <div class="admin-modal-head">
         <div>
           <h3 id="missedTopicModalTitle">Missed Topic</h3>
@@ -353,7 +353,7 @@
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/super-admin.js?v=20260516a"></script>
+  <script type="module" src="scripts/super-admin.js?v=20260516b"></script>
   <script src="scripts/loading.js?v=20260515c" defer></script>
 </body>
 </html>

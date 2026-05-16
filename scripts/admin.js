@@ -613,6 +613,7 @@ function openMissedTopicModal(item) {
   }
 
   document.getElementById("missedTopicModal")?.classList.add("active");
+  document.querySelector("#missedTopicModal .admin-modal-box")?.focus({ preventScroll: true });
 }
 
 function renderInsightList(targetId, items, emptyMessage) {
@@ -1041,7 +1042,10 @@ function openStudentProfileModal() {
   modal.classList.add("active");
   document.body.classList.add("student-profile-open");
   const modalBox = modal.querySelector(".admin-modal-box");
-  if (modalBox) modalBox.scrollTop = 0;
+  if (modalBox) {
+    modalBox.scrollTop = 0;
+    modalBox.focus({ preventScroll: true });
+  }
   syncStudentProfileModalPosition();
 }
 
@@ -1080,9 +1084,9 @@ function formatLearnerResultValue(value) {
   if (typeof value === "number") return `${value}`;
   if (!value || typeof value !== "object") return String(value || "-");
 
-  const score = Number(value.score ?? value.correct ?? NaN);
-  const total = Number(value.total ?? value.items ?? NaN);
-  const xp = Number(value.xpEarned ?? value.xp ?? NaN);
+  const score = Number(value.score ?? value.correct ?? value.correctAnswers ?? NaN);
+  const total = Number(value.total ?? value.items ?? value.questionCount ?? value.totalQuestions ?? NaN);
+  const xp = Number(value.xpEarned ?? value.xp ?? value.xpAwarded ?? value.earnedXp ?? NaN);
   const parts = [];
 
   if (Number.isFinite(score) && Number.isFinite(total)) {
@@ -1099,7 +1103,7 @@ function formatLearnerResultValue(value) {
     parts.push(formatHistoryTimestamp(value.completedAt || value.submittedAt));
   }
 
-  return parts.length ? parts.join(" • ") : "Recorded";
+  return parts.length ? parts.join(" | ") : "Recorded";
 }
 
 function buildLearnerAssessmentBars(learner) {
@@ -1398,6 +1402,17 @@ window.closeStudentProfile = function() {
 window.closeMissedTopicModal = function() {
   document.getElementById("missedTopicModal")?.classList.remove("active");
 };
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (document.getElementById("studentProfileModal")?.classList.contains("active")) {
+    window.closeStudentProfile();
+    return;
+  }
+  if (document.getElementById("missedTopicModal")?.classList.contains("active")) {
+    window.closeMissedTopicModal();
+  }
+});
 
 function wireFileNamePreview(input, statusId) {
   const status = document.getElementById(statusId);

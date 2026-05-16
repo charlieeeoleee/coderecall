@@ -64,7 +64,7 @@ export const hardwareQuizData = {
     {
         "level":  2,
         "sub":  3,
-        "question":  "Which of the following is a non-volatile device?",
+        "question":  "Which of the following is a non-volatile storage device used to save user files permanently?",
         "choices":  [
                         "RAM",
                         "CACHE",

@@ -67,7 +67,7 @@ export const hardwareQuizData = {
         {
           level: 2,
           sub: 3,
-          question: "Which of the following is a non-volatile device?",
+          question: "Which of the following is a non-volatile storage device used to save user files permanently?",
           choices: [
             "RAM",
             "CACHE",
@@ -1143,7 +1143,7 @@ export const hardwareQuizData = {
         {
           level: 8,
           sub: 1,
-          question: "CMOS is The cell is responsible for storing the information in BIOS. What does the acronym CMOS stand for?",
+          question: "What does the acronym CMOS stand for?",
           choices: [
             "Complementary Machine-Oxide Semiconductor",
             "Complimentary Mechanical-Oxide Semiconducting",
@@ -2778,4 +2778,3 @@ export const hardwareQuizData = {
     }
   }
 };
-

@@ -142,6 +142,7 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .profile-row > :last-child {
   white-space: nowrap;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 .notes-block { margin-top: 18px; }
 .admin-modal { position: fixed; inset: 0; background: rgba(8, 10, 26, 0.72); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 80; }
@@ -212,6 +213,11 @@ body.light-mode .grant-item,
 body.light-mode .user-top,
 body.light-mode .admin-modal-box { background: rgba(255,255,255,0.82); color: #1e1547; }
 body.light-mode .learner-assessment-track { background: rgba(60, 40, 120, 0.08); }
+.review-item p,
+.analytics-card p,
+.insight-admin-card p {
+  overflow-wrap: anywhere;
+}
 .inline-select {
   width: 100%;
   min-width: 170px;
@@ -331,7 +337,7 @@ body.light-mode .secondary-btn {
 }
 
 @media (max-width: 720px) {
-  .main { padding: 16px 12px 24px; }
+  .main { padding: 16px 12px calc(96px + env(safe-area-inset-bottom, 0px)); }
   .topbar { gap: 10px; }
   .topbar-title { flex: 1; min-width: 0; }
   .page-title { font-size: 28px; }

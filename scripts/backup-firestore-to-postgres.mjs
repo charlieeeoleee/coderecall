@@ -275,6 +275,9 @@ async function main() {
     if (runId) {
       await finishRun(client, runId, "failed", collections.length, documentCount, error.message);
     }
+    if (error?.code === "ENOTFOUND" && error?.hostname) {
+      error.message = `${error.message}. Check POSTGRES_URL in .postgres-backup.env. If your password contains symbols, copy the Session pooler URI from Supabase and replace [YOUR-PASSWORD] with the percent-encoded password.`;
+    }
     throw error;
   } finally {
     client.release();

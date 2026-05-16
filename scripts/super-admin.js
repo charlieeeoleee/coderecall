@@ -944,7 +944,9 @@ function openMissedTopicModal(item) {
     `;
   }
 
-  document.getElementById("missedTopicModal")?.classList.add("active");
+  const modal = document.getElementById("missedTopicModal");
+  modal?.classList.add("active");
+  modal?.querySelector(".admin-modal-box")?.focus({ preventScroll: true });
 }
 
 function renderInsightList(targetId, items, emptyMessage) {
@@ -1460,6 +1462,13 @@ window.closeSystemPopup = function() {
 window.closeMissedTopicModal = function() {
   document.getElementById("missedTopicModal")?.classList.remove("active");
 };
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (document.getElementById("missedTopicModal")?.classList.contains("active")) {
+    closeMissedTopicModal();
+  }
+});
 
 function initializeSystemPopup() {
   const popup = document.getElementById("systemPopup");
