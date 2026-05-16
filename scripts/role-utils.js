@@ -68,20 +68,6 @@ export async function resolveUserRole(db, user) {
   }
 
   try {
-    const snap = await getDoc(doc(db, "users", user.uid));
-    if (snap.exists()) {
-      const storedRole = getRoleFromUserData(snap.data() || {});
-      if (storedRole === "super_admin" || storedRole === "admin" || storedRole === "user") {
-        return storedRole;
-      }
-    }
-  } catch (error) {
-    if (!isPermissionDenied(error)) {
-      logRoleWarning("Unable to read stored user role.", error);
-    }
-  }
-
-  try {
     if (normalizedEmail) {
       const accessKey = encodeURIComponent(normalizedEmail);
       const accessSnap = await getDoc(doc(db, "accessRoles", accessKey));
@@ -94,6 +80,20 @@ export async function resolveUserRole(db, user) {
   } catch (error) {
     if (!isPermissionDenied(error)) {
       logRoleWarning("Unable to resolve user role from email grants.", error);
+    }
+  }
+
+  try {
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if (snap.exists()) {
+      const storedRole = getRoleFromUserData(snap.data() || {});
+      if (storedRole === "super_admin" || storedRole === "admin" || storedRole === "user") {
+        return storedRole;
+      }
+    }
+  } catch (error) {
+    if (!isPermissionDenied(error)) {
+      logRoleWarning("Unable to read stored user role.", error);
     }
   }
 

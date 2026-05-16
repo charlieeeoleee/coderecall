@@ -88,7 +88,7 @@ function showAlreadyEnrolledUi() {
   document.getElementById("setupPanel").hidden = true;
   document.getElementById("verifyPanel").hidden = false;
   document.getElementById("mfaForm").hidden = true;
-  document.getElementById("mfaResetBtn").hidden = true;
+  document.getElementById("mfaResetBtn").hidden = false;
   document.getElementById("mfaTitle").textContent = "Super Admin 2FA Is Enabled";
   document.getElementById("mfaSubtitle").textContent = "Sign in again and Firebase will ask for your authenticator code before privileged access opens.";
   updateRecoveryNotice(true);
@@ -99,7 +99,7 @@ function updateRecoveryNotice(enrolled) {
   const notice = document.getElementById("mfaRecoveryNotice");
   if (!notice) return;
   notice.textContent = enrolled
-    ? "To change or remove this 2FA method, reset the enrolled factor from Firebase Console or the Admin SDK."
+    ? "Use Reset and Re-Enroll 2FA below if you changed phones or need a fresh authenticator setup."
     : "After enrollment, privileged sign-ins require the current code from your authenticator app.";
   notice.style.color = "#8ef7cf";
 }

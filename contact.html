@@ -248,6 +248,29 @@
   </button>
 
   <script src="scripts/firebase-config.runtime.js"></script>
+  <script>
+    (function () {
+      function syncMobileNavButton() {
+        const navbar = document.querySelector(".navbar");
+        const toggle = document.querySelector(".nav-toggle");
+        if (!navbar || !toggle) return;
+
+        const isOpen = navbar.classList.contains("mobile-open") || navbar.classList.contains("mobile-nav-open");
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        toggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
+      }
+
+      window.toggleMobileNav = window.toggleMobileNav || function () {
+        const navbar = document.querySelector(".navbar");
+        if (!navbar) return;
+
+        const isOpen = !navbar.classList.contains("mobile-open") && !navbar.classList.contains("mobile-nav-open");
+        navbar.classList.toggle("mobile-open", isOpen);
+        navbar.classList.toggle("mobile-nav-open", isOpen);
+        syncMobileNavButton();
+      };
+    })();
+  </script>
   <script type="module" src="scripts/contact.js?v=20260512a"></script>
   <script src="scripts/loading.js?v=20260515c" defer></script>
 </body>

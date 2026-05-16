@@ -49,7 +49,6 @@ let currentUser = null;
 let currentRole = "user";
 let learnersCache = [];
 let contactInboxUnsubscribe = null;
-let studentProfileScrollHandler = null;
 
 applyRoleNavigation("guest", "admin.html");
 
@@ -1032,23 +1031,7 @@ async function openStudentProfile(learner) {
 
 function syncStudentProfileModalPosition() {
   const modal = document.getElementById("studentProfileModal");
-  if (!modal?.classList.contains("active")) return;
-
-  const topOffset = window.innerWidth <= 720 ? 14 : 32;
-  const bottomOffset = window.innerWidth <= 720 ? 88 : 120;
-  const pageHeight = Math.max(
-    document.documentElement.scrollHeight,
-    document.body.scrollHeight,
-    window.innerHeight
-  );
-  const modalBox = modal.querySelector(".admin-modal-box");
-  const modalHeight = modalBox?.offsetHeight || Math.min(window.innerHeight - topOffset - bottomOffset, 700);
-  const desiredTop = window.scrollY + topOffset;
-  const maxTop = Math.max(topOffset, pageHeight - modalHeight - bottomOffset);
-  const safeTop = Math.min(desiredTop, maxTop);
-
-  modal.style.setProperty("--admin-modal-page-height", `${pageHeight + bottomOffset}px`);
-  modal.style.setProperty("--student-profile-modal-top", `${safeTop}px`);
+  if (modal) modal.scrollTop = 0;
 }
 
 function openStudentProfileModal() {
@@ -1060,26 +1043,18 @@ function openStudentProfileModal() {
   const modalBox = modal.querySelector(".admin-modal-box");
   if (modalBox) modalBox.scrollTop = 0;
   syncStudentProfileModalPosition();
-
-  if (!studentProfileScrollHandler) {
-    studentProfileScrollHandler = () => syncStudentProfileModalPosition();
-    window.addEventListener("scroll", studentProfileScrollHandler, { passive: true });
-    window.addEventListener("resize", studentProfileScrollHandler);
-  }
 }
 
 function stopStudentProfileModalFollow() {
-  if (!studentProfileScrollHandler) return;
-  window.removeEventListener("scroll", studentProfileScrollHandler);
-  window.removeEventListener("resize", studentProfileScrollHandler);
-  studentProfileScrollHandler = null;
+  const modal = document.getElementById("studentProfileModal");
+  if (modal) modal.scrollTop = 0;
 }
 
 function buildProgressRows(progress) {
   const rows = Object.entries(progress)
     .filter(([, value]) => value === true)
     .slice(0, 20)
-    .map(([key]) => `<div class="profile-row"><span>${escapeHtml(key)}</span><span>Done</span></div>`);
+    .map(([key]) => `<div class="profile-row"><span>${escapeHtml(formatProfileKey(key))}</span><span>Done</span></div>`);
 
   return rows.length ? rows.join("") : `<div class="profile-row"><span>No progress flags recorded yet.</span><span>-</span></div>`;
 }
@@ -1087,9 +1062,44 @@ function buildProgressRows(progress) {
 function buildResultRows(results) {
   const rows = Object.entries(results)
     .slice(0, 12)
-    .map(([key, value]) => `<div class="profile-row"><span>${escapeHtml(key)}</span><span>${typeof value === "number" ? value : escapeHtml(String(value))}</span></div>`);
+    .map(([key, value]) => `<div class="profile-row"><span>${escapeHtml(formatProfileKey(key))}</span><span>${escapeHtml(formatLearnerResultValue(value))}</span></div>`);
 
   return rows.length ? rows.join("") : `<div class="profile-row"><span>No assessment results recorded yet.</span><span>-</span></div>`;
+}
+
+function formatProfileKey(key = "") {
+  return String(key)
+    .replace(/_/g, " ")
+    .replace(/\bpretest\b/gi, "Pre-Test")
+    .replace(/\bposttest\b/gi, "Post-Test")
+    .replace(/\bxp\b/gi, "XP")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatLearnerResultValue(value) {
+  if (typeof value === "number") return `${value}`;
+  if (!value || typeof value !== "object") return String(value || "-");
+
+  const score = Number(value.score ?? value.correct ?? NaN);
+  const total = Number(value.total ?? value.items ?? NaN);
+  const xp = Number(value.xpEarned ?? value.xp ?? NaN);
+  const parts = [];
+
+  if (Number.isFinite(score) && Number.isFinite(total)) {
+    parts.push(`${score}/${total} pts`);
+  } else if (Number.isFinite(score)) {
+    parts.push(`${score} pts`);
+  }
+
+  if (Number.isFinite(xp)) {
+    parts.push(`${xp} XP`);
+  }
+
+  if (value.completedAt || value.submittedAt) {
+    parts.push(formatHistoryTimestamp(value.completedAt || value.submittedAt));
+  }
+
+  return parts.length ? parts.join(" • ") : "Recorded";
 }
 
 function buildLearnerAssessmentBars(learner) {
@@ -1316,7 +1326,11 @@ function buildStudyHistoryRows(items) {
 }
 
 function formatHistoryTimestamp(value) {
-  const date = new Date(value || 0);
+  const date = value?.toDate
+    ? value.toDate()
+    : value?.seconds
+      ? new Date(value.seconds * 1000)
+      : new Date(value || 0);
   if (Number.isNaN(date.getTime())) return "Unknown time";
   return date.toLocaleString("en-PH", {
     year: "numeric",
