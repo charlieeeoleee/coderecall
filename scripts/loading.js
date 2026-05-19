@@ -88,10 +88,15 @@
 
   function normalizeVisualDisplayPreferences() {
     const migrationKey = "visualPreferencesVersion";
-    const currentVersion = "normal-default-20260515";
+    const currentVersion = "normal-default-20260519";
     if (localStorage.getItem(migrationKey) === currentVersion) return;
 
-    if (localStorage.getItem("visualBrightness") != null || localStorage.getItem("visualContrast") != null) {
+    const savedBrightness = Number(localStorage.getItem("visualBrightness"));
+    const savedContrast = Number(localStorage.getItem("visualContrast"));
+    const hasLegacyBrightness = Number.isFinite(savedBrightness) && savedBrightness <= 0.75;
+    const hasLegacyContrast = Number.isFinite(savedContrast) && savedContrast <= 0.8;
+
+    if (hasLegacyBrightness || hasLegacyContrast) {
       localStorage.setItem("visualBrightness", "1");
       localStorage.setItem("visualContrast", "1");
     }
@@ -1008,7 +1013,9 @@
       "screenReaderAssist",
       "reducedMotion",
       "textSizePreference",
-      "narrationSpeed"
+      "narrationSpeed",
+      "visualBrightness",
+      "visualContrast"
     ].includes(event.key)) {
       applyAccessibilityPreferences();
     }

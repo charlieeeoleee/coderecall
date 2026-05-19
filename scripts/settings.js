@@ -71,7 +71,9 @@ const ACCESSIBILITY_DEFAULTS = {
   visualBrightness: 1,
   visualContrast: 1
 };
-const VISUAL_PREFERENCES_VERSION = "normal-default-20260515";
+const VISUAL_PREFERENCES_VERSION = "normal-default-20260519";
+const LEGACY_VISUAL_BRIGHTNESS_DEFAULT = 0.75;
+const LEGACY_VISUAL_CONTRAST_DEFAULT = 0.8;
 const TEXT_SIZE_OPTIONS = new Set(["normal", "large", "extra-large"]);
 const SETTINGS_STATUS_DEFAULT = "Manage your account, preferences, and system actions.";
 const SLOW_LOAD_DELAY_MS = 4200;
@@ -191,7 +193,14 @@ function readNumberPreference(key, fallback, { min = 0, max = 1 } = {}) {
 function normalizeVisualDisplayPreferences() {
   if (localStorage.getItem("visualPreferencesVersion") === VISUAL_PREFERENCES_VERSION) return;
 
-  if (localStorage.getItem("visualBrightness") != null || localStorage.getItem("visualContrast") != null) {
+  const savedBrightness = Number(localStorage.getItem("visualBrightness"));
+  const savedContrast = Number(localStorage.getItem("visualContrast"));
+  const hasLegacyBrightness = Number.isFinite(savedBrightness)
+    && savedBrightness <= LEGACY_VISUAL_BRIGHTNESS_DEFAULT;
+  const hasLegacyContrast = Number.isFinite(savedContrast)
+    && savedContrast <= LEGACY_VISUAL_CONTRAST_DEFAULT;
+
+  if (hasLegacyBrightness || hasLegacyContrast) {
     localStorage.setItem("visualBrightness", "1");
     localStorage.setItem("visualContrast", "1");
   }

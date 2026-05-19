@@ -3,7 +3,7 @@ let itemFeedbackModulePromise = null;
 function loadItemFeedbackModule() {
   if (!itemFeedbackModulePromise) {
     window.CODE_RECALL_ITEM_FEEDBACK_MANUAL = true;
-    itemFeedbackModulePromise = import("./item-feedback.js?v=20260510b");
+    itemFeedbackModulePromise = import("./item-feedback.js?v=20260519a");
   }
   return itemFeedbackModulePromise;
 }

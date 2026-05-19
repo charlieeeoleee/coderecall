@@ -437,7 +437,23 @@ body.light-mode .image-inspector-action-btn{
   }
 
   .item-feedback-dialog{
+    width:100%;
+    max-height:92vh;
     padding:20px;
+    border-radius:20px 20px 14px 14px;
+  }
+
+  .item-feedback-modal{
+    align-items:flex-end;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .item-feedback-head{
+    gap:12px;
+  }
+
+  .item-feedback-head h2{
+    font-size:1.25rem;
   }
 
   .item-feedback-actions{

@@ -14,6 +14,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let activeContext = {};
+let activeFeedbackTrigger = null;
+let previousBodyOverflow = "";
 
 function buildTicketId() {
   const timePart = Date.now().toString().slice(-6);
@@ -100,7 +102,7 @@ function ensureModal() {
   modal.id = "itemFeedbackModal";
   modal.setAttribute("aria-hidden", "true");
   modal.innerHTML = `
-    <div class="item-feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="itemFeedbackTitle">
+    <div class="item-feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="itemFeedbackTitle" tabindex="-1">
       <div class="item-feedback-head">
         <div>
           <span class="item-feedback-kicker">ITEM FEEDBACK</span>
@@ -150,9 +152,10 @@ function setStatus(message, isError = false) {
   status.classList.toggle("error", isError);
 }
 
-function openModal(context) {
+function openModal(context, triggerButton = null) {
   ensureModal();
   activeContext = context;
+  activeFeedbackTrigger = triggerButton;
   const modal = document.getElementById("itemFeedbackModal");
   const summary = document.getElementById("itemFeedbackContext");
   const form = document.getElementById("itemFeedbackForm");
@@ -163,16 +166,30 @@ function openModal(context) {
   if (summary) summary.textContent = itemLabel || "This feedback will be attached to the current learning item.";
   form?.reset();
   setStatus("");
+  previousBodyOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
   modal?.classList.add("active");
   modal?.setAttribute("aria-hidden", "false");
-  document.getElementById("itemFeedbackType")?.focus();
+  document.querySelector("#itemFeedbackModal .item-feedback-dialog")?.focus({ preventScroll: true });
+  document.getElementById("itemFeedbackType")?.focus({ preventScroll: true });
 }
 
 function closeModal() {
   const modal = document.getElementById("itemFeedbackModal");
   modal?.classList.remove("active");
   modal?.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = previousBodyOverflow;
+  activeFeedbackTrigger?.focus?.({ preventScroll: true });
+  activeFeedbackTrigger = null;
 }
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  const modal = document.getElementById("itemFeedbackModal");
+  if (modal?.classList.contains("active")) {
+    closeModal();
+  }
+});
 
 function buildMessageBody(message, feedbackLabel) {
   const lines = [
@@ -281,13 +298,13 @@ function bindFeedbackButtons() {
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-item-feedback]");
     if (!button) return;
-    openModal(buildContext(button));
+    openModal(buildContext(button), button);
   });
 }
 
 window.openCodeRecallItemFeedback = function(button) {
   if (!button) return;
-  openModal(buildContext(button));
+  openModal(buildContext(button), button);
 };
 
 if (window.CODE_RECALL_ITEM_FEEDBACK_MANUAL === true) {
