@@ -1,16 +1,8 @@
 import { app } from "./firebase-config.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-
 const auth = getAuth(app);
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-
-  if (!window.location.pathname.endsWith("dashboard.html")) {
-    window.location.replace("dashboard.html");
-  }
-});
+let currentUser = null;
 
 function loadTheme() {
   const saved = localStorage.getItem("theme");
@@ -65,9 +57,19 @@ function closeMobileNav() {
   syncMobileNavButton();
 }
 
+function updateAuthButtons() {
+  const signedIn = Boolean(currentUser);
+  document.querySelectorAll("[data-auth-cta]").forEach((button) => {
+    button.textContent = signedIn
+      ? button.dataset.signedInLabel || "Dashboard"
+      : button.dataset.signedOutLabel || "Login";
+    button.setAttribute("aria-label", signedIn ? "Open dashboard" : "Open login");
+  });
+}
+
 window.goToAuth = function() {
   closeMobileNav();
-  window.location.href = "auth.html";
+  window.location.href = currentUser ? "dashboard.html" : "auth.html";
 };
 
 window.playGuest = function() {
@@ -101,6 +103,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   syncMobileNavButton();
+  updateAuthButtons();
+});
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user || null;
+  updateAuthButtons();
 });
 
 loadTheme();
