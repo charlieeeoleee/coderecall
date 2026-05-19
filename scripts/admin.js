@@ -1032,7 +1032,8 @@ async function openStudentProfile(learner) {
 
 function syncStudentProfileModalPosition() {
   const modal = document.getElementById("studentProfileModal");
-  if (modal) modal.scrollTop = 0;
+  const modalBox = modal?.querySelector(".admin-modal-box");
+  if (modalBox) modalBox.scrollTop = 0;
 }
 
 function openStudentProfileModal() {
@@ -1051,7 +1052,8 @@ function openStudentProfileModal() {
 
 function stopStudentProfileModalFollow() {
   const modal = document.getElementById("studentProfileModal");
-  if (modal) modal.scrollTop = 0;
+  const modalBox = modal?.querySelector(".admin-modal-box");
+  if (modalBox) modalBox.scrollTop = 0;
 }
 
 function buildProgressRows(progress) {
