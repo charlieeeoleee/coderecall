@@ -1087,25 +1087,25 @@ function renderUserTable(users) {
     const statusValue = user.status || "active";
 
     row.innerHTML = `
-      <td>${escapeHtml(user.name || "User")}</td>
-      <td>${escapeHtml(user.email || "No email")}</td>
-      <td>
+      <td data-label="Name">${escapeHtml(user.name || "User")}</td>
+      <td data-label="Email">${escapeHtml(user.email || "No email")}</td>
+      <td data-label="Role">
         <select class="inline-select" data-role-select="${user.id}">
           <option value="user" ${getRoleFromUserData(user) === "user" ? "selected" : ""}>User</option>
           <option value="admin" ${getRoleFromUserData(user) === "admin" ? "selected" : ""}>Admin</option>
           <option value="super_admin" ${getRoleFromUserData(user) === "super_admin" ? "selected" : ""}>Super Admin</option>
         </select>
       </td>
-      <td>
+      <td data-label="Status">
         <select class="inline-select" data-status-select="${user.id}">
           <option value="active" ${statusValue === "active" ? "selected" : ""}>Active</option>
           <option value="suspended" ${statusValue === "suspended" ? "selected" : ""}>Suspended</option>
           <option value="archived" ${statusValue === "archived" ? "selected" : ""}>Archived</option>
         </select>
       </td>
-      <td>${user.xp || 0}</td>
-      <td>${progressCount} flags</td>
-      <td>
+      <td data-label="XP">${user.xp || 0}</td>
+      <td data-label="Progress">${progressCount} flags</td>
+      <td data-label="Actions">
         <button class="primary-action compact-action" data-save-user="${user.id}">Save</button>
         <button class="danger-action compact-action" data-delete-user="${user.id}" ${user.id === currentUser.uid ? "disabled" : ""}>Delete Record</button>
       </td>
@@ -1257,7 +1257,7 @@ function renderAccessGrantList(grants) {
       const item = document.createElement("div");
       item.className = "grant-item";
       item.innerHTML = `
-        <div>
+        <div class="grant-copy">
           <strong>${escapeHtml(grant.email || "Unknown email")}</strong>
           <p>Assigned role: ${escapeHtml(grant.role || "user")}</p>
         </div>

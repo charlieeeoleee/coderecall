@@ -703,7 +703,7 @@ function renderStudentTable(learners) {
   body.innerHTML = "";
 
   if (!learners.length) {
-    body.innerHTML = `<tr><td colspan="8">No learner records yet.</td></tr>`;
+    body.innerHTML = `<tr><td data-label="Learners" colspan="8">No learner records yet.</td></tr>`;
     return;
   }
 
@@ -715,14 +715,14 @@ function renderStudentTable(learners) {
 
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${escapeHtml(learner.name || "User")}</td>
-      <td>${escapeHtml(learner.email || "No email")}</td>
-      <td><span class="status-pill">${escapeHtml(learner.role || "user")}</span></td>
-      <td>${learner.xp || 0}</td>
-      <td>${electricalStage}</td>
-      <td>${hardwareStage}</td>
-      <td><span class="status-pill ${needsReview ? "warning" : ""}">${needsReview ? "Needs attention" : "On track"}</span></td>
-      <td><button class="secondary-action" data-open-profile="${learner.id}">Open</button></td>
+      <td data-label="Name">${escapeHtml(learner.name || "User")}</td>
+      <td data-label="Email">${escapeHtml(learner.email || "No email")}</td>
+      <td data-label="Role"><span class="status-pill">${escapeHtml(learner.role || "user")}</span></td>
+      <td data-label="XP">${learner.xp || 0}</td>
+      <td data-label="Electrical">${electricalStage}</td>
+      <td data-label="Hardware">${hardwareStage}</td>
+      <td data-label="Status"><span class="status-pill ${needsReview ? "warning" : ""}">${needsReview ? "Needs attention" : "On track"}</span></td>
+      <td data-label="Actions"><button class="secondary-action" data-open-profile="${learner.id}">Open</button></td>
     `;
     body.appendChild(row);
   });
@@ -1057,38 +1057,212 @@ function stopStudentProfileModalFollow() {
 }
 
 function buildProgressRows(progress) {
-  const rows = Object.entries(progress)
-    .filter(([, value]) => value === true)
-    .slice(0, 20)
-    .map(([key]) => `<div class="profile-row"><span>${escapeHtml(formatProfileKey(key))}</span><span>Done</span></div>`);
+  const rows = summarizeProgressFlags(progress)
+    .map((item) => `<div class="profile-row"><span>${escapeHtml(item.label)}</span><span>${escapeHtml(item.value)}</span></div>`);
 
   return rows.length ? rows.join("") : `<div class="profile-row"><span>No progress flags recorded yet.</span><span>-</span></div>`;
 }
 
 function buildResultRows(results) {
-  const rows = Object.entries(results)
-    .slice(0, 12)
-    .map(([key, value]) => `<div class="profile-row"><span>${escapeHtml(formatProfileKey(key))}</span><span>${escapeHtml(formatLearnerResultValue(value))}</span></div>`);
+  const rows = summarizeAssessmentResults(results)
+    .map((item) => `<div class="profile-row"><span>${escapeHtml(item.label)}</span><span>${escapeHtml(item.value)}</span></div>`);
 
   return rows.length ? rows.join("") : `<div class="profile-row"><span>No assessment results recorded yet.</span><span>-</span></div>`;
 }
 
+function summarizeProgressFlags(progress = {}) {
+  const completedEntries = Object.entries(progress || {}).filter(([, value]) => value === true);
+  const usedKeys = new Set();
+  const directRows = [];
+  const groupedRows = new Map();
+
+  const addGroupedProgress = (key, groupKey, label, unit) => {
+    usedKeys.add(key);
+    const current = groupedRows.get(groupKey) || { label, unit, count: 0 };
+    current.count += 1;
+    groupedRows.set(groupKey, current);
+  };
+
+  completedEntries.forEach(([key]) => {
+    let match = String(key).match(/^(hardware|electrical)_(pretest|modules|quiz|posttest)$/);
+    if (match) {
+      usedKeys.add(key);
+      directRows.push({
+        label: `${getSubjectLabel(match[1])} ${getStageLabel(match[2])}`,
+        value: "Complete"
+      });
+      return;
+    }
+
+    match = String(key).match(/^(hardware|electrical)_(easy|medium|hard)_module_(\d+)_(done|done_read_bottom|done_quick_check_attempted|matching_activity_done|drag_drop_activity_done)$/);
+    if (match) {
+      const [, subject, difficulty, , kind] = match;
+      const label = `${getSubjectLabel(subject)} ${getDifficultyLabel(difficulty)} Modules`;
+      const unitByKind = {
+        done: "modules completed",
+        done_read_bottom: "modules fully read",
+        done_quick_check_attempted: "quick checks attempted",
+        matching_activity_done: "matching activities completed",
+        drag_drop_activity_done: "drag-and-drop activities completed"
+      };
+      addGroupedProgress(key, `${subject}_${difficulty}_module_${kind}`, label, unitByKind[kind] || "items completed");
+      return;
+    }
+
+    match = String(key).match(/^(hardware|electrical)_(easy|medium|hard)_quiz_level_(\d+)_done$/);
+    if (match) {
+      const [, subject, difficulty] = match;
+      addGroupedProgress(
+        key,
+        `${subject}_${difficulty}_quiz_done`,
+        `${getSubjectLabel(subject)} ${getDifficultyLabel(difficulty)} Quiz`,
+        "levels completed"
+      );
+      return;
+    }
+
+    match = String(key).match(/^(hardware|electrical)_quiz_level_(\d+)_done$/);
+    if (match) {
+      const [, subject] = match;
+      addGroupedProgress(key, `${subject}_quiz_done`, `${getSubjectLabel(subject)} Quiz`, "levels completed");
+    }
+  });
+
+  const grouped = Array.from(groupedRows.values()).map((item) => ({
+    label: item.label,
+    value: `${item.count} ${item.unit}`
+  }));
+  const remainingRows = completedEntries
+    .filter(([key]) => !usedKeys.has(key))
+    .slice(0, 8)
+    .map(([key]) => ({ label: formatProfileKey(key), value: "Done" }));
+  const hiddenCount = Math.max(0, completedEntries.length - usedKeys.size - remainingRows.length);
+
+  if (hiddenCount > 0) {
+    remainingRows.push({ label: "Other Progress Flags", value: `${hiddenCount} more recorded` });
+  }
+
+  return [...directRows, ...grouped, ...remainingRows].slice(0, 20);
+}
+
+function summarizeAssessmentResults(results = {}) {
+  const entries = Object.entries(results || {});
+  const usedKeys = new Set();
+  const rows = [];
+  const quizGroups = new Map();
+
+  ["hardware", "electrical"].forEach((subject) => {
+    ["pretest", "posttest"].forEach((stage) => {
+      const key = `${subject}_${stage}`;
+      if (results?.[key] === undefined) return;
+      usedKeys.add(key);
+      rows.push({
+        label: `${getSubjectLabel(subject)} ${getStageLabel(stage)}`,
+        value: formatLearnerResultValue(results[key])
+      });
+    });
+  });
+
+  entries.forEach(([key, value]) => {
+    const match = String(key).match(/^(hardware|electrical)_(easy|medium|hard)_quiz_level_(\d+)_result$/);
+    if (!match) return;
+
+    const [, subject, difficulty] = match;
+    const groupKey = `${subject}_${difficulty}_quiz`;
+    const group = quizGroups.get(groupKey) || {
+      label: `${getSubjectLabel(subject)} ${getDifficultyLabel(difficulty)} Quiz Track`,
+      count: 0,
+      score: 0,
+      total: 0,
+      xp: 0
+    };
+    const score = readResultNumber(value, ["score", "correct", "correctAnswers", "points"]);
+    const total = readResultNumber(value, ["total", "items", "questionCount", "totalQuestions", "maxScore"]);
+    const xp = readResultNumber(value, ["xpEarned", "xp", "xpAwarded", "earnedXp"]);
+
+    usedKeys.add(key);
+    group.count += 1;
+    if (Number.isFinite(score)) group.score += score;
+    if (Number.isFinite(total)) group.total += total;
+    if (Number.isFinite(xp)) group.xp += xp;
+    quizGroups.set(groupKey, group);
+  });
+
+  Array.from(quizGroups.values()).forEach((group) => {
+    const parts = [`${group.count} level${group.count === 1 ? "" : "s"}`];
+    if (group.total > 0) parts.push(`${group.score}/${group.total} pts`);
+    if (group.xp > 0) parts.push(`${group.xp} XP`);
+    rows.push({ label: group.label, value: parts.join(" | ") });
+  });
+
+  const remainingRows = entries
+    .filter(([key]) => !usedKeys.has(key))
+    .slice(0, 8)
+    .map(([key, value]) => ({
+      label: formatProfileKey(key),
+      value: formatLearnerResultValue(value)
+    }));
+  const hiddenCount = Math.max(0, entries.length - usedKeys.size - remainingRows.length);
+
+  if (hiddenCount > 0) {
+    remainingRows.push({ label: "Other Assessment Records", value: `${hiddenCount} more recorded` });
+  }
+
+  return [...rows, ...remainingRows].slice(0, 16);
+}
+
 function formatProfileKey(key = "") {
-  return String(key)
+  const text = String(key)
     .replace(/_/g, " ")
+    .replace(/\bhardware\b/gi, "Computer Hardware")
+    .replace(/\belectrical\b/gi, "Electrical")
     .replace(/\bpretest\b/gi, "Pre-Test")
     .replace(/\bposttest\b/gi, "Post-Test")
+    .replace(/\bquiz\b/gi, "Quiz")
+    .replace(/\bmodule\b/gi, "Module")
+    .replace(/\blevel\b/gi, "Level")
+    .replace(/\bdone read bottom\b/gi, "Fully Read")
+    .replace(/\bdone quick check attempted\b/gi, "Quick Check Attempted")
+    .replace(/\bmatching activity done\b/gi, "Matching Activity Complete")
+    .replace(/\bdrag drop activity done\b/gi, "Drag-and-Drop Activity Complete")
+    .replace(/\bdone\b/gi, "Complete")
+    .replace(/\bresult\b/gi, "Result")
     .replace(/\bxp\b/gi, "XP")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return text.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+function getSubjectLabel(subject = "") {
+  if (subject === "hardware") return "Computer Hardware";
+  if (subject === "electrical") return "Electrical";
+  return formatProfileKey(subject);
+}
+
+function getDifficultyLabel(difficulty = "") {
+  if (difficulty === "easy") return "Easy";
+  if (difficulty === "medium") return "Medium";
+  if (difficulty === "hard") return "Hard";
+  return formatProfileKey(difficulty);
+}
+
+function getStageLabel(stage = "") {
+  if (stage === "pretest") return "Pre-Test";
+  if (stage === "posttest") return "Post-Test";
+  if (stage === "modules") return "Modules";
+  if (stage === "quiz") return "Quiz";
+  return formatProfileKey(stage);
+}
+
 
 function formatLearnerResultValue(value) {
   if (typeof value === "number") return `${value}`;
   if (!value || typeof value !== "object") return String(value || "-");
 
-  const score = Number(value.score ?? value.correct ?? value.correctAnswers ?? NaN);
-  const total = Number(value.total ?? value.items ?? value.questionCount ?? value.totalQuestions ?? NaN);
-  const xp = Number(value.xpEarned ?? value.xp ?? value.xpAwarded ?? value.earnedXp ?? NaN);
+  const score = readResultNumber(value, ["score", "correct", "correctAnswers", "points"]);
+  const total = readResultNumber(value, ["total", "items", "questionCount", "totalQuestions", "maxScore"]);
+  const xp = readResultNumber(value, ["xpEarned", "xp", "xpAwarded", "earnedXp"]);
   const parts = [];
 
   if (Number.isFinite(score) && Number.isFinite(total)) {
@@ -1106,6 +1280,19 @@ function formatLearnerResultValue(value) {
   }
 
   return parts.length ? parts.join(" | ") : "Recorded";
+}
+
+function readResultNumber(value, keys) {
+  for (const key of keys) {
+    const direct = Number(value?.[key]);
+    if (Number.isFinite(direct)) return direct;
+
+    const nestedValue = value?.[key]?.value ?? value?.[key]?.count ?? value?.[key]?.score;
+    const nested = Number(nestedValue);
+    if (Number.isFinite(nested)) return nested;
+  }
+
+  return NaN;
 }
 
 function buildLearnerAssessmentBars(learner) {

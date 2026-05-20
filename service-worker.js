@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260519e";
+const CACHE_VERSION = "code-recall-v20260520e";
 const APP_SHELL = [
   "./",
   "./offline.html",
@@ -107,9 +107,24 @@ async function networkFirstPage(request) {
   }
 }
 
+async function networkOnlyPage(request) {
+  try {
+    return await fetch(request, { cache: "no-store" });
+  } catch {
+    const cache = await caches.open(CACHE_VERSION);
+    return await cache.match("./offline.html");
+  }
+}
+
 function isFreshAssetRequest(request) {
   const url = new URL(request.url);
   return [".js", ".css"].some((extension) => url.pathname.endsWith(extension));
+}
+
+function isAuthSensitiveNavigation(request) {
+  if (request.mode !== "navigate") return false;
+  const url = new URL(request.url);
+  return ["/", "/index.html", "/auth.html"].includes(url.pathname);
 }
 
 function isRuntimeConfigRequest(request) {
@@ -123,6 +138,11 @@ self.addEventListener("fetch", (event) => {
 
   if (isRuntimeConfigRequest(request)) {
     event.respondWith(fetch(request));
+    return;
+  }
+
+  if (isAuthSensitiveNavigation(request)) {
+    event.respondWith(networkOnlyPage(request));
     return;
   }
 

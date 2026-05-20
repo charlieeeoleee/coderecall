@@ -812,6 +812,57 @@
           transform: rotate(360deg);
         }
       }
+
+      @media (max-width: 600px) {
+        .app-loader-overlay {
+          align-items: center;
+          justify-items: center;
+          padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px));
+          box-sizing: border-box;
+        }
+
+        .app-loader-card {
+          width: min(100%, 390px);
+          max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+          max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+          overflow: auto;
+          border-radius: 22px;
+          padding: 20px 16px 18px;
+          scrollbar-width: thin;
+        }
+
+        .app-loader-badge {
+          margin-bottom: 12px;
+          padding: 7px 12px;
+          font-size: 10px;
+          letter-spacing: 0.07em;
+        }
+
+        .app-loader-spinner {
+          width: 58px;
+          height: 58px;
+          margin-bottom: 14px;
+        }
+
+        .app-loader-spinner::before {
+          inset: 8px;
+        }
+
+        .app-loader-title {
+          font-size: clamp(23px, 7vw, 30px);
+        }
+
+        .app-loader-text {
+          margin: 10px 0 16px;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+
+        .app-loader-tip {
+          margin-top: 12px;
+          font-size: 11px;
+        }
+      }
     `;
     document.head.appendChild(style);
 
