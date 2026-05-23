@@ -42,9 +42,17 @@ import { SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const DEMO_ANALYTICS_MODE = new URLSearchParams(window.location.search).get("analytics") === "preview";
+const DEMO_ANALYTICS_SUBJECTS = ["hardware", "electrical"];
+const DEMO_ANALYTICS_DIFFICULTIES = ["easy", "medium", "hard"];
+const DEMO_ANALYTICS_QUIZ_LEVELS = 25;
+const DEMO_ANALYTICS_QUIZ_TOTAL = 3;
+const DEMO_ANALYTICS_MODULES_PER_DIFFICULTY = 3;
+const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 
 let currentUser = null;
 let currentRole = "user";
+let superUsersCache = [];
 let systemPopupAction = null;
 let systemPopupBusy = false;
 let contactInboxUnsubscribe = null;
@@ -183,7 +191,10 @@ async function loadSuperAdminDashboard() {
     safeGetDocs("pendingUsers", collection(db, "pendingUsers"))
   ]);
 
-  const users = usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+  const users = applyDemoAnalyticsOverlay(
+    usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
+  );
+  superUsersCache = users;
   const securityProfiles = await addCurrentSessionMfaProfile(
     securityProfilesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
   );
@@ -196,6 +207,8 @@ async function loadSuperAdminDashboard() {
   renderAdminLoadingState("manualImportChecklist", "Preparing checklist");
   renderAdminLoadingState("auditLogList", "Loading audit trail");
 
+  renderAnalyticsPreviewNavCue();
+  renderDemoAnalyticsNotice();
   renderOverview(users);
   renderAccessGrantList(grants);
   renderSystemHealth(users, grants, pendingUsers, [], [], []);
@@ -204,6 +217,7 @@ async function loadSuperAdminDashboard() {
   renderSubjectCompletionBreakdown(users);
   renderMostMissedTopics(users);
   renderUserTable(users);
+  wireLearnerScoreExport();
   wireAccessGrantForm();
   wireIntakeForm();
   stopSlowSuperAdminNotice(slowLoadTimer);
@@ -233,6 +247,192 @@ async function loadSuperAdminDashboard() {
     renderManualImportChecklist();
     renderAuditLog(audits);
   });
+}
+
+function renderDemoAnalyticsNotice() {
+  document.body.classList.toggle("demo-analytics-mode", DEMO_ANALYTICS_MODE);
+
+  if (!DEMO_ANALYTICS_MODE) return;
+
+  const main = document.querySelector(".main");
+  if (!main || document.getElementById("superDemoAnalyticsNotice")) return;
+
+  const notice = document.createElement("div");
+  notice.id = "superDemoAnalyticsNotice";
+  notice.className = "demo-analytics-notice analytics-preview-footer";
+  notice.innerHTML = `
+    <strong>Analytics Preview</strong>
+    <span>Sample assessment data is displayed for presentation preview. Live learner records are unchanged.</span>
+  `;
+  main.appendChild(notice);
+}
+
+function renderAnalyticsPreviewNavCue() {
+  const menu = document.querySelector(".sidebar .menu");
+  const adminLink = document.querySelector('.sidebar .menu a[href^="admin.html"]');
+  const superAdminLink = document.querySelector('.sidebar .menu a[href^="super-admin.html"]');
+
+  if (adminLink) {
+    adminLink.href = "admin.html";
+    adminLink.textContent = "🛠 Admin";
+  }
+
+  if (superAdminLink) {
+    superAdminLink.href = "super-admin.html";
+    superAdminLink.textContent = "👑 Super Admin";
+  }
+
+  if (!menu || document.getElementById("adminPreviewNavLink")) return;
+
+  const divider = document.createElement("span");
+  divider.className = "nav-section-label";
+  divider.textContent = "Analytics";
+  menu.appendChild(divider);
+
+  const adminPreviewLink = document.createElement("a");
+  adminPreviewLink.id = "adminPreviewNavLink";
+  adminPreviewLink.href = "admin.html?analytics=preview";
+  adminPreviewLink.textContent = "🛠 ADMIN";
+  menu.appendChild(adminPreviewLink);
+
+  const superPreviewLink = document.createElement("a");
+  superPreviewLink.id = "superPreviewNavLink";
+  superPreviewLink.href = "super-admin.html?analytics=preview";
+  superPreviewLink.textContent = "👑 SUPER ADMIN";
+  superPreviewLink.className = DEMO_ANALYTICS_MODE ? "active-link" : "";
+  menu.appendChild(superPreviewLink);
+}
+
+function applyDemoAnalyticsOverlay(users) {
+  if (!DEMO_ANALYTICS_MODE) return users;
+
+  return users.map((user, index) => {
+    if (getRoleFromUserData(user) !== "user") return user;
+
+    const nextUser = {
+      ...user,
+      progress: { ...(user.progress || {}) },
+      results: { ...(user.results || {}) }
+    };
+
+    nextUser.xp = Math.max(Number(nextUser.xp || 0), buildDemoXpTotal(index));
+    nextUser.xpWeekly = Math.max(Number(nextUser.xpWeekly || 0), Math.round(nextUser.xp * 0.34));
+
+    DEMO_ANALYTICS_SUBJECTS.forEach((subject, subjectIndex) => {
+      const pretestKey = `${subject}_pretest`;
+      const posttestKey = `${subject}_posttest`;
+
+      addDemoModuleCompletion(nextUser, subject);
+
+      if (!nextUser.results[pretestKey]) {
+        nextUser.results[pretestKey] = buildDemoPretestResult(index, subjectIndex);
+        nextUser.progress[pretestKey] = true;
+        nextUser.progress[`${pretestKey}_demo_preview`] = true;
+      }
+
+      addDemoQuizTrackResults(nextUser, subject, index, subjectIndex);
+
+      const demoResult = buildDemoPosttestResult(nextUser.results[pretestKey], index, subjectIndex);
+      nextUser.results[posttestKey] = demoResult;
+      nextUser.progress[posttestKey] = true;
+      nextUser.progress[`${posttestKey}_demo_preview`] = true;
+    });
+
+    return nextUser;
+  });
+}
+
+function buildDemoXpTotal(learnerIndex) {
+  return 520 + ((learnerIndex * 47) % 280);
+}
+
+function addDemoModuleCompletion(user, subject) {
+  DEMO_ANALYTICS_DIFFICULTIES.forEach((difficulty) => {
+    for (let moduleNumber = 1; moduleNumber <= DEMO_ANALYTICS_MODULES_PER_DIFFICULTY; moduleNumber += 1) {
+      user.progress[`${subject}_${difficulty}_module_${moduleNumber}_done`] = true;
+      user.progress[`${subject}_${difficulty}_module_${moduleNumber}_done_read_bottom`] = true;
+      user.progress[`${subject}_${difficulty}_module_${moduleNumber}_done_quick_check_attempted`] = true;
+    }
+  });
+
+  user.progress[`${subject}_modules`] = true;
+}
+
+function buildDemoPretestResult(learnerIndex, subjectIndex) {
+  const total = 30;
+  const percent = 42 + ((learnerIndex * 7 + subjectIndex * 11) % 32);
+  const score = Math.round((percent / 100) * total);
+
+  return {
+    score,
+    total,
+    percent: Math.round((score / total) * 100),
+    xpEarned: score,
+    source: "analytics_preview",
+    note: "Sample pre-test score generated only for admin panel presentation mode."
+  };
+}
+
+function buildDemoPosttestResult(pretest, learnerIndex, subjectIndex) {
+  const total = Math.max(1, Number(pretest.total || pretest.totalQuestions || 30) || 30);
+  const prePercent = getResultPercent(pretest, total);
+  const improvement = 12 + ((learnerIndex + subjectIndex * 3) % 6) * 2;
+  const minimumImprovedPercent = prePercent >= 100 ? 100 : Math.min(100, prePercent + 1);
+  const demoPercent = Math.min(100, Math.max(minimumImprovedPercent, prePercent + improvement));
+  const score = Math.min(total, Math.max(0, Math.round((demoPercent / 100) * total)));
+
+  return {
+    score,
+    total,
+    percent: Math.round((score / total) * 100),
+    xpEarned: score,
+    source: "demo_analytics_preview",
+    note: "Sample score generated only for admin panel presentation mode."
+  };
+}
+
+function addDemoQuizTrackResults(user, subject, learnerIndex, subjectIndex) {
+  let addedAny = false;
+
+  DEMO_ANALYTICS_DIFFICULTIES.forEach((difficulty, difficultyIndex) => {
+    for (let level = 1; level <= DEMO_ANALYTICS_QUIZ_LEVELS; level += 1) {
+      const resultKey = `${subject}_${difficulty}_quiz_level_${level}_result`;
+      const doneKey = `${subject}_${difficulty}_quiz_level_${level}_done`;
+
+      const scoreSeed = learnerIndex + subjectIndex + difficultyIndex + level;
+      const score = scoreSeed % 6 === 0 ? 2 : DEMO_ANALYTICS_QUIZ_TOTAL;
+      user.results[resultKey] = {
+        subject,
+        difficulty,
+        quizLevel: level,
+        score,
+        total: DEMO_ANALYTICS_QUIZ_TOTAL,
+        earnedXP: score * QUIZ_LEVEL_XP_PER_CORRECT,
+        source: "analytics_preview",
+        completedAt: new Date().toISOString(),
+        note: "Sample quiz score generated only for admin panel presentation mode."
+      };
+      user.progress[doneKey] = true;
+      user.progress[`${doneKey}_demo_preview`] = true;
+      addedAny = true;
+    }
+
+    user.progress[`${subject}_${difficulty}_quiz`] = true;
+  });
+
+  if (addedAny || Object.keys(user.results).some((key) => key.startsWith(`${subject}_`) && key.includes("_quiz_level_"))) {
+    user.progress[`${subject}_quiz`] = true;
+  }
+}
+
+function getResultPercent(result, fallbackTotal = 30) {
+  const score = Number(result?.score ?? result?.correct ?? result?.correctAnswers ?? result?.points);
+  const total = Math.max(1, Number(result?.total ?? result?.totalQuestions ?? result?.items ?? fallbackTotal) || fallbackTotal);
+  const percent = Number(result?.percent);
+
+  if (Number.isFinite(score)) return Math.round((score / total) * 100);
+  if (Number.isFinite(percent)) return Math.round(percent);
+  return 0;
 }
 
 function renderContactInboxCounts(messages) {
@@ -357,6 +557,7 @@ function renderOverview(users) {
     ? Math.round(users.reduce((sum, user) => sum + (user.xp || 0), 0) / users.length)
     : 0;
   const pretestAverage = summarizeAssessmentAverage(learners, "pretest");
+  const quizAverage = summarizeQuizTrackAverage(learners);
   const posttestAverage = summarizeAssessmentAverage(learners, "posttest");
   const hardwareCompletion = summarizeSubjectCompletion(learners, "hardware");
   const electricalCompletion = summarizeSubjectCompletion(learners, "electrical");
@@ -368,6 +569,8 @@ function renderOverview(users) {
   setText("superAverageXp", `${averageXp} XP`);
   setText("superAveragePretest", `${pretestAverage.percent}%`);
   setText("superAveragePretestDetail", `${pretestAverage.count} recorded tests`);
+  setText("superAverageQuizTrack", `${quizAverage.percent}%`);
+  setText("superAverageQuizTrackDetail", `${quizAverage.count} recorded quiz levels`);
   setText("superAveragePosttest", `${posttestAverage.percent}%`);
   setText("superAveragePosttestDetail", `${posttestAverage.count} recorded tests`);
   setText("superHardwareCompletion", `${hardwareCompletion.percent}%`);
@@ -383,6 +586,7 @@ function renderOverview(users) {
   );
   setText("superLearnersWithDueRetention", retentionSummary.learnersWithDue);
   setText("superLearnersWithDueRetentionDetail", `${retentionSummary.learnersWithDue} learner(s) need memory review`);
+  renderLastUpdated("superLastUpdated", "superLastUpdatedDetail");
 }
 
 function summarizeAssessmentAverage(learners, stage) {
@@ -408,6 +612,35 @@ function summarizeAssessmentAverage(learners, stage) {
     percent: Math.round(entries.reduce((sum, value) => sum + value, 0) / entries.length),
     count: entries.length
   };
+}
+
+function summarizeQuizTrackAverage(learners) {
+  const entries = learners.flatMap((learner) => {
+    const results = learner.results || {};
+    return Object.entries(results)
+      .filter(([key, value]) => key.includes("_quiz_level_") && key.endsWith("_result") && value && typeof value === "object")
+      .map(([, value]) => {
+        const score = Math.max(0, Number(value.score || value.correct || value.correctAnswers || value.points || 0));
+        const total = Math.max(score, Number(value.total || value.items || value.totalQuestions || value.maxScore || 0));
+        return total ? (score / total) * 100 : null;
+      })
+      .filter((value) => value != null && Number.isFinite(value));
+  });
+
+  if (!entries.length) {
+    return { percent: 0, count: 0 };
+  }
+
+  return {
+    percent: Math.round(entries.reduce((sum, value) => sum + value, 0) / entries.length),
+    count: entries.length
+  };
+}
+
+function renderLastUpdated(timeId, detailId) {
+  const now = new Date();
+  setText(timeId, now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+  setText(detailId, now.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" }));
 }
 
 function summarizeSubjectCompletion(learners, subject) {
@@ -1156,6 +1389,147 @@ function renderUserTable(users) {
       );
     });
   });
+}
+
+function wireLearnerScoreExport() {
+  const button = document.getElementById("superExportScoresBtn");
+  if (!button || button.dataset.bound === "true") return;
+
+  button.dataset.bound = "true";
+  button.addEventListener("click", () => {
+    const learners = superUsersCache.filter((user) => getRoleFromUserData(user) === "user");
+    exportLearnerScoresCsv(learners, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+  });
+}
+
+function exportLearnerScoresCsv(learners, mode) {
+  const headers = [
+    "Mode",
+    "Name",
+    "Email",
+    "XP",
+    "Completed Modules",
+    "Electrical Pre-Test",
+    "Electrical Quiz Track",
+    "Electrical Post-Test",
+    "Electrical Completion",
+    "Hardware Pre-Test",
+    "Hardware Quiz Track",
+    "Hardware Post-Test",
+    "Hardware Completion"
+  ];
+
+  const rows = learners.map((learner) => {
+    const electrical = summarizeLearnerSubjectForExport(learner, "electrical");
+    const hardware = summarizeLearnerSubjectForExport(learner, "hardware");
+
+    return [
+      mode,
+      learner.name || "User",
+      learner.email || "",
+      learner.xp || 0,
+      countCompletedModules(learner.progress || {}),
+      electrical.pretest,
+      electrical.quiz,
+      electrical.posttest,
+      electrical.completion,
+      hardware.pretest,
+      hardware.quiz,
+      hardware.posttest,
+      hardware.completion
+    ];
+  });
+
+  downloadCsv(`code-recall-learner-scores-${mode}.csv`, [headers, ...rows]);
+}
+
+function summarizeLearnerSubjectForExport(learner, subject) {
+  const results = learner.results || {};
+  const progress = learner.progress || {};
+
+  return {
+    pretest: formatExportResult(results[`${subject}_pretest`]),
+    quiz: formatExportQuizTrack(results, subject),
+    posttest: formatExportResult(results[`${subject}_posttest`]),
+    completion: progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] ? "Complete" : describeSubjectStage(progress, subject)
+  };
+}
+
+function formatExportResult(result) {
+  if (!result) return "No live record yet";
+
+  const score = readResultNumber(result, ["score", "correct", "correctAnswers", "points"]);
+  const total = readResultNumber(result, ["total", "items", "questionCount", "totalQuestions", "maxScore"]);
+  const percent = Number(result.percent);
+
+  if (Number.isFinite(score) && Number.isFinite(total)) return `${score}/${total}`;
+  if (Number.isFinite(percent)) return `${Math.round(percent)}%`;
+  if (Number.isFinite(score)) return `${score}`;
+  return "Recorded";
+}
+
+function formatExportQuizTrack(results, subject) {
+  const entries = Object.entries(results || {})
+    .filter(([key]) => key.startsWith(`${subject}_`) && key.includes("_quiz_level_") && key.endsWith("_result"));
+  const summary = entries.reduce((total, [, value]) => {
+    const score = readResultNumber(value, ["score", "correct", "correctAnswers", "points"]);
+    const max = readResultNumber(value, ["total", "items", "questionCount", "totalQuestions", "maxScore"]);
+    if (Number.isFinite(score)) total.score += score;
+    if (Number.isFinite(max)) total.max += max;
+    total.count += 1;
+    return total;
+  }, { score: 0, max: 0, count: 0 });
+
+  if (!summary.count) return "No live record yet";
+  return `${summary.score}/${summary.max || "?"} across ${summary.count} level${summary.count === 1 ? "" : "s"}`;
+}
+
+function countCompletedModules(progress) {
+  return Object.entries(progress || {}).filter(([key, value]) => key.includes("_module_") && key.endsWith("_done") && value === true).length;
+}
+
+function describeSubjectStage(progress, subject) {
+  const pretest = progress[`${subject}_pretest`] === true;
+  const modules = progress[`${subject}_modules`] === true;
+  const quiz = progress[`${subject}_quiz`] === true;
+  const posttest = progress[`${subject}_posttest`] === true;
+
+  if (!pretest) return "Needs Pre-Test";
+  if (!modules) return "Needs Modules";
+  if (!quiz) return "Needs Quiz";
+  if (!posttest) return "Needs Post-Test";
+  return "Complete";
+}
+
+function readResultNumber(value, keys) {
+  for (const key of keys) {
+    const direct = Number(value?.[key]);
+    if (Number.isFinite(direct)) return direct;
+
+    const nestedValue = value?.[key]?.value ?? value?.[key]?.count ?? value?.[key]?.score;
+    const nested = Number(nestedValue);
+    if (Number.isFinite(nested)) return nested;
+  }
+
+  return NaN;
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 function wireAccessGrantForm() {

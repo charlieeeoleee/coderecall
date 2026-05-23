@@ -24,6 +24,7 @@ const subject = validSubjects.has(subjectParam)
     ? savedSubject
     : "hardware";
 const initialMode = (params.get("mode") || "").toLowerCase();
+const CERTIFICATE_PREVIEW_MODE = params.get("analytics") === "preview";
 
 const subjectMeta = {
   hardware: {
@@ -62,11 +63,12 @@ window.toggleTheme = function() {
   restartThemeMusic();
 };
 
-function setStatus(message, isError = false) {
+function setStatus(message, isError = false, variant = "") {
   const status = document.getElementById("certificateStatus");
   if (!status) return;
   status.textContent = message;
   status.classList.toggle("is-error", isError);
+  status.classList.toggle("is-preview", variant === "preview");
 }
 
 function setExportMode(mode = "") {
@@ -150,6 +152,41 @@ function buildCertificateId(name, completedAt) {
   const dateCode = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
   const code = certificateKind === "dual" ? dualMeta.shortCode : currentMeta.shortCode;
   return `CR-${code}-${dateCode}-${compactName}`;
+}
+
+function buildPreviewCompletionState() {
+  const completedAt = new Date().toISOString();
+  return {
+    completed: true,
+    completedAt,
+    preview: true
+  };
+}
+
+function setCertificateVisualState({ isComplete, isPreview }) {
+  const card = document.getElementById("certificateCard");
+  const sealLabel = document.querySelector(".certificate-seal span");
+  const sealText = document.querySelector(".certificate-seal strong");
+  const verifyNote = document.getElementById("certificateVerifyNote");
+
+  card?.classList.toggle("locked-certificate", !isComplete);
+  card?.classList.toggle("preview-certificate", isComplete && isPreview);
+
+  if (sealLabel) {
+    sealLabel.textContent = !isComplete ? "Pending" : isPreview ? "Preview" : "Verified";
+  }
+
+  if (sealText) {
+    sealText.textContent = !isComplete ? "Incomplete" : isPreview ? "Evaluation Copy" : "Subject Complete";
+  }
+
+  if (verifyNote) {
+    verifyNote.textContent = !isComplete
+      ? "Certificate release is pending until the required learning path is completed."
+      : isPreview
+        ? "Preview certificate for panel evaluation only. Live learner records remain unchanged."
+        : "Verified by Code Recall learning path records.";
+  }
 }
 
 function hasLocalCompletion(name) {
@@ -266,10 +303,14 @@ async function getRemoteSubjectCompletionState(user, targetSubject) {
 }
 
 function populateCertificate({ learnerName, completedAt }) {
+  const certificateTitle = normalizeCertificateText(certificateKind === "dual" ? dualMeta.title : currentMeta.title);
+  const completionDate = formatDate(completedAt);
+
   document.getElementById("certificateLearnerName").textContent = normalizeCertificateText(learnerName);
-  document.getElementById("certificateSubjectTitle").textContent =
-    normalizeCertificateText(certificateKind === "dual" ? dualMeta.title : currentMeta.title);
-  document.getElementById("certificateIssueDate").textContent = formatDate(completedAt);
+  document.getElementById("certificateSubjectTitle").textContent = certificateTitle;
+  document.getElementById("certificateSubjectMeta").textContent = certificateTitle;
+  document.getElementById("certificateCompletionDate").textContent = completionDate;
+  document.getElementById("certificateIssueDate").textContent = formatDate(new Date());
   document.getElementById("certificateId").textContent = buildCertificateId(normalizeCertificateText(learnerName), completedAt);
   document.querySelector(".certificate-topline").textContent =
     certificateKind === "dual" ? "Code Recall Master Completion Award" : "Code Recall Learning Achievement";
@@ -312,6 +353,10 @@ async function prepareCertificate(user) {
     userData = remoteState?.data || null;
   }
 
+  if (CERTIFICATE_PREVIEW_MODE && !completion.completed) {
+    completion = buildPreviewCompletionState();
+  }
+
   const userName = user?.displayName
     || userData?.name
     || user?.email
@@ -325,6 +370,11 @@ async function prepareCertificate(user) {
   const downloadButton = document.getElementById("downloadCertificateBtn");
   const printButton = document.getElementById("printCertificateBtn");
 
+  setCertificateVisualState({
+    isComplete: completion.completed,
+    isPreview: CERTIFICATE_PREVIEW_MODE
+  });
+
   if (!completion.completed) {
     setStatus(
       certificateKind === "dual"
@@ -337,7 +387,13 @@ async function prepareCertificate(user) {
     return false;
   }
 
-  setStatus(`${certificateKind === "dual" ? dualMeta.title : currentMeta.title} certificate ready to view and download.`);
+  setStatus(
+    CERTIFICATE_PREVIEW_MODE
+      ? `${certificateKind === "dual" ? dualMeta.title : currentMeta.title} preview certificate ready for evaluation.`
+      : `${certificateKind === "dual" ? dualMeta.title : currentMeta.title} certificate ready to view and download.`,
+    false,
+    CERTIFICATE_PREVIEW_MODE ? "preview" : ""
+  );
   if (downloadButton) downloadButton.disabled = false;
   if (printButton) printButton.disabled = false;
   return true;

@@ -11,6 +11,7 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .menu { display: flex; flex-direction: column; gap: 30px; padding-top: 14px; }
 .menu a { color: white; text-decoration: none; opacity: 0.82; font-size: 14px; display: flex; align-items: center; gap: 10px; line-height: 1.2; padding: 2px 0; }
 .menu a:hover, .menu a.active-link { opacity: 1; transform: translateX(5px); }
+.nav-section-label { margin: -4px 0 -18px; color: rgba(255,255,255,0.5); font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
 .nav-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: linear-gradient(135deg, #ff2e97, #ff8c00); color: #fff; font-size: 11px; font-weight: 800; line-height: 1; box-shadow: 0 8px 18px rgba(255,46,151,0.25); }
 .bottom-section { padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
 .logout-btn, .primary-action, .danger-action, .theme-toggle { border: none; border-radius: 14px; cursor: pointer; font-family: inherit; }
@@ -20,6 +21,36 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .topbar-title { display: flex; align-items: flex-start; gap: 12px; }
 .page-title { margin: 0; font-size: 32px; }
 .page-subtitle { margin: 8px 0 0; opacity: 0.82; font-size: 14px; max-width: 760px; }
+.demo-analytics-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 210, 77, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 210, 77, 0.12);
+  color: #ffe28a;
+  font-size: 12px;
+}
+.demo-analytics-notice strong {
+  color: #fff3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.demo-analytics-notice span {
+  color: rgba(255, 255, 255, 0.86);
+}
+.analytics-preview-footer {
+  justify-content: center;
+  width: 100%;
+  margin: 4px 0 0;
+  font-size: 11px;
+  opacity: 0.86;
+}
 .user-top { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 14px; }
 .user-top img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
 .overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
@@ -118,6 +149,10 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .profile-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .profile-stat-card { padding: 14px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
 .profile-stat-card strong { display: block; font-size: 22px; margin-top: 6px; }
+.profile-assessment-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.profile-assessment-summary-card { min-width: 0; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08); }
+.profile-assessment-summary-card span { display: block; font-size: 12px; opacity: 0.76; }
+.profile-assessment-summary-card strong { display: block; margin-top: 6px; font-size: 16px; overflow-wrap: anywhere; }
 .profile-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .profile-section { padding: 16px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
 .profile-section h4 { margin: 0 0 12px; }
@@ -205,6 +240,7 @@ body.light-mode .sidebar { background: #e9e0ff; }
 body.light-mode .sidebar-toggle { background: rgba(108,76,255,0.1); }
 body.light-mode .sidebar-toggle span { background: #1a1140; }
 body.light-mode .menu a { color: #1e1547; }
+body.light-mode .nav-section-label { color: rgba(30, 21, 71, 0.55); }
 body.light-mode .nav-count-badge { color: #fff; }
 body.light-mode .overview-card,
 body.light-mode .panel-card,
@@ -217,6 +253,15 @@ body.light-mode .admin-form textarea,
 body.light-mode .admin-form select { color: #1e1547; }
 body.light-mode .overview-card,
 body.light-mode .panel-card { background: rgba(130, 99, 255, 0.12); }
+body.light-mode .demo-analytics-notice {
+  background: rgba(156, 101, 0, 0.1);
+  border-color: rgba(156, 101, 0, 0.24);
+  color: #7c5200;
+}
+body.light-mode .demo-analytics-notice strong,
+body.light-mode .demo-analytics-notice span {
+  color: #5f4308;
+}
 body.light-mode .bottleneck-card,
 body.light-mode .analytics-card,
 body.light-mode .admin-form input,
@@ -225,6 +270,7 @@ body.light-mode .admin-form select,
 body.light-mode .review-item,
 body.light-mode .profile-section,
 body.light-mode .profile-stat-card,
+body.light-mode .profile-assessment-summary-card,
 body.light-mode .learner-assessment-card,
 body.light-mode .grant-item,
 body.light-mode .user-top,
@@ -343,6 +389,7 @@ body.light-mode .secondary-btn {
   .review-grid,
   .insights-admin-columns,
   .learner-assessment-grid,
+  .profile-assessment-summary,
   .profile-stats,
   .profile-columns { grid-template-columns: 1fr; }
 }
@@ -391,6 +438,7 @@ body.light-mode .secondary-btn {
   .review-grid,
   .insights-admin-columns,
   .learner-assessment-grid,
+  .profile-assessment-summary,
   .profile-stats,
   .profile-columns {
     width: 100%;

@@ -236,6 +236,24 @@ body{
   opacity: 0.88;
 }
 
+.quiz-hero-media{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:12px;
+  margin:22px auto 0;
+  width:min(720px, 100%);
+}
+
+.quiz-hero-media img{
+  width:100%;
+  aspect-ratio:16 / 9;
+  object-fit:cover;
+  border-radius:16px;
+  background:rgba(255,255,255,0.92);
+  border:1px solid rgba(255,255,255,0.12);
+  box-shadow:0 14px 30px rgba(0,0,0,0.16);
+}
+
 /* ================= MAIN CARD ================= */
 .quiz-main{
   padding: 26px;
@@ -648,6 +666,11 @@ body.light-mode .quiz-header{
   background: rgba(255,255,255,0.74);
 }
 
+body.light-mode .quiz-hero-media img{
+  border-color:rgba(15,23,42,0.08);
+  box-shadow:0 12px 24px rgba(15,23,42,0.10);
+}
+
 body.light-mode .quiz-main{
   background: rgba(255,255,255,0.78);
   color: #111827;
@@ -826,6 +849,10 @@ body.light-mode .confidence-btn.selected{
 
   .quiz-main{
     padding: 20px;
+  }
+
+  .quiz-hero-media{
+    grid-template-columns:1fr;
   }
 
   .image-inspector-trigger{

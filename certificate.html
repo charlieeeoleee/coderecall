@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css?v=20260519a">
-  <link rel="stylesheet" href="styles/certificate.css?v=20260422b">
+  <link rel="stylesheet" href="styles/certificate.css?v=20260523a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -50,6 +50,14 @@
 
           <div class="certificate-meta-grid">
             <div class="certificate-meta-box">
+              <span class="certificate-meta-label">Completed Subject</span>
+              <strong id="certificateSubjectMeta">Computer Hardware</strong>
+            </div>
+            <div class="certificate-meta-box">
+              <span class="certificate-meta-label">Completion Date</span>
+              <strong id="certificateCompletionDate">April 20, 2026</strong>
+            </div>
+            <div class="certificate-meta-box">
               <span class="certificate-meta-label">Issued On</span>
               <strong id="certificateIssueDate">April 20, 2026</strong>
             </div>
@@ -58,6 +66,9 @@
               <strong id="certificateId">CR-HW-0001</strong>
             </div>
           </div>
+          <p class="certificate-verify-note" id="certificateVerifyNote">
+            Verified by Code Recall learning path records.
+          </p>
 
           <div class="certificate-signature-row">
             <div class="certificate-signature">
@@ -78,7 +89,7 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/certificate.js?v=20260422d"></script>
+  <script type="module" src="scripts/certificate.js?v=20260523a"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>
 </html>

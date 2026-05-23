@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css?v=20260519a">
-  <link rel="stylesheet" href="styles/subject.css?v=20260427a">
+  <link rel="stylesheet" href="styles/subject.css?v=20260523a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -37,6 +37,7 @@
     <section class="subject-actions">
       <button class="subject-card card pretest active-card" id="pretestBtn" onclick="openPretest()">
         <div class="subject-card-glow"></div>
+        <img class="subject-card-image" src="assets/modules/hardware/easy/module1/image-01.png" alt="Computer hardware component preview">
         <div class="subject-card-inner">
           <span class="subject-badge">START HERE</span>
           <h2>Pre-Test</h2>
@@ -47,6 +48,7 @@
       <button class="subject-card card modules locked" id="modulesBtn" onclick="openModules()">
         <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
+        <img class="subject-card-image" src="assets/modules/electrical/easy/module1/image-04.png" alt="Electrical lesson component preview">
         <div class="subject-card-inner">
           <span class="subject-badge">STEP 2</span>
           <h2>Modules</h2>
@@ -57,6 +59,7 @@
       <button class="subject-card card quizzes locked" id="quizzesBtn" onclick="openQuiz()">
         <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
+        <img class="subject-card-image" src="assets/modules/hardware/medium/module1/image-03.png" alt="Quiz visual reference preview">
         <div class="subject-card-inner">
           <span class="subject-badge">STEP 3</span>
           <h2>Quizzes</h2>
@@ -67,12 +70,43 @@
       <button class="subject-card card posttest locked" id="posttestBtn" onclick="openPosttest()">
         <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
+        <img class="subject-card-image" src="assets/modules/electrical/easy/module2/image-01.jpg" alt="Post-test electrical wiring preview">
         <div class="subject-card-inner">
           <span class="subject-badge">FINAL</span>
           <h2>Post-Test</h2>
           <p>Final assessment</p>
         </div>
       </button>
+    </section>
+
+    <section class="subject-checklist-panel card" id="subjectChecklistPanel">
+      <div class="subject-checklist-head">
+        <span class="subject-badge">LEARNING PATH</span>
+        <h2>Subject Completion Checklist</h2>
+        <p id="subjectChecklistHint">Complete each step in order to unlock the final certificate.</p>
+      </div>
+      <div class="subject-checklist-grid">
+        <article class="subject-checklist-item" id="checkPretest">
+          <strong>Pre-Test</strong>
+          <span>Start with baseline assessment</span>
+        </article>
+        <article class="subject-checklist-item" id="checkModules">
+          <strong>Modules</strong>
+          <span>Study the lesson content</span>
+        </article>
+        <article class="subject-checklist-item" id="checkQuiz">
+          <strong>Quiz Track</strong>
+          <span>Finish the practice levels</span>
+        </article>
+        <article class="subject-checklist-item" id="checkPosttest">
+          <strong>Post-Test</strong>
+          <span>Complete the final assessment</span>
+        </article>
+        <article class="subject-checklist-item" id="checkCertificate">
+          <strong>Certificate</strong>
+          <span>Unlock proof of completion</span>
+        </article>
+      </div>
     </section>
 
     <section class="subject-assessment-panel card" id="subjectAssessmentPanel">
@@ -286,16 +320,28 @@
       };
 
       window.openModules = function () {
+        if (document.getElementById("modulesBtn")?.classList.contains("locked")) {
+          showSubjectNotice("Complete the Pre-Test first to unlock the learning modules.");
+          return;
+        }
         sessionStorage.setItem("selectedSubject", subject);
         window.location.href = buildUrl("module-difficulty.html", { subject });
       };
 
       window.openQuiz = function () {
+        if (document.getElementById("quizzesBtn")?.classList.contains("locked")) {
+          showSubjectNotice("Complete the Modules first to unlock the quiz track.");
+          return;
+        }
         sessionStorage.setItem("selectedSubject", subject);
         window.location.href = buildUrl("quiz-difficulty.html", { subject });
       };
 
       window.openPosttest = function () {
+        if (document.getElementById("posttestBtn")?.classList.contains("locked")) {
+          showSubjectNotice("Complete the Quiz Track first to unlock the Post-Test.");
+          return;
+        }
         sessionStorage.setItem("selectedSubject", subject);
         window.location.href = buildUrl("quiz.html", { subject, level: "easy", type: "posttest" });
       };
@@ -306,7 +352,7 @@
     })();
   </script>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/subject.js?v=20260427a"></script>
+  <script type="module" src="scripts/subject.js?v=20260523b"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>
 </html>

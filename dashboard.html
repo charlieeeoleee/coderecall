@@ -3,7 +3,7 @@
 <head>
   <title>Code Recall Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260510c">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260523a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -58,10 +58,12 @@
         <div class="card">
           <h3>XP</h3>
           <p id="xp">0</p>
+          <small class="stat-detail" id="xpToNext">100 XP to Level 2</small>
         </div>
         <div class="card">
           <h3>Level</h3>
           <p id="level">1</p>
+          <small class="stat-detail" id="levelDetail">Beginner track</small>
         </div>
         <div class="card">
           <h3>Progress: <span id="progressText">0%</span></h3>
@@ -84,8 +86,20 @@
       <div class="card section">
         <h3>Start Learning</h3>
         <div class="subjects">
-          <button onclick="startGame('hardware')">&#128421; Computer Hardware</button>
-          <button onclick="startGame('electrical')">&#9889; Electrical Wiring and Electronics Circuit Components</button>
+          <button class="subject-visual-button hardware-path" onclick="startGame('hardware')">
+            <span class="subject-visual-copy">
+              <strong>Computer Hardware</strong>
+              <small>Parts, assembly, and troubleshooting</small>
+            </span>
+            <img src="assets/modules/hardware/easy/module1/image-01.png" alt="Computer hardware components preview">
+          </button>
+          <button class="subject-visual-button electrical-path" onclick="startGame('electrical')">
+            <span class="subject-visual-copy">
+              <strong>Electrical Wiring and Electronics Circuit Components</strong>
+              <small>Safety, wiring, and circuit foundations</small>
+            </span>
+            <img src="assets/modules/electrical/easy/module1/image-04.png" alt="Electrical circuit components preview">
+          </button>
         </div>
       </div>
 
@@ -187,6 +201,7 @@
             </div>
           </article>
         </div>
+        <div id="recentActivityCards" class="recent-activity-cards"></div>
       </div>
 
       <div class="card section subject-progress-section">
@@ -272,7 +287,7 @@
   <div id="confettiContainer" class="confetti-container"></div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/dashboard.js?v=20260510d"></script>
+  <script type="module" src="scripts/dashboard.js?v=20260523b"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>
 </html>

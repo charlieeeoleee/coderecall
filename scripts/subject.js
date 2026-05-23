@@ -17,6 +17,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
+let latestProgress = {};
+let latestCompletion = { completed: false, completedAt: "" };
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
 
@@ -84,6 +86,42 @@ function showSubjectNotice(message) {
   };
 }
 
+function getStepStatus(progress = latestProgress, completion = latestCompletion) {
+  const pretestDone = progress[getProgressKey("pretest")] === true;
+  const modulesDone = progress[getProgressKey("modules")] === true;
+  const quizDone = progress[getProgressKey("quiz")] === true;
+  const posttestDone = progress[getProgressKey("posttest")] === true || completion.completed === true;
+
+  return {
+    pretestDone,
+    modulesDone,
+    quizDone,
+    posttestDone,
+    certificateReady: pretestDone && modulesDone && quizDone && posttestDone
+  };
+}
+
+function getLockedMessage(step) {
+  const status = getStepStatus();
+
+  if (step === "modules" && !status.pretestDone) {
+    return "Complete the Pre-Test first to unlock the learning modules.";
+  }
+
+  if (step === "quiz") {
+    if (!status.pretestDone) return "Complete the Pre-Test first, then study the modules before opening quizzes.";
+    if (!status.modulesDone) return "Complete the Modules first to unlock the quiz track.";
+  }
+
+  if (step === "posttest") {
+    if (!status.pretestDone) return "Complete the Pre-Test, Modules, and Quiz Track before the Post-Test.";
+    if (!status.modulesDone) return "Complete the Modules first before the Post-Test.";
+    if (!status.quizDone) return "Complete the Quiz Track first to unlock the Post-Test.";
+  }
+
+  return "Complete the previous step first to unlock this activity.";
+}
+
 /* =========================
    NAVIGATION
 ========================= */
@@ -104,14 +142,26 @@ window.openPretest = function () {
 };
 
 window.openModules = function () {
+  if (document.getElementById("modulesBtn")?.classList.contains("locked")) {
+    showSubjectNotice(getLockedMessage("modules"));
+    return;
+  }
   window.location.href = `module-difficulty.html?subject=${subject}`;
 };
 
 window.openQuiz = function () {
+  if (document.getElementById("quizzesBtn")?.classList.contains("locked")) {
+    showSubjectNotice(getLockedMessage("quiz"));
+    return;
+  }
   window.location.href = `quiz-difficulty.html?subject=${subject}`;
 };
 
 window.openPosttest = function () {
+  if (document.getElementById("posttestBtn")?.classList.contains("locked")) {
+    showSubjectNotice(getLockedMessage("posttest"));
+    return;
+  }
   window.location.href = `quiz.html?subject=${subject}&level=easy&type=posttest`;
 };
 
@@ -139,9 +189,66 @@ function unlockButton(buttonId) {
   if (!btn) return;
 
   btn.classList.remove("locked");
+  btn.classList.add("unlocked");
 
   const badge = btn.querySelector(".lock-icon");
   if (badge) badge.remove();
+}
+
+function lockButton(buttonId) {
+  const btn = document.getElementById(buttonId);
+  if (!btn) return;
+  btn.classList.add("locked");
+  btn.classList.remove("unlocked", "ready-card");
+  if (!btn.querySelector(".lock-icon")) {
+    const icon = document.createElement("span");
+    icon.className = "lock-icon";
+    icon.textContent = "🔒";
+    btn.prepend(icon);
+  }
+}
+
+function setPosttestReady(isReady) {
+  const button = document.getElementById("posttestBtn");
+  if (!button) return;
+  button.classList.toggle("ready-card", isReady);
+  const badge = button.querySelector(".subject-badge");
+  const copy = button.querySelector("p");
+  if (badge) badge.textContent = isReady ? "READY" : "FINAL";
+  if (copy) copy.textContent = isReady ? "Post-test unlocked" : "Final assessment";
+}
+
+function setChecklistItem(id, status, detail = "") {
+  const item = document.getElementById(id);
+  if (!item) return;
+  item.classList.remove("done", "current", "locked");
+  item.classList.add(status);
+  if (detail) {
+    const span = item.querySelector("span");
+    if (span) span.textContent = detail;
+  }
+}
+
+function renderCompletionChecklist(progress = latestProgress, completion = latestCompletion) {
+  const status = getStepStatus(progress, completion);
+  const hint = document.getElementById("subjectChecklistHint");
+  const nextStep = !status.pretestDone
+    ? "Take the Pre-Test to begin the subject path."
+    : !status.modulesDone
+      ? "Continue to Modules and complete the lesson content."
+      : !status.quizDone
+        ? "Proceed to the Quiz Track to reinforce the lesson."
+        : !status.posttestDone
+          ? "The Post-Test is now ready. Complete it to finish the subject."
+          : "Subject complete. You may now open the certificate.";
+
+  if (hint) hint.textContent = nextStep;
+
+  setChecklistItem("checkPretest", status.pretestDone ? "done" : "current", status.pretestDone ? "Completed" : "Start with baseline assessment");
+  setChecklistItem("checkModules", status.modulesDone ? "done" : status.pretestDone ? "current" : "locked", status.modulesDone ? "Completed" : status.pretestDone ? "Ready to open" : "Complete Pre-Test first");
+  setChecklistItem("checkQuiz", status.quizDone ? "done" : status.modulesDone ? "current" : "locked", status.quizDone ? "Completed" : status.modulesDone ? "Ready to open" : "Complete Modules first");
+  setChecklistItem("checkPosttest", status.posttestDone ? "done" : status.quizDone ? "current" : "locked", status.posttestDone ? "Completed" : status.quizDone ? "Ready to take" : "Complete Quiz Track first");
+  setChecklistItem("checkCertificate", status.certificateReady ? "done" : "locked", status.certificateReady ? "Unlocked" : "Complete all steps first");
 }
 
 function getCertificateUrl(mode = "") {
@@ -409,25 +516,56 @@ async function getCompletionDetails() {
 }
 
 async function loadProgress() {
+  lockButton("modulesBtn");
+  lockButton("quizzesBtn");
+  lockButton("posttestBtn");
+  setPosttestReady(false);
+
   if (unlockMode === "modules") {
+    latestProgress = {
+      [getProgressKey("pretest")]: true,
+      [getProgressKey("modules")]: false,
+      [getProgressKey("quiz")]: false,
+      [getProgressKey("posttest")]: false
+    };
     unlockButton("modulesBtn");
+    renderCompletionChecklist(latestProgress, latestCompletion);
+    await renderAssessmentOverview();
     return;
   }
 
   if (unlockMode === "quiz") {
+    latestProgress = {
+      [getProgressKey("pretest")]: true,
+      [getProgressKey("modules")]: true,
+      [getProgressKey("quiz")]: false,
+      [getProgressKey("posttest")]: false
+    };
     unlockButton("modulesBtn");
     unlockButton("quizzesBtn");
+    renderCompletionChecklist(latestProgress, latestCompletion);
+    await renderAssessmentOverview();
     return;
   }
 
   if (unlockMode === "all") {
+    latestProgress = {
+      [getProgressKey("pretest")]: true,
+      [getProgressKey("modules")]: true,
+      [getProgressKey("quiz")]: true,
+      [getProgressKey("posttest")]: false
+    };
     unlockButton("modulesBtn");
     unlockButton("quizzesBtn");
     unlockButton("posttestBtn");
+    setPosttestReady(true);
+    renderCompletionChecklist(latestProgress, latestCompletion);
+    await renderAssessmentOverview();
     return;
   }
 
   const progress = await getMergedProgress();
+  latestProgress = progress;
 
   const pretestDone = progress[getProgressKey("pretest")] === true;
   const modulesDone = progress[getProgressKey("modules")] === true;
@@ -443,13 +581,17 @@ async function loadProgress() {
 
   if (pretestDone && modulesDone && quizDone) {
     unlockButton("posttestBtn");
+    setPosttestReady(true);
   }
 
   const completion = await getCompletionDetails();
+  latestCompletion = completion;
   if (pretestDone && modulesDone && quizDone && completion.completed) {
+    setPosttestReady(false);
     showCertificatePanel(completion.completedAt);
   }
 
+  renderCompletionChecklist(progress, completion);
   await renderAssessmentOverview();
 }
 

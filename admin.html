@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260520e">
+  <link rel="stylesheet" href="styles/admin.css?v=20260523a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -62,11 +62,13 @@
         <div class="overview-card"><h3>Average XP</h3><p id="adminAverageXp">0</p></div>
         <div class="overview-card"><h3>Modules Cleared</h3><p id="adminModulesCleared">0 / 18</p></div>
         <div class="overview-card"><h3>Average Pre-Test</h3><p id="adminAveragePretest">0%</p><small id="adminAveragePretestDetail">0 recorded tests</small></div>
+        <div class="overview-card"><h3>Average Quiz Track</h3><p id="adminAverageQuizTrack">0%</p><small id="adminAverageQuizTrackDetail">0 recorded quiz levels</small></div>
         <div class="overview-card"><h3>Average Post-Test</h3><p id="adminAveragePosttest">0%</p><small id="adminAveragePosttestDetail">0 recorded tests</small></div>
         <div class="overview-card"><h3>Hardware Completion</h3><p id="adminHardwareCompletion">0%</p><small id="adminHardwareCompletionDetail">0 of 0 learners</small></div>
         <div class="overview-card"><h3>Electrical Completion</h3><p id="adminElectricalCompletion">0%</p><small id="adminElectricalCompletionDetail">0 of 0 learners</small></div>
         <div class="overview-card"><h3>Due Memory Cards</h3><p id="adminDueRetentionCards">0</p><small id="adminDueRetentionCardsDetail">No due flashcards right now</small></div>
         <div class="overview-card"><h3>Learners With Due Cards</h3><p id="adminLearnersWithDueRetention">0</p><small id="adminLearnersWithDueRetentionDetail">0 learner(s) need memory review</small></div>
+        <div class="overview-card"><h3>Last Updated</h3><p id="adminLastUpdated">--</p><small id="adminLastUpdatedDetail">Dashboard data refresh time</small></div>
       </div>
 
       <section class="panel-card wide inbox-shortcut-card">
@@ -184,6 +186,7 @@
               <h3>Student Progress Monitor</h3>
               <p>Track subject status, XP, likely difficulty points, and open a full learner profile.</p>
             </div>
+            <button type="button" id="adminExportScoresBtn" class="secondary-action">Export CSV</button>
           </div>
           <div class="table-wrap">
             <table class="admin-table">

@@ -50,6 +50,7 @@ let currentAchievements = [];
 let leaderboardData = [];
 let leaderboardState = "idle";
 let leaderboardErrorCode = "";
+let latestSubjectSnapshot = [];
 const CONTACT_REPLY_SEEN_KEY_PREFIX = "contact_reply_seen";
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const DASHBOARD_STATUS_DEFAULT = "Jump straight back into your latest lesson or quiz";
@@ -434,6 +435,7 @@ async function loadDashboard() {
   updateUserUI(name, photo);
   updateStatsUI(xp);
   const subjectSnapshot = buildSubjectProgressSnapshot(data.progress || {}, data.results || {});
+  latestSubjectSnapshot = subjectSnapshot;
   renderCareerPathCard(xp, subjectSnapshot);
   renderSubjectProgressSection(subjectSnapshot);
   renderCertificatesPreview(subjectSnapshot);
@@ -450,7 +452,7 @@ async function loadDashboard() {
     await Promise.all([
       renderReviewInsights(data),
       renderMemoryReviewInsights(data),
-      renderStudyHistoryInsights(data),
+      renderStudyHistoryInsights(data, subjectSnapshot),
       loadLeaderboard()
     ]);
     renderDashboardAchievementsExpanded({
@@ -616,6 +618,7 @@ function loadGuestDashboard() {
   updateContactReplyBadge(0);
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
   const guestSnapshot = buildGuestSubjectProgressSnapshot();
+  latestSubjectSnapshot = guestSnapshot;
 
   currentXP = guestXP;
   updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
@@ -627,7 +630,7 @@ function loadGuestDashboard() {
   deferNonCriticalTask(() => {
     renderReviewInsights();
     renderMemoryReviewInsights({});
-    renderStudyHistoryInsights({});
+    renderStudyHistoryInsights({}, guestSnapshot);
     renderDashboardAchievementsExpanded({
       xp: guestXP,
       isGuest: true,
@@ -652,6 +655,50 @@ function toPercent(value, max) {
   return Math.max(0, Math.min(100, Math.round((Number(value || 0) / max) * 100)));
 }
 
+function getNextSubjectStep({ subject, pretestDone, modulesDone, quizTrackDone, posttestDone }) {
+  if (!pretestDone) {
+    return {
+      label: "Pre-Test",
+      detail: "Take the baseline assessment",
+      url: `quiz.html?subject=${subject}&level=easy&type=pretest`
+    };
+  }
+
+  if (!modulesDone) {
+    return {
+      label: "Modules",
+      detail: "Continue the lesson path",
+      url: `module-difficulty.html?subject=${subject}`
+    };
+  }
+
+  if (!quizTrackDone) {
+    return {
+      label: "Quiz Track",
+      detail: "Clear the practice levels",
+      url: `quiz-difficulty.html?subject=${subject}`
+    };
+  }
+
+  if (!posttestDone) {
+    return {
+      label: "Post-Test",
+      detail: "Finish the final assessment",
+      url: `quiz.html?subject=${subject}&level=easy&type=posttest`
+    };
+  }
+
+  return {
+    label: "Certificate",
+    detail: "Open the unlocked certificate",
+    url: certificateKindUrl(subject)
+  };
+}
+
+function certificateKindUrl(subject) {
+  return `certificate.html?subject=${subject}`;
+}
+
 function buildSubjectProgressSnapshot(progress = {}, results = {}) {
   return ["hardware", "electrical"].map((subject) => {
     const totalModules = getTotalModulesForSubject(subject);
@@ -670,6 +717,11 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
 
     const pretestDone = progress[`${subject}_pretest`] === true || results[`${subject}_pretest`] != null;
     const posttestDone = progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] != null;
+    const modulesDone = progress[`${subject}_modules`] === true || moduleDoneCount >= totalModules;
+    const quizTrackDone =
+      progress[`${subject}_quiz`] === true ||
+      progress[`${subject}_hard_quiz`] === true ||
+      quizLevelDoneCount >= totalQuizLevels;
     const pretestResult = results[`${subject}_pretest`] || {};
     const posttestResult = results[`${subject}_posttest`] || {};
     const pretestXP = getAssessmentXP("pretest", results[`${subject}_pretest`]);
@@ -725,6 +777,15 @@ function buildSubjectProgressSnapshot(progress = {}, results = {}) {
       totalModules,
       quizLevelDoneCount,
       totalQuizLevels,
+      modulesDone,
+      quizTrackDone,
+      nextStep: getNextSubjectStep({
+        subject,
+        pretestDone,
+        modulesDone,
+        quizTrackDone,
+        posttestDone
+      }),
       assessments: {
         pretest: {
           state: pretestDone ? "Completed" : "Not taken",
@@ -802,6 +863,21 @@ function renderSubjectProgressSection(subjects = []) {
         <span>${item.quizLevelDoneCount}/${item.totalQuizLevels} quiz levels</span>
         <strong>${item.xp} XP</strong>
       </div>
+      <div class="subject-step-strip">
+        ${[
+          { label: "Pre-Test", done: item.assessments.pretest.state === "Completed" },
+          { label: "Modules", done: item.modulesDone },
+          { label: "Quiz Track", done: item.quizTrackDone },
+          { label: "Post-Test", done: item.assessments.posttest.state === "Completed" }
+        ].map((step) => `
+          <span class="subject-step-chip ${step.done ? "done" : item.nextStep?.label === step.label ? "current" : "locked"}">
+            ${step.label}
+          </span>
+        `).join("")}
+      </div>
+      <button class="subject-next-btn" type="button" onclick="window.location.href='${escapeHtml(item.nextStep?.url || `subject.html?subject=${item.subject}`)}'">
+        ${item.percent >= 100 ? "View Certificate" : `Next: ${escapeHtml(item.nextStep?.label || "Open Subject")}`}
+      </button>
       <div class="subject-assessment-stack">
         ${[
           { label: "Pre-Test", data: item.assessments.pretest },
@@ -976,6 +1052,46 @@ function renderMissedTopics(items = []) {
   `).join("");
 }
 
+function buildRecommendedLearningAction(subjects = latestSubjectSnapshot) {
+  const candidates = Array.isArray(subjects) ? subjects : [];
+  const activeSubject = candidates
+    .filter((item) => item && item.percent < 100)
+    .sort((a, b) => {
+      const aStarted = a.completedItems > 0 ? 1 : 0;
+      const bStarted = b.completedItems > 0 ? 1 : 0;
+      if (aStarted !== bStarted) return bStarted - aStarted;
+      return b.percent - a.percent;
+    })[0];
+
+  if (activeSubject?.nextStep) {
+    return {
+      title: `${activeSubject.nextStep.label}: ${activeSubject.label}`,
+      detail: activeSubject.nextStep.detail,
+      actionUrl: activeSubject.nextStep.url,
+      source: "recommended",
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  if (candidates.length && candidates.every((item) => item.percent >= 100)) {
+    return {
+      title: "Certificates Ready",
+      detail: "Both subject paths are complete. Open your certificates.",
+      actionUrl: "certificates.html",
+      source: "certificate",
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  return {
+    title: "Choose a Subject",
+    detail: "Start with Hardware or Electrical to begin your learning path.",
+    actionUrl: "subjects.html",
+    source: "start",
+    updatedAt: new Date().toISOString()
+  };
+}
+
 async function renderReviewInsights(userData = {}) {
   const countEl = document.getElementById("wrongAnswerReviewCount");
   if (!countEl) return;
@@ -1031,7 +1147,7 @@ async function renderMemoryReviewInsights(userData = {}) {
   textEl.textContent = `${title} • ${subject} • ${dueItems.length} due • ${stageDays ? `${stageDays}-day review` : "review due"}`;
 }
 
-function renderContinueLearning(items = [], userData = {}) {
+function renderContinueLearning(items = [], userData = {}, subjects = latestSubjectSnapshot) {
   const titleEl = document.getElementById("continueLearningTitle");
   const detailEl = document.getElementById("continueLearningDetail");
   const kindEl = document.getElementById("continueLearningKind");
@@ -1046,18 +1162,19 @@ function renderContinueLearning(items = [], userData = {}) {
   const latestResume = chooseLatestActivity(readLocalResumeActivity());
   const remoteResume = chooseLatestActivity(userData?.resumeActivity);
   const latest = chooseLatestActivity(latestResume, remoteResume, latestHistory);
+  const recommended = buildRecommendedLearningAction(subjects);
 
   if (!latest) {
-    latestHistoryActionUrl = "";
-    titleEl.textContent = "No recent activity yet";
-    detailEl.textContent = "Start a module, quiz, or test and your latest activity will appear here.";
-    kindEl.textContent = "start here";
-    if (savedAtEl) savedAtEl.textContent = "No saved activity yet";
-    buttonEl.textContent = "Go to Subjects";
+    latestHistoryActionUrl = recommended.actionUrl;
+    titleEl.textContent = recommended.title;
+    detailEl.textContent = recommended.detail;
+    kindEl.textContent = "next step";
+    if (savedAtEl) savedAtEl.textContent = "Recommended path";
+    buttonEl.textContent = recommended.actionUrl === "certificates.html" ? "Open Certificates" : "Continue";
     return;
   }
 
-  latestHistoryActionUrl = latest.resumeUrl || latest.actionUrl || "";
+  latestHistoryActionUrl = latest.resumeUrl || latest.actionUrl || recommended.actionUrl;
   const progressLabel = formatResumeProgress(latest);
   titleEl.textContent = latest.title || "Continue Learning";
   detailEl.textContent = [latest.detail || "Resume your latest activity.", progressLabel]
@@ -1065,10 +1182,34 @@ function renderContinueLearning(items = [], userData = {}) {
     .join(" • ");
   kindEl.textContent = latest.resumeUrl ? "resume ready" : prettifySourceLabel(latest);
   if (savedAtEl) savedAtEl.textContent = formatResumeSavedAt(latest);
-  buttonEl.textContent = latestHistoryActionUrl ? "Resume Now" : "Open History";
+  buttonEl.textContent = latest.resumeUrl || latest.actionUrl ? "Resume Now" : "Continue";
 }
 
-async function renderStudyHistoryInsights(userData = {}) {
+function renderRecentActivityCards(items = []) {
+  const container = document.getElementById("recentActivityCards");
+  if (!container) return;
+
+  const recentItems = items.slice(0, 3);
+  if (!recentItems.length) {
+    container.innerHTML = `
+      <article class="recent-activity-card empty">
+        <strong>No activity yet</strong>
+        <span>Your latest module, quiz, or test will appear here.</span>
+      </article>
+    `;
+    return;
+  }
+
+  container.innerHTML = recentItems.map((item) => `
+    <button class="recent-activity-card" type="button" onclick="window.location.href='${escapeHtml(item.resumeUrl || item.actionUrl || "history.html")}'">
+      <span class="recent-activity-kind">${escapeHtml(prettifySourceLabel(item))}</span>
+      <strong>${escapeHtml(item.title || "Learning Activity")}</strong>
+      <small>${escapeHtml(item.detail || formatResumeSavedAt(item))}</small>
+    </button>
+  `).join("");
+}
+
+async function renderStudyHistoryInsights(userData = {}, subjects = latestSubjectSnapshot) {
   const countEl = document.getElementById("studyHistoryCount");
   const textEl = document.getElementById("studyHistoryPreviewText");
   if (!countEl || !textEl) return;
@@ -1082,16 +1223,17 @@ async function renderStudyHistoryInsights(userData = {}) {
 
   countEl.textContent = String(mergedItems.length);
   document.getElementById("studyHistoryCard")?.classList.remove("is-loading");
+  renderRecentActivityCards(mergedItems);
   if (!mergedItems.length) {
     textEl.textContent = "Your recent modules and quizzes will appear here.";
-    renderContinueLearning(mergedItems, userData);
+    renderContinueLearning(mergedItems, userData, subjects);
     setInsightLoadingState(false);
     return;
   }
 
   const latest = mergedItems[0];
   textEl.textContent = `${latest.title} • ${latest.detail || "Recent activity"}`;
-  renderContinueLearning(mergedItems, userData);
+  renderContinueLearning(mergedItems, userData, subjects);
   setInsightLoadingState(false);
 }
 
@@ -1276,9 +1418,19 @@ function updateUserUI(name, photo) {
 function updateStatsUI(xp) {
   const level = Math.floor(xp / 100) + 1;
   const progress = Math.min(100, Math.round((Math.max(0, xp) / TOTAL_SYSTEM_XP) * 100));
+  const xpIntoLevel = Math.max(0, xp % 100);
+  const xpNeeded = level >= Math.floor(TOTAL_SYSTEM_XP / 100) + 1 ? 0 : Math.max(0, 100 - xpIntoLevel);
+  const xpToNext = document.getElementById("xpToNext");
+  const levelDetail = document.getElementById("levelDetail");
 
   document.getElementById("xp").textContent = xp;
   document.getElementById("level").textContent = level;
+  if (xpToNext) {
+    xpToNext.textContent = xpNeeded > 0 ? `${xpNeeded} XP to Level ${level + 1}` : "Top level progress reached";
+  }
+  if (levelDetail) {
+    levelDetail.textContent = `${xpIntoLevel}/100 XP in this level`;
+  }
   animateNumber("xp", xp);
   animateNumber("level", level);
   animateProgress(progress);
