@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260523a">
+  <link rel="stylesheet" href="styles/admin.css?v=20260523b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -186,7 +186,10 @@
               <h3>Student Progress Monitor</h3>
               <p>Track subject status, XP, likely difficulty points, and open a full learner profile.</p>
             </div>
-            <button type="button" id="adminExportScoresBtn" class="secondary-action">Export CSV</button>
+            <div class="export-action-group">
+              <button type="button" id="adminExportScoresBtn" class="secondary-action">Export Learner Scores</button>
+              <small id="adminExportStatus">CSV includes live records or current analytics preview values.</small>
+            </div>
           </div>
           <div class="table-wrap">
             <table class="admin-table">
@@ -306,7 +309,7 @@
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/admin.js?v=20260520c"></script>
+  <script type="module" src="scripts/admin.js?v=20260523b"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/admin.css?v=20260523a">
+  <link rel="stylesheet" href="styles/admin.css?v=20260523b">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -268,7 +268,10 @@
               <h3>User Access Control</h3>
               <p>Change roles and remove app records. For the prototype, deleting here removes the Firestore user record only.</p>
             </div>
-            <button type="button" id="superExportScoresBtn" class="secondary-action">Export Learner Scores</button>
+            <div class="export-action-group">
+              <button type="button" id="superExportScoresBtn" class="secondary-action">Export Learner Scores</button>
+              <small id="superExportStatus">CSV includes live records or current analytics preview values.</small>
+            </div>
           </div>
         <div class="table-wrap">
           <table class="admin-table">
@@ -356,7 +359,7 @@
 
   <button class="theme-toggle" onclick="toggleTheme()"><span id="themeIcon">&#127769;</span></button>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/super-admin.js?v=20260519f"></script>
+  <script type="module" src="scripts/super-admin.js?v=20260523b"></script>
   <script src="scripts/loading.js?v=20260519f" defer></script>
 </body>
 </html>

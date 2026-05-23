@@ -980,8 +980,18 @@ function wireLearnerScoreExport() {
 }
 
 function exportLearnerScoresCsv(learners, mode) {
+  const button = document.getElementById("adminExportScoresBtn");
+  const previousText = button?.textContent || "Export Learner Scores";
+  const status = document.getElementById("adminExportStatus");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Preparing CSV...";
+  }
+  if (status) status.textContent = `Preparing ${learners.length} learner record${learners.length === 1 ? "" : "s"} for export.`;
+
   const headers = [
     "Mode",
+    "Exported At",
     "Name",
     "Email",
     "XP",
@@ -1002,6 +1012,7 @@ function exportLearnerScoresCsv(learners, mode) {
 
     return [
       mode,
+      formatExportTimestamp(new Date()),
       learner.name || "User",
       learner.email || "",
       learner.xp || 0,
@@ -1017,7 +1028,13 @@ function exportLearnerScoresCsv(learners, mode) {
     ];
   });
 
-  downloadCsv(`code-recall-learner-scores-${mode}.csv`, [headers, ...rows]);
+  const filename = `code-recall-learner-scores-${mode}-${formatExportDateStamp(new Date())}.csv`;
+  downloadCsv(filename, [headers, ...rows]);
+  if (status) status.textContent = `Export ready: ${filename}`;
+  if (button) {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
 }
 
 function summarizeLearnerSubjectForExport(learner, subject) {
@@ -1072,6 +1089,21 @@ function downloadCsv(filename, rows) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function formatExportDateStamp(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+}
+
+function formatExportTimestamp(date) {
+  return date.toLocaleString([], {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 function escapeCsvCell(value) {

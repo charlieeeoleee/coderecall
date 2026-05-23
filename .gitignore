@@ -5,6 +5,8 @@ firestore-debug.log
 firebase-debug.log
 logs/
 manuals/tmp/
+manuals/tmp_render/
+manuals/pydeps/
 scripts/firebase-config.local.js
 scripts/firebase-config.runtime.js
 *.service-account.json

@@ -145,6 +145,20 @@ body { margin: 0; font-family: "Poppins", sans-serif; background: linear-gradien
 .topic-modal-row p { margin: 0; font-size: 13px; opacity: 0.84; }
 .topic-modal-row small { opacity: 0.72; }
 .secondary-action { padding: 10px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: white; cursor: pointer; }
+.secondary-action:disabled { opacity: 0.6; cursor: wait; }
+.export-action-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 280px;
+  text-align: right;
+}
+.export-action-group small {
+  color: rgba(255,255,255,0.68);
+  font-size: 11px;
+  line-height: 1.35;
+}
 .profile-layout { display: grid; gap: 16px; margin-bottom: 18px; }
 .profile-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .profile-stat-card { padding: 14px; border-radius: 16px; background: rgba(10, 16, 42, 0.24); border: 1px solid rgba(255,255,255,0.08); }
@@ -311,6 +325,7 @@ body.light-mode .inline-select {
   color: #1e1547;
 }
 body.light-mode .inbox-shortcut-card { background: rgba(255,255,255,0.82); }
+body.light-mode .export-action-group small { color: rgba(30, 21, 71, 0.62); }
 body.light-mode .panel-count-badge { background: rgba(15, 118, 110, 0.12); color: #0f766e; }
 body.light-mode .topic-breakdown-stat { background: rgba(130, 99, 255, 0.12); }
 .form-status { margin: 0; font-size: 13px; min-height: 20px; color: #8df6cb; }
@@ -495,6 +510,13 @@ body.light-mode .secondary-btn {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+  }
+
+  .export-action-group {
+    width: 100%;
+    max-width: none;
+    align-items: stretch;
+    text-align: left;
   }
 
   .panel-count-badge {

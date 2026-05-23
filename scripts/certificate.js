@@ -169,6 +169,8 @@ function setCertificateVisualState({ isComplete, isPreview }) {
   const sealText = document.querySelector(".certificate-seal strong");
   const verifyNote = document.getElementById("certificateVerifyNote");
 
+  document.body.classList.toggle("certificate-preview-mode", isComplete && isPreview);
+  document.body.classList.toggle("certificate-locked-mode", !isComplete);
   card?.classList.toggle("locked-certificate", !isComplete);
   card?.classList.toggle("preview-certificate", isComplete && isPreview);
 
@@ -528,13 +530,13 @@ async function renderCertificateCanvas(mode = "png") {
 }
 
 async function downloadCertificateAsPdf() {
-  if (!window.jspdf?.jsPDF) {
-    setStatus("PDF download is unavailable right now. Please try again in a moment.", true);
+  if (!window.jspdf?.jsPDF || typeof window.html2canvas !== "function") {
+    openBrowserPrintFallback();
     return;
   }
 
   const button = document.getElementById("printCertificateBtn");
-  const previousText = button?.textContent || "Download PDF";
+  const previousText = button?.textContent || "Print / PDF";
   if (button) {
     button.disabled = true;
     button.textContent = "Preparing...";
@@ -588,6 +590,15 @@ async function downloadCertificateAsPdf() {
 window.printCertificate = function() {
   downloadCertificateAsPdf();
 };
+
+function openBrowserPrintFallback() {
+  setStatus("Opening the browser print dialog. Choose Save as PDF to export this certificate.", false);
+  setExportMode("print");
+  window.setTimeout(() => {
+    window.print();
+    window.setTimeout(() => setExportMode(""), 300);
+  }, 100);
+}
 
 window.goBackToSubject = function() {
   if (certificateKind === "dual") {
