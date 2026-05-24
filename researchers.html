@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Researchers | Code Recall</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles/landing.css">
+  <link rel="stylesheet" href="styles/researchers.css?v=20260525a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-code">CODE:</span>
+      <span class="logo-recall">RECALL!</span>
+    </div>
+
+    <button class="nav-toggle" onclick="toggleMobileNav()" aria-label="Open navigation" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="researchers.html" class="active-link">Researchers</a>
+      <a href="subjects-preview.html">Subjects</a>
+      <a href="coming-soon.html?feature=Future%20Feature&state=in%20development&note=This%20navigation%20slot%20is%20reserved%20for%20new%20features%20that%20are%20already%20linked%20but%20not%20finished%20yet.">Future Feature</a>
+      <a href="contact.html">Contact Us</a>
+      <a href="faq.html">FAQ</a>
+      <button class="login-btn" onclick="goToAuth()" data-auth-cta data-signed-out-label="Login" data-signed-in-label="Dashboard">Login</button>
+    </nav>
+  </header>
+
+  <main class="landing-page researchers-page">
+    <section class="researchers-hero fade-in">
+      <div class="researchers-hero-copy">
+        <div class="hero-badge">Research Team</div>
+        <h1>The Researchers</h1>
+        <p>
+          Meet the team behind Code Recall, a gamified learning platform designed
+          to support Computer System Servicing learners through interactive lessons,
+          assessments, progress tracking, and achievement-based motivation.
+        </p>
+      </div>
+
+      <div class="researchers-hero-panel">
+        <span>Code Recall</span>
+        <strong>Gamified Learning System</strong>
+        <p>Development, documentation, content organization, testing, and evaluation.</p>
+      </div>
+    </section>
+
+    <section class="section-block fade-in">
+      <div class="section-heading">
+        <h2>Research Team Profile</h2>
+        <p>Select a researcher card to view the enlarged profile and full details.</p>
+      </div>
+
+      <div id="researcherGrid" class="researcher-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div id="researcherModal" class="researcher-modal" role="dialog" aria-modal="true" aria-labelledby="researcherModalName" hidden>
+    <div class="researcher-modal-backdrop" data-close-modal></div>
+    <article class="researcher-modal-card" tabindex="-1">
+      <button class="researcher-modal-close" type="button" data-close-modal aria-label="Close researcher details">&times;</button>
+      <div id="researcherModalPhoto" class="researcher-modal-photo"></div>
+      <div class="researcher-modal-content">
+        <p id="researcherModalRole" class="researcher-modal-role"></p>
+        <h2 id="researcherModalName"></h2>
+        <p id="researcherModalSection" class="researcher-modal-section"></p>
+        <p id="researcherModalBio" class="researcher-modal-bio"></p>
+        <div id="researcherModalTags" class="researcher-tags"></div>
+      </div>
+    </article>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2026 Code Recall System | Gamified Learning Platform</p>
+    </div>
+  </footer>
+
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">&#127769;</span>
+  </button>
+
+  <script src="scripts/firebase-config.runtime.js"></script>
+  <script type="module" src="scripts/researchers.js?v=20260525a"></script>
+  <script src="scripts/loading.js?v=20260519f" defer></script>
+</body>
+</html>

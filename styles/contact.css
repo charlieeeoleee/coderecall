@@ -981,11 +981,37 @@ body.light-mode .learner-status-chip.resolved {
 
   .nav-links {
     width: 100%;
+    box-sizing: border-box;
     display: none;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-    padding-top: 8px;
+    align-items: stretch;
+    gap: 8px;
+    max-height: calc(100vh - 104px);
+    overflow-y: auto;
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 20px;
+    background: rgba(16, 24, 55, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 40px rgba(4, 7, 22, 0.28);
+  }
+
+  .nav-links a {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border-radius: 12px;
+  }
+
+  .nav-links a:hover,
+  .nav-links a.active-link {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .login-btn {
+    width: 100%;
+    margin-top: 4px;
   }
 
   .navbar.mobile-nav-open .nav-links,

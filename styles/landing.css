@@ -431,11 +431,14 @@ body.light-mode .nav-toggle span{
     top:calc(100% + 10px);
     left:18px;
     right:18px;
+    box-sizing:border-box;
     display:none;
     flex-direction:column;
     align-items:stretch;
-    gap:10px;
-    padding:16px;
+    gap:8px;
+    max-height:calc(100vh - 96px);
+    overflow-y:auto;
+    padding:14px;
     border-radius:20px;
     background:rgba(26,17,64,0.96);
     border:1px solid rgba(255,255,255,0.08);
@@ -454,8 +457,15 @@ body.light-mode .nav-toggle span{
   .nav-links a{
     display:block;
     width:100%;
-    padding:10px 4px;
+    box-sizing:border-box;
+    padding:11px 12px;
+    border-radius:12px;
     font-size:15px;
+  }
+
+  .nav-links a:hover,
+  .nav-links a.active-link{
+    background:rgba(255,255,255,0.08);
   }
 
   .login-btn{
