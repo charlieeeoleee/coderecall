@@ -23,6 +23,16 @@ const researchers = [
     image: "assets/researchers/researcher-2.png"
   },
   {
+    name: "Charles Vincent Robeso",
+    role: "Group Leader / Main Developer",
+    email: "2023-203748@rtu.edu.ph",
+    section: "Computer System Servicing Research Team",
+    summary: "Led the group and handled the main development of the Code Recall system.",
+    bio: "Served as the group leader and main developer of Code Recall, leading the technical implementation, feature integration, interface refinement, and final system preparation for demonstration.",
+    tags: ["Group Leadership", "Main Development", "System Integration"],
+    image: "assets/researchers/researcher-5.png"
+  },
+  {
     name: "Marvic Mansibang",
     role: "Content and Assessment Coordinator",
     email: "2023-200087@rtu.edu.ph",
@@ -41,16 +51,6 @@ const researchers = [
     bio: "Supported the documentation of system features, checked usability issues, reviewed presentation materials, and helped prepare the system for final demonstration.",
     tags: ["Documentation", "Testing", "Presentation"],
     image: "assets/researchers/researcher-4.png"
-  },
-  {
-    name: "Charles Vincent Robeso",
-    role: "Group Leader / Main Developer",
-    email: "2023-203748@rtu.edu.ph",
-    section: "Computer System Servicing Research Team",
-    summary: "Led the group and handled the main development of the Code Recall system.",
-    bio: "Served as the group leader and main developer of Code Recall, leading the technical implementation, feature integration, interface refinement, and final system preparation for demonstration.",
-    tags: ["Group Leadership", "Main Development", "System Integration"],
-    image: "assets/researchers/researcher-5.png"
   }
 ];
 
