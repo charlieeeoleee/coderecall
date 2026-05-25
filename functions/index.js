@@ -6,6 +6,14 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 initializeApp();
 
 const PRIVILEGED_ROLES = new Set(["admin", "super_admin"]);
+const ADMIN_EMAILS = new Set([
+  "marvicdatulmansibang@gmail.com",
+  "biancadenisemedel@gmail.com",
+  "reinbarb27@gmail.com"
+]);
+const SUPER_ADMIN_EMAILS = new Set([
+  "charlesvrobeso@gmail.com"
+]);
 
 function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
@@ -29,9 +37,27 @@ async function resolvePrivilegedRole(uid, authUser) {
   const claimRole = roleFromClaims(authUser.customClaims || {});
   if (claimRole) return claimRole;
 
-  const userDoc = await getFirestore().collection("users").doc(uid).get();
-  if (!userDoc.exists) return "";
-  return privilegedRoleFromUserDoc(userDoc.data() || {});
+  const db = getFirestore();
+  const email = String(authUser.email || "").trim().toLowerCase();
+
+  if (email) {
+    const accessDoc = await db.collection("accessRoles").doc(encodeURIComponent(email)).get();
+    if (accessDoc.exists) {
+      const accessRole = normalizeRole(accessDoc.data()?.role);
+      if (PRIVILEGED_ROLES.has(accessRole)) return accessRole;
+      if (accessRole === "user") return "";
+    }
+  }
+
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (userDoc.exists) {
+    const userRole = privilegedRoleFromUserDoc(userDoc.data() || {});
+    if (userRole) return userRole;
+  }
+
+  if (SUPER_ADMIN_EMAILS.has(email)) return "super_admin";
+  if (ADMIN_EMAILS.has(email)) return "admin";
+  return "";
 }
 
 exports.resetOwnMfaEnrollment = onCall({
