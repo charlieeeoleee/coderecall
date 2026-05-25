@@ -284,6 +284,7 @@ service cloud.firestore {
       allow create: if validOwnerUserCreate(userId);
       allow read: if isOwner(userId) || isMfaAdmin();
       allow update: if validOwnerUserUpdate(userId) || validAdminUserUpdate() || isMfaSuperAdmin();
+      allow delete: if isMfaSuperAdmin() && request.auth.uid != userId;
     }
 
     match /leaderboard_public/{userId} {

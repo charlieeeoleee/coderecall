@@ -1380,6 +1380,7 @@ function renderUserTable(users) {
         "Delete User Record",
         "Delete this user record from Firestore? This will not remove the Firebase Auth account.",
         async () => {
+          setStatus("Deleting user record...");
           await deleteDoc(doc(db, "users", userId));
           await writeAuditLog("user_record_deleted", `Deleted Firestore record for user ${userId}`);
           setStatus("User record removed. Reloading table...");
@@ -1748,6 +1749,15 @@ async function writeAuditLog(action, details) {
   });
 }
 
+function formatFirebaseError(error) {
+  const code = error?.code || "";
+  if (code === "permission-denied") {
+    return "Permission denied. Make sure your super admin session has completed Firebase 2FA.";
+  }
+
+  return error?.message || "Please try again.";
+}
+
 function setStatus(message) {
   const el = document.getElementById("superAdminStatus");
   if (el) el.textContent = message;
@@ -1907,7 +1917,7 @@ function initializeSystemPopup() {
       await systemPopupAction();
     } catch (error) {
       console.error("System popup action failed:", error);
-      setGrantStatus("Unable to complete the action. Please try again.");
+      setStatus(`Unable to complete the action: ${formatFirebaseError(error)}`);
       systemPopupBusy = false;
       confirmBtn.disabled = false;
       if (cancelBtn) cancelBtn.disabled = false;
