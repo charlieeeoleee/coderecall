@@ -290,6 +290,7 @@ service cloud.firestore {
     match /leaderboard_public/{userId} {
       allow read: if true;
       allow create, update: if isOwner(userId) || isMfaAdmin();
+      allow delete: if isMfaSuperAdmin() && request.auth.uid != userId;
     }
 
     match /accessRoles/{roleId} {

@@ -1378,12 +1378,15 @@ function renderUserTable(users) {
       if (!userId || userId === currentUser.uid) return;
       openSystemPopup(
         "Delete User Record",
-        "Delete this user record from Firestore? This will not remove the Firebase Auth account.",
+        "Delete this user's Firestore app record and public leaderboard entry? This will not remove the Firebase Auth account or clear saved data on the learner's own browser.",
         async () => {
-          setStatus("Deleting user record...");
-          await deleteDoc(doc(db, "users", userId));
-          await writeAuditLog("user_record_deleted", `Deleted Firestore record for user ${userId}`);
-          setStatus("User record removed. Reloading table...");
+          setStatus("Deleting user record and leaderboard entry...");
+          await Promise.all([
+            deleteDoc(doc(db, "users", userId)),
+            deleteDoc(doc(db, "leaderboard_public", userId))
+          ]);
+          await writeAuditLog("user_record_deleted", `Deleted Firestore user and leaderboard records for user ${userId}`);
+          setStatus("User record and leaderboard entry removed. Reloading table...");
           closeSystemPopup();
           await loadSuperAdminDashboard();
         }
