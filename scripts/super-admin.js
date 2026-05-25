@@ -1340,6 +1340,7 @@ function renderUserTable(users) {
       <td data-label="Progress">${progressCount} flags</td>
       <td data-label="Actions">
         <button class="primary-action compact-action" data-save-user="${user.id}">Save</button>
+        <button class="secondary-action compact-action" data-reset-user="${user.id}">Reset Learner Data</button>
         <button class="danger-action compact-action" data-delete-user="${user.id}" ${user.id === currentUser.uid ? "disabled" : ""}>Delete Record</button>
       </td>
     `;
@@ -1369,6 +1370,55 @@ function renderUserTable(users) {
       await writeAuditLog("user_access_updated", `Updated user ${userId} to role ${selectedRole} and status ${selectedStatus}`);
       setStatus("User access updated successfully.");
       await loadSuperAdminDashboard();
+    });
+  });
+
+  body.querySelectorAll("[data-reset-user]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const userId = button.getAttribute("data-reset-user");
+      if (!userId) return;
+      const userRecord = users.find((entry) => entry.id === userId) || {};
+      const userName = userRecord.name || userRecord.email || "this learner";
+      const role = getRoleFromUserData(userRecord);
+      const resetProgress = role && role !== "user" ? { role } : {};
+
+      openSystemPopup(
+        "Reset Learner Data",
+        `Reset XP, progress, assessment results, review queues, and leaderboard score for ${userName}? The account record, role, email, and login access will stay.`,
+        async () => {
+          setStatus("Resetting learner data...");
+          await Promise.all([
+            setDoc(doc(db, "users", userId), {
+              xp: 0,
+              xpWeekly: 0,
+              xpChange: 0,
+              streak: 0,
+              progress: resetProgress,
+              results: {},
+              wrongAnswerReview: [],
+              studyHistory: [],
+              retentionQueue: [],
+              resumeActivity: null,
+              lastWeeklyReset: "",
+              lastActiveDate: "",
+              updatedAt: serverTimestamp()
+            }, { merge: true }),
+            setDoc(doc(db, "leaderboard_public", userId), {
+              name: userRecord.name || userRecord.email || "User",
+              photo: userRecord.photo || "https://i.pravatar.cc/40?img=12",
+              xp: 0,
+              xpWeekly: 0,
+              xpChange: 0,
+              updatedAt: new Date().toISOString()
+            }, { merge: true })
+          ]);
+          await writeAuditLog("learner_data_reset", `Reset learner data and leaderboard score for user ${userId}`);
+          setStatus("Learner data reset. Reloading table...");
+          closeSystemPopup();
+          await loadSuperAdminDashboard();
+        },
+        { confirmLabel: "Reset Data" }
+      );
     });
   });
 
