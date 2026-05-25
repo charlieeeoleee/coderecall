@@ -26,9 +26,11 @@ function getConfiguredRoleFromEmail(email = "") {
 }
 
 export function getRoleFromUserData(data = {}) {
+  const rawStoredRole = data.role || data.progress?.role || "";
+  if (rawStoredRole) return normalizeRole(rawStoredRole);
   const configuredRole = getConfiguredRoleFromEmail(data.email || "");
   if (configuredRole !== "user") return configuredRole;
-  return normalizeRole(data.role || data.progress?.role || "user");
+  return "user";
 }
 
 function getRoleFromClaims(claims = {}) {
@@ -61,12 +63,6 @@ export async function resolveUserRole(db, user) {
     logRoleWarning("Unable to read user role claims.", error);
   }
 
-  const configuredRole = getConfiguredRoleFromEmail(normalizedEmail);
-  if (configuredRole !== "user") {
-    logRoleWarning("Using temporary configured admin email fallback. Replace this with Firebase Auth custom claims before public release.");
-    return configuredRole;
-  }
-
   try {
     if (normalizedEmail) {
       const accessKey = encodeURIComponent(normalizedEmail);
@@ -95,6 +91,12 @@ export async function resolveUserRole(db, user) {
     if (!isPermissionDenied(error)) {
       logRoleWarning("Unable to read stored user role.", error);
     }
+  }
+
+  const configuredRole = getConfiguredRoleFromEmail(normalizedEmail);
+  if (configuredRole !== "user") {
+    logRoleWarning("Using temporary configured admin email fallback. Replace this with Firebase Auth custom claims before public release.");
+    return configuredRole;
   }
 
   return "user";

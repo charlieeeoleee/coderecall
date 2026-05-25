@@ -303,6 +303,7 @@ service cloud.firestore {
       allow read: if isMfaSuperAdmin() || (isOwner(userId) && securityProfileHasNoStoredSecrets());
       allow create: if validLegacySecurityProfileWrite() || validNativeMfaSecurityProfileCreate(userId);
       allow update: if validLegacySecurityProfileWrite() || validNativeMfaSecurityProfileUpdate(userId);
+      allow delete: if isMfaSuperAdmin() && request.auth.uid != userId;
     }
 
     match /pendingUsers/{pendingUserId} {

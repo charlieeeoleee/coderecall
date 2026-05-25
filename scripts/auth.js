@@ -21,7 +21,7 @@ import {
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { resolveUserRole, syncUserRole } from "./role-utils.js";
+import { resolveUserRole, syncUserRole } from "./role-utils.js?v=20260525a";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { clearAdminMfaSession } from "./admin-mfa-session.js";

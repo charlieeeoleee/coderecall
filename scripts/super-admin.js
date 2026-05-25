@@ -27,7 +27,7 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
-import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js";
+import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js?v=20260525a";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { enforcePrivilegedMfa, getFirebaseSecondFactorProvider, signedInWithSecondFactor } from "./firebase-native-mfa.js";
 import { syncNativeMfaProfile } from "./native-mfa-profile.js";
@@ -1426,17 +1426,32 @@ function renderUserTable(users) {
     button.addEventListener("click", async () => {
       const userId = button.getAttribute("data-delete-user");
       if (!userId || userId === currentUser.uid) return;
+      const userRecord = users.find((entry) => entry.id === userId) || {};
+      const userEmail = String(userRecord.email || "").trim().toLowerCase();
       openSystemPopup(
         "Delete User Record",
-        "Delete this user's Firestore app record and public leaderboard entry? This will not remove the Firebase Auth account or clear saved data on the learner's own browser.",
+        "Delete this user's Firestore app record, public leaderboard entry, 2FA profile, and email access grant? This will not remove the Firebase Auth account or clear saved data on the learner's own browser.",
         async () => {
-          setStatus("Deleting user record and leaderboard entry...");
-          await Promise.all([
+          setStatus("Deleting user record and revoking app access...");
+          const deletionTasks = [
             deleteDoc(doc(db, "users", userId)),
-            deleteDoc(doc(db, "leaderboard_public", userId))
-          ]);
-          await writeAuditLog("user_record_deleted", `Deleted Firestore user and leaderboard records for user ${userId}`);
-          setStatus("User record and leaderboard entry removed. Reloading table...");
+            deleteDoc(doc(db, "leaderboard_public", userId)),
+            deleteDoc(doc(db, "securityProfiles", userId))
+          ];
+
+          if (userEmail) {
+            deletionTasks.push(setDoc(doc(db, "accessRoles", encodeURIComponent(userEmail)), {
+              email: userEmail,
+              role: "user",
+              revokedAt: serverTimestamp(),
+              revokedByUid: currentUser.uid,
+              revokedByEmail: currentUser.email || ""
+            }, { merge: true }));
+          }
+
+          await Promise.all(deletionTasks);
+          await writeAuditLog("user_record_deleted", `Deleted Firestore user, leaderboard, security profile, and revoked app role for user ${userId}`);
+          setStatus("User record removed and app access revoked. Reloading table...");
           closeSystemPopup();
           await loadSuperAdminDashboard();
         }
