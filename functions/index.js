@@ -62,7 +62,8 @@ async function resolvePrivilegedRole(uid, authUser) {
 
 exports.resetOwnMfaEnrollment = onCall({
   region: "us-central1",
-  enforceAppCheck: false
+  enforceAppCheck: false,
+  invoker: "public"
 }, async (request) => {
   if (!request.auth?.uid) {
     throw new HttpsError("unauthenticated", "Sign in before resetting 2FA.");
