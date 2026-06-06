@@ -50,6 +50,14 @@ const DEMO_ANALYTICS_DIFFICULTIES = ["easy", "medium", "hard"];
 const DEMO_ANALYTICS_QUIZ_LEVELS = 25;
 const DEMO_ANALYTICS_QUIZ_TOTAL = 3;
 const DEMO_ANALYTICS_MODULES_PER_DIFFICULTY = 3;
+const DEMO_ANALYTICS_SCORE_OVERRIDES = {
+  "iancisesanjose@gmail.com": {
+    electrical_pretest: { score: 24, total: 30 },
+    electrical_posttest: { score: 28, total: 30 },
+    hardware_pretest: { score: 23, total: 30 },
+    hardware_posttest: { score: 27, total: 30 }
+  }
+};
 
 let currentUser = null;
 let currentRole = "user";
@@ -232,10 +240,32 @@ function applyDemoAnalyticsOverlay(users) {
       nextUser.results[posttestKey] = demoResult;
       nextUser.progress[posttestKey] = true;
       nextUser.progress[`${posttestKey}_demo_preview`] = true;
+
+      applyDemoAssessmentOverride(nextUser, pretestKey);
+      applyDemoAssessmentOverride(nextUser, posttestKey);
     });
 
     return nextUser;
   });
+}
+
+function applyDemoAssessmentOverride(user, key) {
+  const email = String(user.email || "").toLowerCase();
+  const override = DEMO_ANALYTICS_SCORE_OVERRIDES[email]?.[key];
+  if (!override) return;
+
+  const total = Math.max(1, Number(override.total || 30) || 30);
+  const score = Math.min(total, Math.max(0, Number(override.score || 0)));
+  user.results[key] = {
+    score,
+    total,
+    percent: Math.round((score / total) * 100),
+    xpEarned: score,
+    source: "analytics_preview_override",
+    note: "Sample score adjusted only for admin panel presentation mode."
+  };
+  user.progress[key] = true;
+  user.progress[`${key}_demo_preview`] = true;
 }
 
 function buildDemoXpTotal(learnerIndex) {
