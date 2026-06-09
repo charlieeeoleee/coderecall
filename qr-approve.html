@@ -23,9 +23,18 @@
         <span id="approvalStatus">Preparing secure approval request.</span>
       </div>
 
+      <form id="phonePasswordForm" class="phone-password-form" hidden>
+        <label for="phoneEmail">Email</label>
+        <input id="phoneEmail" type="email" autocomplete="email" placeholder="Email">
+        <label for="phonePassword">Password</label>
+        <input id="phonePassword" type="password" autocomplete="current-password" placeholder="Password">
+        <button type="submit" class="secondary">Sign In with Email</button>
+      </form>
+
       <div class="approval-actions">
         <button id="approveQrBtn" type="button">Approve Login</button>
         <button id="phoneGoogleBtn" type="button" class="secondary">Sign In with Google</button>
+        <button id="phonePasswordToggleBtn" type="button" class="secondary">Use Email Instead</button>
       </div>
 
       <p class="approval-note">Only approve this when the QR code is visible on your own computer.</p>
@@ -33,6 +42,6 @@
   </main>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/qr-approve.js"></script>
+  <script type="module" src="scripts/qr-approve.js?v=20260609b"></script>
 </body>
 </html>

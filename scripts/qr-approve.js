@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   getRedirectResult,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
   signInWithRedirect
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
@@ -21,6 +22,7 @@ const pendingQrApprovalKey = "code_recall_pending_qr_approval";
 
 let currentUser = null;
 let approvalCompleted = false;
+let authStateResolved = false;
 
 function setStatus(message, isError = false) {
   const status = document.getElementById("approvalStatus");
@@ -33,7 +35,8 @@ function syncAccountLabel() {
   const account = document.getElementById("approvalAccount");
   const approveBtn = document.getElementById("approveQrBtn");
   const googleBtn = document.getElementById("phoneGoogleBtn");
-  if (!account || !approveBtn || !googleBtn) return;
+  const passwordToggleBtn = document.getElementById("phonePasswordToggleBtn");
+  if (!account || !approveBtn || !googleBtn || !passwordToggleBtn) return;
   const pending = getPendingQrApproval();
   const hasQrRequest = Boolean((requestId && secret) || (pending.requestId && pending.secret));
 
@@ -41,6 +44,7 @@ function syncAccountLabel() {
     account.textContent = "Invalid QR login link";
     approveBtn.disabled = true;
     googleBtn.hidden = true;
+    passwordToggleBtn.hidden = true;
     setStatus("Generate a new QR code from the login page.", true);
     return;
   }
@@ -49,6 +53,8 @@ function syncAccountLabel() {
     account.textContent = currentUser.email || currentUser.displayName || "Signed-in account";
     approveBtn.disabled = false;
     googleBtn.hidden = true;
+    passwordToggleBtn.hidden = true;
+    document.getElementById("phonePasswordForm")?.setAttribute("hidden", "");
     setStatus("Ready to approve this desktop sign-in.");
     return;
   }
@@ -56,6 +62,7 @@ function syncAccountLabel() {
   account.textContent = "No phone account signed in";
   approveBtn.disabled = true;
   googleBtn.hidden = false;
+  passwordToggleBtn.hidden = false;
   setStatus("Sign in on this phone first, then approve the QR login.");
 }
 
@@ -64,7 +71,10 @@ async function approveLogin() {
   const pending = getPendingQrApproval();
   const activeRequestId = requestId || pending.requestId || "";
   const activeSecret = secret || pending.secret || "";
-  if (!currentUser || !activeRequestId || !activeSecret || approveBtn?.disabled || approvalCompleted) return;
+  if (!currentUser || !activeRequestId || !activeSecret || approvalCompleted) {
+    syncAccountLabel();
+    return;
+  }
 
   approveBtn.disabled = true;
   setStatus("Approving desktop sign-in...");
@@ -114,12 +124,52 @@ async function signInWithGoogle() {
   }
 }
 
+async function signInWithEmail(event) {
+  event.preventDefault();
+  const form = document.getElementById("phonePasswordForm");
+  const email = document.getElementById("phoneEmail")?.value.trim();
+  const password = document.getElementById("phonePassword")?.value || "";
+  if (!email || !password) {
+    setStatus("Enter your email and password first.", true);
+    return;
+  }
+
+  const button = form?.querySelector("button[type='submit']");
+  if (button) button.disabled = true;
+  setStatus("Signing in with email...");
+
+  try {
+    savePendingQrApproval();
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    console.error("Phone email sign-in failed:", error);
+    setStatus(error?.message || "Email sign-in failed.", true);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function togglePasswordForm() {
+  const form = document.getElementById("phonePasswordForm");
+  const toggle = document.getElementById("phonePasswordToggleBtn");
+  if (!form || !toggle) return;
+  const nextHidden = !form.hidden;
+  form.hidden = nextHidden;
+  toggle.textContent = nextHidden ? "Use Email Instead" : "Hide Email Sign-In";
+}
+
 async function handleGoogleRedirectReturn() {
   const pending = getPendingQrApproval();
   if (!pending.requestId || !pending.secret) return;
 
   try {
-    await getRedirectResult(auth);
+    const result = await Promise.race([
+      getRedirectResult(auth),
+      new Promise((resolve) => window.setTimeout(() => resolve(null), 5000))
+    ]);
+    if (result?.user) {
+      currentUser = result.user;
+    }
     setStatus("Returned from Google. Checking account...");
   } catch (error) {
     console.error("Google redirect result failed:", error);
@@ -131,8 +181,11 @@ async function handleGoogleRedirectReturn() {
 
 document.getElementById("approveQrBtn")?.addEventListener("click", approveLogin);
 document.getElementById("phoneGoogleBtn")?.addEventListener("click", signInWithGoogle);
+document.getElementById("phonePasswordToggleBtn")?.addEventListener("click", togglePasswordForm);
+document.getElementById("phonePasswordForm")?.addEventListener("submit", signInWithEmail);
 
 onAuthStateChanged(auth, (user) => {
+  authStateResolved = true;
   currentUser = user || null;
   syncAccountLabel();
   if (currentUser && getPendingQrApproval().requestId && !approvalCompleted) {
@@ -140,4 +193,11 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+syncAccountLabel();
 handleGoogleRedirectReturn();
+
+window.setTimeout(() => {
+  if (authStateResolved || currentUser || approvalCompleted) return;
+  syncAccountLabel();
+  setStatus("Still checking the phone sign-in. If this stays here, use Email Instead or reopen the QR link.", true);
+}, 8000);
