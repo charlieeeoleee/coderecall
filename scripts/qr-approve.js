@@ -2,8 +2,9 @@ import { app } from "./firebase-config.js";
 import {
   getAuth,
   GoogleAuthProvider,
+  getRedirectResult,
   onAuthStateChanged,
-  signInWithPopup
+  signInWithRedirect
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   getFunctions,
@@ -16,8 +17,10 @@ const approveQrLoginRequest = httpsCallable(functions, "approveQrLoginRequest");
 const params = new URLSearchParams(window.location.search);
 const requestId = params.get("requestId") || "";
 const secret = params.get("secret") || "";
+const pendingQrApprovalKey = "code_recall_pending_qr_approval";
 
 let currentUser = null;
+let approvalCompleted = false;
 
 function setStatus(message, isError = false) {
   const status = document.getElementById("approvalStatus");
@@ -31,8 +34,10 @@ function syncAccountLabel() {
   const approveBtn = document.getElementById("approveQrBtn");
   const googleBtn = document.getElementById("phoneGoogleBtn");
   if (!account || !approveBtn || !googleBtn) return;
+  const pending = getPendingQrApproval();
+  const hasQrRequest = Boolean((requestId && secret) || (pending.requestId && pending.secret));
 
-  if (!requestId || !secret) {
+  if (!hasQrRequest) {
     account.textContent = "Invalid QR login link";
     approveBtn.disabled = true;
     googleBtn.hidden = true;
@@ -56,14 +61,19 @@ function syncAccountLabel() {
 
 async function approveLogin() {
   const approveBtn = document.getElementById("approveQrBtn");
-  if (!currentUser || !requestId || !secret || approveBtn?.disabled) return;
+  const pending = getPendingQrApproval();
+  const activeRequestId = requestId || pending.requestId || "";
+  const activeSecret = secret || pending.secret || "";
+  if (!currentUser || !activeRequestId || !activeSecret || approveBtn?.disabled || approvalCompleted) return;
 
   approveBtn.disabled = true;
   setStatus("Approving desktop sign-in...");
 
   try {
-    const result = await approveQrLoginRequest({ requestId, secret });
+    const result = await approveQrLoginRequest({ requestId: activeRequestId, secret: activeSecret });
     const email = result.data?.email || currentUser.email || "";
+    approvalCompleted = true;
+    sessionStorage.removeItem(pendingQrApprovalKey);
     setStatus(`Approved for ${email}. You can return to the desktop browser.`);
     document.getElementById("approvalCopy").textContent = "Desktop sign-in approved.";
   } catch (error) {
@@ -73,21 +83,49 @@ async function approveLogin() {
   }
 }
 
+function savePendingQrApproval() {
+  if (!requestId || !secret) return;
+  sessionStorage.setItem(pendingQrApprovalKey, JSON.stringify({ requestId, secret }));
+}
+
+function getPendingQrApproval() {
+  try {
+    return JSON.parse(sessionStorage.getItem(pendingQrApprovalKey) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
 async function signInWithGoogle() {
   const googleBtn = document.getElementById("phoneGoogleBtn");
   if (googleBtn?.disabled) return;
 
   googleBtn.disabled = true;
-  setStatus("Opening Google sign-in...");
+  setStatus("Redirecting to Google sign-in...");
 
   try {
+    savePendingQrApproval();
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   } catch (error) {
-    console.error("Phone Google sign-in failed:", error);
+    console.error("Phone Google redirect sign-in failed:", error);
+    setStatus(error?.message || "Google sign-in could not start.", true);
+    googleBtn.disabled = false;
+  }
+}
+
+async function handleGoogleRedirectReturn() {
+  const pending = getPendingQrApproval();
+  if (!pending.requestId || !pending.secret) return;
+
+  try {
+    await getRedirectResult(auth);
+    setStatus("Returned from Google. Checking account...");
+  } catch (error) {
+    console.error("Google redirect result failed:", error);
     setStatus(error?.message || "Google sign-in was not completed.", true);
   } finally {
-    googleBtn.disabled = false;
+    syncAccountLabel();
   }
 }
 
@@ -97,4 +135,9 @@ document.getElementById("phoneGoogleBtn")?.addEventListener("click", signInWithG
 onAuthStateChanged(auth, (user) => {
   currentUser = user || null;
   syncAccountLabel();
+  if (currentUser && getPendingQrApproval().requestId && !approvalCompleted) {
+    approveLogin();
+  }
 });
+
+handleGoogleRedirectReturn();
