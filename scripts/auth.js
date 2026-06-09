@@ -4,8 +4,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  browserLocalPersistence,
   signInWithPopup,
   signInWithRedirect,
+  setPersistence,
   getRedirectResult,
   onAuthStateChanged,
   sendEmailVerification,
@@ -40,6 +42,9 @@ const db = getFirestore(app);
 const functions = getFunctions(app, "us-central1");
 const createQrLoginRequest = httpsCallable(functions, "createQrLoginRequest");
 const exchangeQrLoginRequest = httpsCallable(functions, "exchangeQrLoginRequest");
+const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn("Firebase auth persistence could not be forced to local storage:", error);
+});
 
 const pendingGoogleKey = "pendingGoogleRegistration";
 const googleRedirectPendingKey = "codeRecallGoogleRedirectPending";
@@ -329,6 +334,7 @@ window.googleLogin = async function(){
     if (shouldUseGoogleRedirect()) {
       sessionStorage.setItem(googleRedirectPendingKey, "true");
       setGoogleButtonsLoading(true, "Redirecting to Google...");
+      await authPersistenceReady;
       await signInWithRedirect(auth, provider);
       return;
     }
@@ -376,6 +382,7 @@ async function handleGoogleRedirectResult() {
       setGoogleButtonsLoading(true, "Finishing Google sign-in...");
     }
 
+    await authPersistenceReady;
     const result = await getRedirectResult(auth);
     sessionStorage.removeItem(googleRedirectPendingKey);
 
@@ -388,7 +395,7 @@ async function handleGoogleRedirectResult() {
       }
 
       if (wasRedirectPending) {
-        showPopup("Google Login Error", "Google returned to Code Recall, but Firebase did not complete the sign-in session. Please try again in an incognito window or clear site data for coderecall.online.");
+        showPopup("Google Login Error", "Google returned to Code Recall, but this browser did not restore the Firebase sign-in session. Turn off strict shields for this site, clear site data for gamifiedlearningsystem.web.app, or use Email Instead for QR approval.");
       }
 
       isHandlingAuthFlow = false;

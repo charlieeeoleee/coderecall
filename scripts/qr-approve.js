@@ -2,8 +2,10 @@ import { app } from "./firebase-config.js";
 import {
   getAuth,
   GoogleAuthProvider,
+  browserLocalPersistence,
   getRedirectResult,
   onAuthStateChanged,
+  setPersistence,
   signInWithEmailAndPassword,
   signInWithRedirect
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -15,6 +17,9 @@ import {
 const auth = getAuth(app);
 const functions = getFunctions(app, "us-central1");
 const approveQrLoginRequest = httpsCallable(functions, "approveQrLoginRequest");
+const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn("Firebase auth persistence could not be forced to local storage:", error);
+});
 const params = new URLSearchParams(window.location.search);
 const requestId = params.get("requestId") || "";
 const secret = params.get("secret") || "";
@@ -115,6 +120,7 @@ async function signInWithGoogle() {
 
   try {
     savePendingQrApproval();
+    await authPersistenceReady;
     const provider = new GoogleAuthProvider();
     await signInWithRedirect(auth, provider);
   } catch (error) {
@@ -140,6 +146,7 @@ async function signInWithEmail(event) {
 
   try {
     savePendingQrApproval();
+    await authPersistenceReady;
     await signInWithEmailAndPassword(auth, email, password);
   } catch (error) {
     console.error("Phone email sign-in failed:", error);
@@ -164,7 +171,7 @@ async function handleGoogleRedirectReturn() {
 
   try {
     const result = await Promise.race([
-      getRedirectResult(auth),
+      authPersistenceReady.then(() => getRedirectResult(auth)),
       new Promise((resolve) => window.setTimeout(() => resolve(null), 5000))
     ]);
     if (result?.user) {
