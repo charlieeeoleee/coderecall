@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Code: Recall - QR Login Approval</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/qr-approve.css">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <main class="approval-shell">
+    <section class="approval-card">
+      <div class="logo">CODE: RECALL!</div>
+      <span class="eyebrow">QR-Assisted Login</span>
+      <h1>Approve Desktop Sign-In</h1>
+      <p id="approvalCopy">Confirm that you are trying to sign in on another device.</p>
+
+      <div class="approval-panel">
+        <strong id="approvalAccount">Checking account...</strong>
+        <span id="approvalStatus">Preparing secure approval request.</span>
+      </div>
+
+      <div class="approval-actions">
+        <button id="approveQrBtn" type="button">Approve Login</button>
+        <button id="phoneGoogleBtn" type="button" class="secondary">Sign In with Google</button>
+      </div>
+
+      <p class="approval-note">Only approve this when the QR code is visible on your own computer.</p>
+    </section>
+  </main>
+
+  <script src="scripts/firebase-config.runtime.js"></script>
+  <script type="module" src="scripts/qr-approve.js"></script>
+</body>
+</html>

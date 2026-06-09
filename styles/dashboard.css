@@ -1965,6 +1965,17 @@ body.light-mode .view-full-btn{
   opacity:0.82;
 }
 
+.recent-activity-meta{
+  margin-top:auto;
+  width:fit-content;
+  padding:5px 9px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  color:#c8fff4;
+  font-size:11px;
+  font-weight:800;
+}
+
 .subject-assessment-row{
   display:flex;
   flex-direction:column;
@@ -2078,6 +2089,11 @@ body.light-mode .recent-activity-card{
 body.light-mode .recent-activity-kind{
   background:rgba(0,134,176,0.12);
   color:#007ca6;
+}
+
+body.light-mode .recent-activity-meta{
+  background:rgba(37,27,75,0.07);
+  color:#5b4aa8;
 }
 
 body.light-mode .subject-assessment-stack{

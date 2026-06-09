@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/dashboard.css?v=20260420b">
-  <link rel="stylesheet" href="styles/certificates.css?v=20260502b">
+  <link rel="stylesheet" href="styles/dashboard.css?v=20260607a">
+  <link rel="stylesheet" href="styles/certificates.css?v=20260607a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -68,7 +68,7 @@
         </div>
         <div class="card">
           <h3>Latest Issued</h3>
-          <p id="latestCertificateDate">-</p>
+          <p id="latestCertificateDate">Checking</p>
         </div>
       </div>
 
@@ -111,8 +111,13 @@
             </select>
           </label>
         </div>
-        <div id="certificateVaultSummary" class="certificate-vault-summary">Showing all certificates.</div>
-        <div id="certificateVaultGrid" class="certificate-vault-grid"></div>
+        <div id="certificateVaultSummary" class="certificate-vault-summary">Checking certificate requirements.</div>
+        <div id="certificateVaultGrid" class="certificate-vault-grid">
+          <div class="certificate-vault-empty">
+            <h4>Loading certificate vault</h4>
+            <p>We are checking your subject completion records.</p>
+          </div>
+        </div>
       </div>
 
       <div class="card section certificate-history-section">
@@ -122,7 +127,12 @@
             <span class="section-note">A timeline of certificates you already unlocked.</span>
           </div>
         </div>
-        <div id="certificateHistoryList" class="certificate-history-list"></div>
+        <div id="certificateHistoryList" class="certificate-history-list">
+          <div class="certificate-history-empty">
+            <h4>Loading issued history</h4>
+            <p>Issued certificates will appear here after the requirements are checked.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -146,7 +156,7 @@
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/certificates.js?v=20260502b"></script>
+  <script type="module" src="scripts/certificates.js?v=20260607a"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>
 </html>

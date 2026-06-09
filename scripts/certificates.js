@@ -347,7 +347,35 @@ function renderOverview(certificates) {
   const latest = getLatestDate(certificates.filter((item) => item.unlocked).map((item) => item.completedAt));
   document.getElementById("certificatesEarnedCount").textContent = String(earned);
   document.getElementById("certificatesReadyCount").textContent = String(ready);
-  document.getElementById("latestCertificateDate").textContent = latest ? formatDate(latest) : "-";
+  document.getElementById("latestCertificateDate").textContent = latest ? formatDate(latest) : "None yet";
+}
+
+function renderCertificatesLoadError() {
+  const summary = document.getElementById("certificateVaultSummary");
+  const grid = document.getElementById("certificateVaultGrid");
+  const history = document.getElementById("certificateHistoryList");
+
+  if (summary) {
+    summary.textContent = "Certificate records could not be loaded right now.";
+  }
+
+  if (grid) {
+    grid.innerHTML = `
+      <div class="certificate-vault-empty is-error">
+        <h4>Unable to load certificate vault</h4>
+        <p>Please refresh the page or check your connection. Your certificate records were not changed.</p>
+      </div>
+    `;
+  }
+
+  if (history) {
+    history.innerHTML = `
+      <div class="certificate-history-empty is-error">
+        <h4>Issued history unavailable</h4>
+        <p>Try refreshing after your connection is stable.</p>
+      </div>
+    `;
+  }
 }
 
 function renderCertificates(certificates) {
@@ -604,7 +632,12 @@ onAuthStateChanged(auth, async (user) => {
     updateUserUI("Guest", "https://i.pravatar.cc/40?img=8");
   }
 
-  await loadCertificatesPage();
+  try {
+    await loadCertificatesPage();
+  } catch (error) {
+    console.error("Unable to load certificates page:", error);
+    renderCertificatesLoadError();
+  }
 });
 
 loadTheme();

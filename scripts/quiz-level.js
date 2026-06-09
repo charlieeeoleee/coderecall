@@ -218,6 +218,7 @@ let awardedQuestionIds = new Set();
 let correctQuestionIdsThisRun = new Set();
 let wrongAnswerReviewKeys = new Set();
 let recoveredMistakesThisRun = 0;
+let answeredQuestionsThisRun = [];
 let imageInspectorAction = null;
 
 function getQuizPrefetchKey(level = quizLevel) {
@@ -699,6 +700,7 @@ async function saveQuizLevelResumeState() {
     selectedChoice,
     selectedConfidence,
     correctQuestionIdsThisRun: Array.from(correctQuestionIdsThisRun),
+    answeredQuestionsThisRun,
     questions,
     updatedAt: new Date().toISOString()
   };
@@ -740,6 +742,7 @@ function restoreQuizLevelResumeState() {
   selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
   selectedConfidence = typeof state.selectedConfidence === "string" ? state.selectedConfidence : null;
   correctQuestionIdsThisRun = new Set(normalizeQuestionIdList(state.correctQuestionIdsThisRun));
+  answeredQuestionsThisRun = Array.isArray(state.answeredQuestionsThisRun) ? state.answeredQuestionsThisRun : [];
   return true;
 }
 
@@ -1272,6 +1275,27 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
   };
 }
 
+function buildAnswerDetailItem(question, selectedAnswer, isCorrect) {
+  return {
+    subject,
+    type: "quiz-level",
+    difficulty,
+    quizLevel,
+    level: question?.level || quizLevel,
+    questionNumber: question?.sub || currentIndex + 1,
+    questionId: getQuestionIdentifier(question),
+    question: String(question?.question || ""),
+    selectedAnswer: String(selectedAnswer || ""),
+    correctAnswer: String(question?.answer || ""),
+    isCorrect: Boolean(isCorrect),
+    result: isCorrect ? "Correct" : "Wrong",
+    confidence: selectedConfidence || "",
+    rationale: buildRationale(question, isCorrect),
+    source: "saved_attempt",
+    answeredAt: new Date().toISOString()
+  };
+}
+
 function showRationale(isCorrect, question) {
   document.getElementById("rationaleTitle").textContent = isCorrect ? "Correct ✔" : "Wrong ✖";
   document.getElementById("rationaleText").textContent = buildRationale(question, isCorrect);
@@ -1423,6 +1447,7 @@ async function saveLevelCompletion({ earnedXP, awardedIds }) {
     score,
     total: questions.length,
     earnedXP,
+    answerItems: answeredQuestionsThisRun,
     xpAwardedQuestionIds: awardedIdList,
     completedAt: new Date().toISOString()
   };
@@ -1444,6 +1469,7 @@ async function finishLevel() {
   });
   await clearQuizLevelResumeState();
   correctQuestionIdsThisRun = new Set();
+  answeredQuestionsThisRun = [];
 
   document.getElementById("resultMessage").textContent =
     `You completed Level ${quizLevel} with a score of ${score}/${questions.length} and earned ${earnedXP} XP.`;
@@ -1474,6 +1500,7 @@ window.handleNext = function () {
   const reviewTrackingKey = buildReviewTrackingKey(reviewPayload);
   const lowConfidence = isLowConfidenceAnswer(selectedConfidence);
   const questionState = recordQuestionAttempt(currentQuestion, isCorrect);
+  answeredQuestionsThisRun.push(buildAnswerDetailItem(currentQuestion, selectedChoice, isCorrect));
 
   if (isCorrect) {
     correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion));

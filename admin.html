@@ -48,6 +48,10 @@
           <div>
           <h2 class="page-title">Admin Panel</h2>
           <p class="page-subtitle">Monitor student progress, identify learning bottlenecks, and draft new content for the pilot system.</p>
+          <div class="dashboard-refresh-row">
+            <button id="adminRefreshBtn" type="button" class="secondary-action">Refresh Data</button>
+            <span id="adminRefreshStatus" class="refresh-status">Dashboard data is ready.</span>
+          </div>
           </div>
         </div>
         <div class="user-top">
@@ -188,7 +192,8 @@
             </div>
             <div class="export-action-group">
               <button type="button" id="adminExportScoresBtn" class="secondary-action">Export Learner Scores</button>
-              <small id="adminExportStatus">CSV includes live records or current analytics preview values.</small>
+              <button type="button" id="adminExportAnswersBtn" class="secondary-action">Export Answer Details</button>
+              <small id="adminExportStatus">CSV includes learner scores and available question-level answer records.</small>
             </div>
           </div>
           <div class="table-wrap">

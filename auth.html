@@ -38,6 +38,7 @@
         </div>
 
         <div class="helper-links">
+          <p class="forgot-text" onclick="openAccountHelpPopup()">Need account help?</p>
           <p class="forgot-text" onclick="openResetPopup()">Forgot password?</p>
         </div>
 
@@ -56,6 +57,8 @@
             <span>Login with Google</span>
           </button>
         </div>
+
+        <button class="qr-login-btn" onclick="openQrLoginPopup()">Login with Phone QR</button>
 
         <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
 
@@ -157,6 +160,55 @@
       <div class="popup-actions">
         <button onclick="confirmResend()">Send Email</button>
         <button class="secondary-popup-btn" onclick="closeResendPopup()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT HELP POPUP -->
+  <div id="accountHelpPopup" class="popup">
+    <div class="popup-box account-help-box">
+      <h3>Account Help</h3>
+      <p class="account-help-intro">Choose the issue you need help with. Code Recall will guide you to the right recovery step.</p>
+
+      <div class="account-help-grid">
+        <button type="button" class="account-help-card" onclick="openResetFromHelp()">
+          <strong>Password Reset</strong>
+          <span>Send a password reset link to your email.</span>
+        </button>
+        <button type="button" class="account-help-card" onclick="openResendFromHelp()">
+          <strong>Email Verification</strong>
+          <span>Resend the verification email for password accounts.</span>
+        </button>
+        <a class="account-help-card" href="contact.html">
+          <strong>Contact Support</strong>
+          <span>Send an account, role, or access concern to the team.</span>
+        </a>
+        <div class="account-help-card account-help-note">
+          <strong>Admin / 2FA Access</strong>
+          <span>Ask a super admin to verify role access or reset enrolled 2FA when needed.</span>
+        </div>
+      </div>
+
+      <div class="popup-actions">
+        <button class="secondary-popup-btn" onclick="closeAccountHelpPopup()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR LOGIN POPUP -->
+  <div id="qrLoginPopup" class="popup">
+    <div class="popup-box qr-login-box">
+      <h3>Login with Phone QR</h3>
+      <p class="qr-login-intro">Scan this QR using your phone. After approval, this browser will sign in automatically.</p>
+      <div id="qrLoginImage" class="qr-login-image">Preparing QR...</div>
+      <div class="qr-login-steps">
+        <span>1. Scan QR</span>
+        <span>2. Approve on phone</span>
+        <span>3. Continue here</span>
+      </div>
+      <p id="qrLoginStatus" class="status-text">Generating one-time login request...</p>
+      <div class="popup-actions">
+        <button class="secondary-popup-btn" onclick="closeQrLoginPopup()">Cancel</button>
       </div>
     </div>
   </div>

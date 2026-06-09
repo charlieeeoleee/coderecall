@@ -238,6 +238,33 @@ function chooseLatestActivity(...items) {
   })[0];
 }
 
+function getSafeActivityUrl(url, fallbackUrl = "subjects.html") {
+  const value = String(url || "").trim();
+  if (!value) return fallbackUrl;
+  if (/^(javascript|data|vbscript):/i.test(value)) return fallbackUrl;
+  if (/^https?:\/\//i.test(value)) return fallbackUrl;
+  return value;
+}
+
+function normalizeActivityItem(item = {}, fallbackUrl = "history.html") {
+  if (!item) return null;
+  const actionUrl = getSafeActivityUrl(item.actionUrl, fallbackUrl);
+  const resumeUrl = item.resumeUrl ? getSafeActivityUrl(item.resumeUrl, actionUrl) : "";
+  return {
+    ...item,
+    actionUrl,
+    resumeUrl,
+    title: String(item.title || "Learning Activity").trim(),
+    detail: String(item.detail || "").trim(),
+    source: item.source || item.kind || "activity",
+    updatedAt: item.updatedAt || item.timestamp || new Date().toISOString()
+  };
+}
+
+function getActivityUrl(item = {}, fallbackUrl = "history.html") {
+  return getSafeActivityUrl(item.resumeUrl || item.actionUrl, fallbackUrl);
+}
+
 function formatResumeSavedAt(activity) {
   const rawDate = activity?.updatedAt || activity?.timestamp || "";
   const time = rawDate ? new Date(rawDate).getTime() : 0;
@@ -1158,23 +1185,24 @@ function renderContinueLearning(items = [], userData = {}, subjects = latestSubj
 
   cardEl.classList.remove("is-loading");
 
-  const latestHistory = items[0] || null;
-  const latestResume = chooseLatestActivity(readLocalResumeActivity());
-  const remoteResume = chooseLatestActivity(userData?.resumeActivity);
-  const latest = chooseLatestActivity(latestResume, remoteResume, latestHistory);
   const recommended = buildRecommendedLearningAction(subjects);
+  const recommendedActivity = normalizeActivityItem(recommended, "subjects.html");
+  const latestHistory = normalizeActivityItem(items[0] || null, recommendedActivity.actionUrl);
+  const latestResume = normalizeActivityItem(chooseLatestActivity(readLocalResumeActivity()), recommendedActivity.actionUrl);
+  const remoteResume = normalizeActivityItem(chooseLatestActivity(userData?.resumeActivity), recommendedActivity.actionUrl);
+  const latest = chooseLatestActivity(latestResume, remoteResume, latestHistory);
 
   if (!latest) {
-    latestHistoryActionUrl = recommended.actionUrl;
-    titleEl.textContent = recommended.title;
-    detailEl.textContent = recommended.detail;
+    latestHistoryActionUrl = recommendedActivity.actionUrl;
+    titleEl.textContent = recommendedActivity.title;
+    detailEl.textContent = recommendedActivity.detail;
     kindEl.textContent = "next step";
     if (savedAtEl) savedAtEl.textContent = "Recommended path";
-    buttonEl.textContent = recommended.actionUrl === "certificates.html" ? "Open Certificates" : "Continue";
+    buttonEl.textContent = recommendedActivity.actionUrl === "certificates.html" ? "Open Certificates" : "Continue";
     return;
   }
 
-  latestHistoryActionUrl = latest.resumeUrl || latest.actionUrl || recommended.actionUrl;
+  latestHistoryActionUrl = getActivityUrl(latest, recommendedActivity.actionUrl);
   const progressLabel = formatResumeProgress(latest);
   titleEl.textContent = latest.title || "Continue Learning";
   detailEl.textContent = [latest.detail || "Resume your latest activity.", progressLabel]
@@ -1185,28 +1213,80 @@ function renderContinueLearning(items = [], userData = {}, subjects = latestSubj
   buttonEl.textContent = latest.resumeUrl || latest.actionUrl ? "Resume Now" : "Continue";
 }
 
+function buildRecentActivityCardsData(items = [], userData = {}, subjects = latestSubjectSnapshot) {
+  const recommended = normalizeActivityItem(buildRecommendedLearningAction(subjects), "subjects.html");
+  const candidates = [
+    normalizeActivityItem(chooseLatestActivity(readLocalResumeActivity()), recommended.actionUrl),
+    normalizeActivityItem(chooseLatestActivity(userData?.resumeActivity), recommended.actionUrl),
+    ...items.map((item) => normalizeActivityItem(item, "history.html"))
+  ].filter(Boolean);
+
+  const seen = new Set();
+  const unique = candidates.filter((item) => {
+    const key = [
+      item.title,
+      item.resumeUrl || item.actionUrl,
+      item.updatedAt || item.timestamp || ""
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  unique.sort((a, b) => {
+    const left = new Date(a.updatedAt || a.timestamp || 0).getTime();
+    const right = new Date(b.updatedAt || b.timestamp || 0).getTime();
+    return right - left;
+  });
+
+  return unique.length ? unique : [recommended];
+}
+
 function renderRecentActivityCards(items = []) {
   const container = document.getElementById("recentActivityCards");
   if (!container) return;
 
-  const recentItems = items.slice(0, 3);
+  const recentItems = items
+    .map((item) => normalizeActivityItem(item, "history.html"))
+    .filter(Boolean)
+    .slice(0, 3);
+
+  container.innerHTML = "";
   if (!recentItems.length) {
     container.innerHTML = `
       <article class="recent-activity-card empty">
         <strong>No activity yet</strong>
-        <span>Your latest module, quiz, or test will appear here.</span>
+        <span>Your latest module, quiz, or test will appear here after you start learning.</span>
       </article>
     `;
     return;
   }
 
-  container.innerHTML = recentItems.map((item) => `
-    <button class="recent-activity-card" type="button" onclick="window.location.href='${escapeHtml(item.resumeUrl || item.actionUrl || "history.html")}'">
-      <span class="recent-activity-kind">${escapeHtml(prettifySourceLabel(item))}</span>
-      <strong>${escapeHtml(item.title || "Learning Activity")}</strong>
-      <small>${escapeHtml(item.detail || formatResumeSavedAt(item))}</small>
-    </button>
-  `).join("");
+  recentItems.forEach((item) => {
+    const button = document.createElement("button");
+    button.className = "recent-activity-card";
+    button.type = "button";
+    button.addEventListener("click", () => {
+      window.location.href = getActivityUrl(item, "history.html");
+    });
+
+    const kind = document.createElement("span");
+    kind.className = "recent-activity-kind";
+    kind.textContent = prettifySourceLabel(item);
+
+    const title = document.createElement("strong");
+    title.textContent = item.title || "Learning Activity";
+
+    const detail = document.createElement("small");
+    detail.textContent = item.detail || "Recent learning activity";
+
+    const meta = document.createElement("span");
+    meta.className = "recent-activity-meta";
+    meta.textContent = item.resumeUrl ? "Resume available" : formatResumeSavedAt(item);
+
+    button.append(kind, title, detail, meta);
+    container.appendChild(button);
+  });
 }
 
 async function renderStudyHistoryInsights(userData = {}, subjects = latestSubjectSnapshot) {
@@ -1221,9 +1301,11 @@ async function renderStudyHistoryInsights(userData = {}, subjects = latestSubjec
         user: currentUser
       });
 
+  const recentCards = buildRecentActivityCardsData(mergedItems, userData, subjects);
+
   countEl.textContent = String(mergedItems.length);
   document.getElementById("studyHistoryCard")?.classList.remove("is-loading");
-  renderRecentActivityCards(mergedItems);
+  renderRecentActivityCards(recentCards);
   if (!mergedItems.length) {
     textEl.textContent = "Your recent modules and quizzes will appear here.";
     renderContinueLearning(mergedItems, userData, subjects);

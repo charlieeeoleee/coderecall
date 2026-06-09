@@ -57,6 +57,8 @@ let correctQuestionIdsThisRun = new Set();
 let lastEarnedXP = 0;
 let wrongAnswerReviewKeys = new Set();
 let recoveredMistakesThisRun = 0;
+let missedQuestionsThisRun = [];
+let answeredQuestionsThisRun = [];
 const SELECTED_SUBJECT_KEY = "selectedSubject";
 const validSubjects = new Set(["hardware", "electrical"]);
 const RESUME_ACTIVITY_KEY = "resume_activity";
@@ -385,6 +387,7 @@ async function saveQuizResumeState() {
     selectedChoice,
     selectedConfidence,
     correctQuestionIdsThisRun: Array.from(correctQuestionIdsThisRun),
+    answeredQuestionsThisRun,
     questions: quizQuestions,
     updatedAt: new Date().toISOString()
   };
@@ -425,6 +428,7 @@ function restoreQuizResumeState() {
   selectedChoice = typeof state.selectedChoice === "string" ? state.selectedChoice : null;
   selectedConfidence = typeof state.selectedConfidence === "string" ? state.selectedConfidence : null;
   correctQuestionIdsThisRun = new Set(normalizeQuestionIdList(state.correctQuestionIdsThisRun));
+  answeredQuestionsThisRun = Array.isArray(state.answeredQuestionsThisRun) ? state.answeredQuestionsThisRun : [];
   return true;
 }
 
@@ -1180,6 +1184,107 @@ function buildWrongAnswerReviewPayload(question, selectedAnswer) {
   };
 }
 
+function buildAnswerDetailItem(question, selectedAnswer, isCorrect) {
+  return {
+    subject,
+    type,
+    level,
+    questionNumber: currentIndex + 1,
+    questionId: getQuestionIdentifier(question, currentIndex),
+    question: String(question?.question || ""),
+    selectedAnswer: String(selectedAnswer || ""),
+    correctAnswer: getCorrectAnswerText(question),
+    isCorrect: Boolean(isCorrect),
+    result: isCorrect ? "Correct" : "Wrong",
+    confidence: selectedConfidence || "",
+    rationale: buildReviewRationale(question),
+    source: "saved_attempt",
+    answeredAt: new Date().toISOString()
+  };
+}
+
+function getResultNextStepText(percent) {
+  if (type === "pretest") {
+    return percent >= 80
+      ? "Strong baseline. Continue to the modules and use them to confirm the concepts you already know."
+      : "Continue to the modules next. The lessons will help strengthen the topics that appeared in this Pre-Test.";
+  }
+
+  if (type === "posttest") {
+    return percent >= 80
+      ? "Great finish. Return to the subject page to check completion and open the certificate when available."
+      : "Return to the subject page and review the modules or quiz track before trying similar items again.";
+  }
+
+  return missedQuestionsThisRun.length
+    ? "Review the missed items below, then return to the quiz track when you are ready for the next level."
+    : "Clean run. Return to the quiz track and continue to the next level.";
+}
+
+function renderResultNextStep(percent) {
+  const title = document.getElementById("resultNextStepTitle");
+  const text = document.getElementById("resultNextStepText");
+  if (!title || !text) return;
+
+  title.textContent = missedQuestionsThisRun.length
+    ? "Review Before Continuing"
+    : "Continue Learning";
+  text.textContent = getResultNextStepText(percent);
+}
+
+function appendReviewField(parent, label, value, className = "") {
+  const wrapper = document.createElement("div");
+  wrapper.className = `result-review-field ${className}`.trim();
+
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+
+  const valueEl = document.createElement("strong");
+  valueEl.textContent = value || "Not recorded";
+
+  wrapper.append(labelEl, valueEl);
+  parent.appendChild(wrapper);
+}
+
+function renderResultReviewPanel() {
+  const panel = document.getElementById("resultReviewPanel");
+  const list = document.getElementById("resultReviewList");
+  const summary = document.getElementById("resultReviewSummary");
+  if (!panel || !list || !summary) return;
+
+  list.innerHTML = "";
+  if (!missedQuestionsThisRun.length) {
+    panel.hidden = true;
+    return;
+  }
+
+  panel.hidden = false;
+  summary.textContent = `${missedQuestionsThisRun.length} missed item${missedQuestionsThisRun.length === 1 ? "" : "s"} added to review. Showing the first ${Math.min(3, missedQuestionsThisRun.length)}.`;
+
+  missedQuestionsThisRun.slice(0, 3).forEach((item, index) => {
+    const card = document.createElement("article");
+    card.className = "result-review-item";
+
+    const eyebrow = document.createElement("span");
+    eyebrow.className = "result-review-eyebrow";
+    eyebrow.textContent = `Item ${item.number || index + 1}`;
+
+    const question = document.createElement("h5");
+    question.textContent = item.question || "Question text unavailable";
+
+    const answers = document.createElement("div");
+    answers.className = "result-review-answer-grid";
+    appendReviewField(answers, "Your Answer", item.selectedAnswer, "missed");
+    appendReviewField(answers, "Correct Answer", item.correctAnswer, "correct");
+
+    const rationale = document.createElement("p");
+    rationale.textContent = item.rationale || "Review the related lesson before trying a similar item again.";
+
+    card.append(eyebrow, question, answers, rationale);
+    list.appendChild(card);
+  });
+}
+
 window.closeRationaleAndContinue = function () {
   document.getElementById("rationaleModal").classList.remove("active");
 
@@ -1204,6 +1309,8 @@ function showResult() {
   document.getElementById("resultScoreFill").style.width = `${percent}%`;
   document.getElementById("resultXpFill").style.width = `${xpPercent}%`;
   document.getElementById("resultMessage").textContent = `You scored ${score} out of ${total}.`;
+  renderResultNextStep(percent);
+  renderResultReviewPanel();
   const recoverySummary = document.getElementById("resultRecoverySummary");
   if (recoverySummary) {
     if (recoveredMistakesThisRun > 0) {
@@ -1333,6 +1440,7 @@ async function saveQuizResultToStorageAndFirestore() {
     total,
     percent,
     xpEarned,
+    answerItems: answeredQuestionsThisRun,
     xpAwardedQuestionIds: Array.from(awardedQuestionIds),
     completedAt: new Date().toISOString()
   };
@@ -1405,6 +1513,7 @@ async function finishAttempt() {
   await saveQuizResultToStorageAndFirestore();
   await clearQuizResumeState();
   correctQuestionIdsThisRun = new Set();
+  answeredQuestionsThisRun = [];
   showResult();
   recoveredMistakesThisRun = 0;
 }
@@ -1432,6 +1541,7 @@ window.handleNext = function () {
   const reviewTrackingKey = buildReviewTrackingKey(reviewPayload);
   const tracksReviewQueues = requiresConfidenceSelection();
   const lowConfidence = tracksReviewQueues && isLowConfidenceAnswer(selectedConfidence);
+  answeredQuestionsThisRun.push(buildAnswerDetailItem(currentQuestion, selectedChoice, isCorrect));
 
   if (isCorrect) {
     correctQuestionIdsThisRun.add(getQuestionIdentifier(currentQuestion, currentIndex));
@@ -1489,6 +1599,13 @@ window.handleNext = function () {
   }
 
   playSound("wrong");
+  missedQuestionsThisRun.push({
+    number: currentIndex + 1,
+    question: String(currentQuestion?.question || ""),
+    selectedAnswer: String(selectedChoice || ""),
+    correctAnswer: getCorrectAnswerText(currentQuestion),
+    rationale: buildReviewRationale(currentQuestion)
+  });
   if (tracksReviewQueues) {
     saveWrongAnswerReview({
       db,

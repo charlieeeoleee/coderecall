@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const crypto = require("crypto");
 
 initializeApp();
 
@@ -14,6 +15,17 @@ const ADMIN_EMAILS = new Set([
 const SUPER_ADMIN_EMAILS = new Set([
   "charlesvrobeso@gmail.com"
 ]);
+const QR_LOGIN_TTL_MS = 5 * 60 * 1000;
+
+function hashQrSecret(secret) {
+  return crypto.createHash("sha256").update(String(secret || "")).digest("hex");
+}
+
+function assertQrRequestIsFresh(data = {}) {
+  if (Number(data.expiresAtMs || 0) <= Date.now()) {
+    throw new HttpsError("deadline-exceeded", "This QR login request expired. Generate a new QR code.");
+  }
+}
 
 function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
@@ -111,5 +123,127 @@ exports.resetOwnMfaEnrollment = onCall({
     email: authUser.email || "",
     role,
     removedFactorCount: enrolledFactors.length
+  };
+});
+
+exports.createQrLoginRequest = onCall({
+  region: "us-central1",
+  enforceAppCheck: false,
+  invoker: "public"
+}, async () => {
+  const db = getFirestore();
+  const requestId = crypto.randomUUID();
+  const secret = crypto.randomBytes(32).toString("base64url");
+  const now = Date.now();
+
+  await db.collection("qrLoginRequests").doc(requestId).set({
+    status: "pending",
+    secretHash: hashQrSecret(secret),
+    createdAt: FieldValue.serverTimestamp(),
+    createdAtMs: now,
+    expiresAtMs: now + QR_LOGIN_TTL_MS,
+    used: false
+  });
+
+  return {
+    requestId,
+    secret,
+    expiresAtMs: now + QR_LOGIN_TTL_MS
+  };
+});
+
+exports.approveQrLoginRequest = onCall({
+  region: "us-central1",
+  enforceAppCheck: false,
+  invoker: "public"
+}, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError("unauthenticated", "Sign in on this phone before approving QR login.");
+  }
+
+  const requestId = String(request.data?.requestId || "").trim();
+  const secret = String(request.data?.secret || "").trim();
+  if (!requestId || !secret) {
+    throw new HttpsError("invalid-argument", "Missing QR login request details.");
+  }
+
+  const db = getFirestore();
+  const ref = db.collection("qrLoginRequests").doc(requestId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "QR login request was not found.");
+  }
+
+  const data = snap.data() || {};
+  assertQrRequestIsFresh(data);
+  if (data.used || data.status === "exchanged") {
+    throw new HttpsError("failed-precondition", "This QR login request was already used.");
+  }
+  if (data.secretHash !== hashQrSecret(secret)) {
+    throw new HttpsError("permission-denied", "This QR login request is not valid.");
+  }
+
+  const authUser = await getAuth().getUser(request.auth.uid);
+  await ref.set({
+    status: "approved",
+    approvedUid: request.auth.uid,
+    approvedEmail: authUser.email || "",
+    approvedName: authUser.displayName || "",
+    approvedAt: FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  return {
+    approved: true,
+    email: authUser.email || "",
+    name: authUser.displayName || ""
+  };
+});
+
+exports.exchangeQrLoginRequest = onCall({
+  region: "us-central1",
+  enforceAppCheck: false,
+  invoker: "public"
+}, async (request) => {
+  const requestId = String(request.data?.requestId || "").trim();
+  const secret = String(request.data?.secret || "").trim();
+  if (!requestId || !secret) {
+    throw new HttpsError("invalid-argument", "Missing QR login request details.");
+  }
+
+  const auth = getAuth();
+  const db = getFirestore();
+  const ref = db.collection("qrLoginRequests").doc(requestId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "QR login request was not found.");
+  }
+
+  const data = snap.data() || {};
+  assertQrRequestIsFresh(data);
+  if (data.used || data.status === "exchanged") {
+    throw new HttpsError("failed-precondition", "This QR login request was already used.");
+  }
+  if (data.status !== "approved" || !data.approvedUid) {
+    return { approved: false };
+  }
+  if (data.secretHash !== hashQrSecret(secret)) {
+    throw new HttpsError("permission-denied", "This QR login request is not valid.");
+  }
+
+  const token = await auth.createCustomToken(data.approvedUid, {
+    qr_login: true
+  });
+
+  await ref.set({
+    status: "exchanged",
+    used: true,
+    exchangedAt: FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  return {
+    approved: true,
+    customToken: token,
+    email: data.approvedEmail || "",
+    name: data.approvedName || ""
   };
 });

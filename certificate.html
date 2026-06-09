@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/styles.css?v=20260519a">
-  <link rel="stylesheet" href="styles/certificate.css?v=20260523c">
+  <link rel="stylesheet" href="styles/certificate.css?v=20260607a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -83,13 +83,22 @@
           </div>
         </div>
       </article>
+
+      <section class="certificate-readiness-panel" aria-labelledby="certificateReadinessTitle">
+        <div class="certificate-readiness-copy">
+          <span class="certificate-readiness-eyebrow" id="certificateReadinessEyebrow">Completion Check</span>
+          <h2 id="certificateReadinessTitle">Certificate Readiness</h2>
+          <p id="certificateReadinessText">Checking your learning path requirements.</p>
+        </div>
+        <div class="certificate-readiness-list" id="certificateReadinessList"></div>
+      </section>
     </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/certificate.js?v=20260523c"></script>
+  <script type="module" src="scripts/certificate.js?v=20260607a"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>
 </html>

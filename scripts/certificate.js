@@ -159,8 +159,51 @@ function buildPreviewCompletionState() {
   return {
     completed: true,
     completedAt,
-    preview: true
+    preview: true,
+    steps: getSubjectCertificateSteps({
+      pretest: true,
+      modules: true,
+      quiz: true,
+      posttest: true
+    })
   };
+}
+
+function getSubjectCertificateSteps(state = {}) {
+  return [
+    { label: "Pre-Test", complete: Boolean(state.pretest) },
+    { label: "Modules", complete: Boolean(state.modules) },
+    { label: "Quiz Track", complete: Boolean(state.quiz) },
+    { label: "Post-Test", complete: Boolean(state.posttest) }
+  ];
+}
+
+function renderCertificateReadiness(completion = {}) {
+  const eyebrow = document.getElementById("certificateReadinessEyebrow");
+  const title = document.getElementById("certificateReadinessTitle");
+  const text = document.getElementById("certificateReadinessText");
+  const list = document.getElementById("certificateReadinessList");
+  if (!eyebrow || !title || !text || !list) return;
+
+  const steps = Array.isArray(completion.steps) ? completion.steps : [];
+  const completeCount = steps.filter((step) => step.complete).length;
+  const total = Math.max(steps.length, 1);
+  const percent = Math.round((completeCount / total) * 100);
+
+  eyebrow.textContent = completion.completed ? "Ready" : "Pending Requirements";
+  title.textContent = completion.completed ? "Certificate Ready" : "Complete the Path First";
+  text.textContent = completion.completed
+    ? "All required learning path records are complete. This certificate can be downloaded or printed."
+    : `${completeCount} of ${steps.length} requirement${steps.length === 1 ? "" : "s"} completed. Finish the remaining step${steps.length - completeCount === 1 ? "" : "s"} to unlock this certificate.`;
+
+  list.innerHTML = steps.map((step) => `
+    <div class="certificate-readiness-step ${step.complete ? "done" : "locked"}">
+      <span>${step.complete ? "✓" : "○"}</span>
+      <strong>${step.label}</strong>
+    </div>
+  `).join("");
+
+  list.style.setProperty("--certificate-ready-percent", `${percent}%`);
 }
 
 function setCertificateVisualState({ isComplete, isPreview }) {
@@ -214,8 +257,13 @@ function getLocalCompletionState() {
   const completedAt = localStorage.getItem(`${subject}_posttest_completedAt`) || "";
 
   return {
+    pretest,
+    modules,
+    quiz,
+    posttest,
     completed: pretest && modules && quiz && posttest,
-    completedAt
+    completedAt,
+    steps: getSubjectCertificateSteps({ pretest, modules, quiz, posttest })
   };
 }
 
@@ -269,7 +317,12 @@ async function getRemoteCompletionState(user) {
 
   return {
     completed: pretest && modules && quiz && posttest,
+    pretest,
+    modules,
+    quiz,
+    posttest,
     completedAt,
+    steps: getSubjectCertificateSteps({ pretest, modules, quiz, posttest }),
     data
   };
 }
@@ -345,7 +398,11 @@ async function prepareCertificate(user) {
 
     completion = {
       completed: hardwareDone && electricalDone,
-      completedAt: latestCompletedAt
+      completedAt: latestCompletedAt,
+      steps: [
+        { label: "Computer Hardware Certificate", complete: hardwareDone },
+        { label: "Electrical Wiring Certificate", complete: electricalDone }
+      ]
     };
     userData = remoteHardware?.data || remoteElectrical?.data || null;
   } else {
@@ -376,6 +433,7 @@ async function prepareCertificate(user) {
     isComplete: completion.completed,
     isPreview: CERTIFICATE_PREVIEW_MODE
   });
+  renderCertificateReadiness(completion);
 
   if (!completion.completed) {
     setStatus(

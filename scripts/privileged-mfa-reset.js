@@ -14,6 +14,7 @@ export async function resetOwnMfaEnrollment() {
 
 export function describeAutomaticMfaResetError(error) {
   const code = String(error?.code || "");
+  const message = String(error?.message || error?.details?.message || "").trim();
   if (code.includes("unauthenticated")) {
     return "Sign in again, then retry the 2FA reset.";
   }
@@ -23,5 +24,8 @@ export function describeAutomaticMfaResetError(error) {
   if (code.includes("not-found")) {
     return "The automatic 2FA reset service is not deployed yet. Deploy Firebase Functions, then try again.";
   }
-  return "Automatic 2FA reset is unavailable right now. Try again after the Firebase Function is deployed.";
+  if (code || message) {
+    return `Automatic 2FA reset is unavailable right now${code ? ` (${code})` : ""}${message ? `: ${message}` : "."}`;
+  }
+  return "Automatic 2FA reset is unavailable right now. Check the network connection and try again.";
 }

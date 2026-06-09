@@ -642,9 +642,28 @@ body{
     0 0 30px rgba(50,255,199,0.22);
 }
 
+.subject-card.ready-card::before{
+  opacity: 0.92;
+}
+
 .subject-card.ready-card .subject-badge{
   background: rgba(50,255,199,0.22);
   border-color: rgba(50,255,199,0.28);
+}
+
+.subject-card-cta{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-top: 4px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  color: #08111f;
+  font-size: 12px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #32ffc7, #00e5ff);
+  box-shadow: 0 10px 24px rgba(0,229,255,0.22);
 }
 
 .subject-card:not(.locked):hover h2,
@@ -664,8 +683,8 @@ body{
 
 /* ================= LOCK ================= */
 .locked{
-  filter: blur(1.1px) saturate(0.85);
-  opacity: 0.58;
+  filter: saturate(0.82);
+  opacity: 0.72;
   cursor: pointer;
   user-select: none;
 }
@@ -688,6 +707,20 @@ body{
   right: 14px;
   font-size: 18px;
   z-index: 4;
+}
+
+.subject-lock-hint{
+  display: block;
+  width: min(100%, 360px);
+  margin-top: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  color: rgba(244,248,255,0.94);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  background: rgba(8, 17, 31, 0.42);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 /* ================= BACK BUTTON ================= */
@@ -893,6 +926,18 @@ body.light-mode .subject-card:not(.locked):hover .subject-badge{
   border: 1px solid rgba(255,255,255,0.24);
 }
 
+body.light-mode .subject-lock-hint{
+  color: rgba(17,24,39,0.82);
+  background: rgba(255,255,255,0.66);
+  border-color: rgba(17,24,39,0.08);
+}
+
+body.light-mode .subject-card-cta{
+  color: white;
+  background: linear-gradient(135deg, #6d5dfc, #00d9ff);
+  box-shadow: 0 10px 24px rgba(109,93,252,0.18);
+}
+
 body.light-mode .subject-modal-box{
   background: rgba(255,255,255,0.96);
   border-color: rgba(0,0,0,0.08);
@@ -1025,6 +1070,11 @@ body.light-mode .subject-certificate-copy p{
 
   .subject-card h2{
     font-size: 28px;
+  }
+
+  .subject-lock-hint{
+    width: 100%;
+    font-size: 11px;
   }
 
   .subject-back-btn{

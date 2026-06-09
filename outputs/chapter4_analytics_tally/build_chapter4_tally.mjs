@@ -2,7 +2,8 @@ import fs from "node:fs/promises";
 import { Workbook, SpreadsheetFile } from "@oai/artifact-tool";
 
 const outputDir = new URL("./", import.meta.url);
-const outputPath = new URL("./chapter4_analytics_preview_tally.xlsx", outputDir);
+const outputPath = new URL("./pretest-posttest results.xlsx", outputDir);
+const repoRoot = new URL("../../", import.meta.url);
 
 const respondents = [
   { respondent: "Respondent 1", name: "Kyla Uboñgen", email: "kylaubongen02@gmail.com", electricalPre: 17, electricalPost: 22, hardwarePre: 17, hardwarePost: 24 },
@@ -33,6 +34,77 @@ const headerFill = "#F3F4F6";
 const totalFill = "#FEF3C7";
 const preFill = "#E0F2FE";
 const postFill = "#DCFCE7";
+
+async function readExportedQuestionArray(relativePath, exportName) {
+  const source = await fs.readFile(new URL(relativePath, repoRoot), "utf8");
+  const exportIndex = source.indexOf(`export const ${exportName}`);
+  const constIndex = exportIndex >= 0 ? exportIndex : source.indexOf(`const ${exportName}`);
+  if (constIndex < 0) {
+    throw new Error(`Question array ${exportName} was not found in ${relativePath}.`);
+  }
+
+  const arrayStart = source.indexOf("[", constIndex);
+  if (arrayStart < 0) {
+    throw new Error(`Question array ${exportName} has no opening bracket in ${relativePath}.`);
+  }
+
+  let depth = 0;
+  let inString = false;
+  let stringQuote = "";
+  let escaped = false;
+
+  for (let index = arrayStart; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === stringQuote) {
+        inString = false;
+        stringQuote = "";
+      }
+      continue;
+    }
+
+    if (char === "\"" || char === "'" || char === "`") {
+      inString = true;
+      stringQuote = char;
+      continue;
+    }
+
+    if (char === "[") depth += 1;
+    if (char === "]") {
+      depth -= 1;
+      if (depth === 0) {
+        const arrayLiteral = source.slice(arrayStart, index + 1);
+        return Function(`"use strict"; return (${arrayLiteral});`)();
+      }
+    }
+  }
+
+  throw new Error(`Question array ${exportName} was not closed in ${relativePath}.`);
+}
+
+function toQuestionTextList(questions) {
+  return Array.from({ length: itemCount }, (_, index) => {
+    const text = String(questions[index]?.question || "").trim();
+    return text || `Question ${index + 1}`;
+  });
+}
+
+const questionTextBySubject = {
+  electrical: {
+    pretest: toQuestionTextList(await readExportedQuestionArray("scripts/quiz.js", "electricalPretestQuestions")),
+    posttest: toQuestionTextList(await readExportedQuestionArray("data/electrical-posttest-data.js", "electricalPosttestQuestions"))
+  },
+  hardware: {
+    pretest: toQuestionTextList(await readExportedQuestionArray("data/hardware-assessment-data.js", "hardwarePretestQuestions")),
+    posttest: toQuestionTextList(await readExportedQuestionArray("data/hardware-posttest-data.js", "hardwarePosttestQuestions"))
+  }
+};
+
 function colName(index) {
   let n = index + 1;
   let name = "";
@@ -93,7 +165,7 @@ function buildTallySheet(workbook, sheetName, subjectKey, subjectLabel, seedOffs
   headerRows[2].push("Respondent");
 
   for (let item = 1; item <= itemCount; item += 1) {
-    headerRows[0].push("[Place Quiz Text]");
+    headerRows[0].push(questionTextBySubject[subjectKey].pretest[item - 1]);
     headerRows[1].push(`Quiz Item ${item}`);
     headerRows[2].push(`Pre_Q${String(item).padStart(2, "0")}`);
   }
@@ -102,7 +174,7 @@ function buildTallySheet(workbook, sheetName, subjectKey, subjectLabel, seedOffs
   headerRows[2].push("Pre_Total");
 
   for (let item = 1; item <= itemCount; item += 1) {
-    headerRows[0].push("[Place Quiz Text]");
+    headerRows[0].push(questionTextBySubject[subjectKey].posttest[item - 1]);
     headerRows[1].push(`Quiz Item ${item}`);
     headerRows[2].push(`Post_Q${String(item).padStart(2, "0")}`);
   }

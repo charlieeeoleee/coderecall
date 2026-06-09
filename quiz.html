@@ -141,8 +141,23 @@
         </div>
       </div>
       <p id="resultRecoverySummary" class="result-recovery-summary" hidden></p>
-      <button class="quiz-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="assessment">Report Issue / Feedback</button>
-      <button class="quiz-btn primary-btn" onclick="finishQuizFlow()">Return to Subject</button>
+      <section class="result-next-step" aria-labelledby="resultNextStepTitle">
+        <span class="quiz-tag">NEXT STEP</span>
+        <h4 id="resultNextStepTitle">Continue Learning</h4>
+        <p id="resultNextStepText">Return to the subject page and continue your learning path.</p>
+      </section>
+      <section class="result-review-panel" id="resultReviewPanel" hidden aria-labelledby="resultReviewTitle">
+        <div class="result-review-head">
+          <span class="quiz-tag">REVIEW</span>
+          <h4 id="resultReviewTitle">Questions to Review</h4>
+          <p id="resultReviewSummary">Review missed items before moving forward.</p>
+        </div>
+        <div class="result-review-list" id="resultReviewList"></div>
+      </section>
+      <div class="result-actions">
+        <button class="quiz-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="assessment">Report Issue / Feedback</button>
+        <button class="quiz-btn primary-btn" onclick="finishQuizFlow()">Return to Subject</button>
+      </div>
     </div>
   </div>
 
@@ -168,7 +183,7 @@
   </div>
 
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/quiz.js?v=20260510b"></script>
+  <script type="module" src="scripts/quiz.js?v=20260607a"></script>
   <script type="module" src="scripts/item-feedback-loader.js?v=20260519a"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>

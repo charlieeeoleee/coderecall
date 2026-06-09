@@ -11,6 +11,7 @@ import {
   sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
+  signInWithCustomToken,
   getMultiFactorResolver,
   TotpMultiFactorGenerator
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -21,24 +22,36 @@ import {
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getFunctions,
+  httpsCallable
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js?v=20260525a";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { clearAdminMfaSession } from "./admin-mfa-session.js";
 import { hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
 import { syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { renderQrSvgMarkup } from "./local-qr.js";
 
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const functions = getFunctions(app, "us-central1");
+const createQrLoginRequest = httpsCallable(functions, "createQrLoginRequest");
+const exchangeQrLoginRequest = httpsCallable(functions, "exchangeQrLoginRequest");
 
 const pendingGoogleKey = "pendingGoogleRegistration";
 const googleRedirectPendingKey = "codeRecallGoogleRedirectPending";
+const switchAccountKey = "code_recall_switch_account";
 let isHandlingAuthFlow = false;
 let activeMfaResolver = null;
 let activeMfaProvider = "password";
 let googleSignInInFlight = false;
 let hasCheckedGoogleRedirectResult = false;
+let qrLoginPollTimer = null;
+let qrLoginExpiresTimer = null;
+let activeQrLogin = null;
 
 if (sessionStorage.getItem(googleRedirectPendingKey) === "true") {
   isHandlingAuthFlow = true;
@@ -69,6 +82,16 @@ onAuthStateChanged(auth, async (user) => {
 
   if (!user) return;
   if (isHandlingAuthFlow) return;
+
+  if (sessionStorage.getItem(switchAccountKey) === "1" && window.location.pathname.includes("auth.html")) {
+    sessionStorage.removeItem(switchAccountKey);
+    isHandlingAuthFlow = true;
+    clearSuperAdminMfaSession();
+    clearAdminMfaSession();
+    await signOut(auth);
+    isHandlingAuthFlow = false;
+    return;
+  }
 
   if (pendingGoogle && window.location.pathname.includes("auth.html")) {
     showPendingGoogleRegistration(pendingGoogle);
@@ -697,6 +720,118 @@ window.confirmResend = async function(){
     isHandlingAuthFlow = false;
     showPopup("Resend Error", error.message);
   }
+};
+
+/* QR-ASSISTED LOGIN */
+function setQrLoginStatus(message, isError = false) {
+  const status = document.getElementById("qrLoginStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("error", Boolean(isError));
+}
+
+function stopQrLoginPolling() {
+  if (qrLoginPollTimer) window.clearInterval(qrLoginPollTimer);
+  if (qrLoginExpiresTimer) window.clearTimeout(qrLoginExpiresTimer);
+  qrLoginPollTimer = null;
+  qrLoginExpiresTimer = null;
+}
+
+function buildQrApprovalUrl(requestId, secret) {
+  const url = new URL("qr-approve.html", window.location.href);
+  url.searchParams.set("requestId", requestId);
+  url.searchParams.set("secret", secret);
+  return url.toString();
+}
+
+async function pollQrLoginApproval() {
+  if (!activeQrLogin?.requestId || !activeQrLogin?.secret) return;
+
+  try {
+    const result = await exchangeQrLoginRequest({
+      requestId: activeQrLogin.requestId,
+      secret: activeQrLogin.secret
+    });
+
+    if (!result.data?.approved) {
+      setQrLoginStatus("Waiting for phone approval...");
+      return;
+    }
+
+    stopQrLoginPolling();
+    setQrLoginStatus(`Approved${result.data.email ? ` by ${result.data.email}` : ""}. Signing in...`);
+    isHandlingAuthFlow = true;
+    const credential = await signInWithCustomToken(auth, result.data.customToken);
+    closeQrLoginPopup();
+    await finishQrSignIn(credential.user);
+  } catch (error) {
+    console.error("QR login exchange failed:", error);
+    stopQrLoginPolling();
+    setQrLoginStatus(error?.message || "QR login failed. Generate a new QR code.", true);
+  }
+}
+
+async function finishQrSignIn(user) {
+  await transferGuestProgressIfNeeded(user.uid);
+  window.location.replace(await getLandingPageForUser(user));
+}
+
+window.openQrLoginPopup = async function(){
+  const popup = document.getElementById("qrLoginPopup");
+  const image = document.getElementById("qrLoginImage");
+  if (!popup || !image) return;
+
+  stopQrLoginPolling();
+  activeQrLogin = null;
+  popup.classList.add("active");
+  image.textContent = "Preparing QR...";
+  setQrLoginStatus("Generating one-time login request...");
+
+  try {
+    const result = await createQrLoginRequest({});
+    activeQrLogin = {
+      requestId: result.data.requestId,
+      secret: result.data.secret,
+      expiresAtMs: Number(result.data.expiresAtMs || 0)
+    };
+    const approvalUrl = buildQrApprovalUrl(activeQrLogin.requestId, activeQrLogin.secret);
+    image.innerHTML = renderQrSvgMarkup(approvalUrl, 220);
+    setQrLoginStatus("Scan with your phone camera, then approve the sign-in.");
+    qrLoginPollTimer = window.setInterval(pollQrLoginApproval, 2500);
+    qrLoginExpiresTimer = window.setTimeout(() => {
+      stopQrLoginPolling();
+      setQrLoginStatus("This QR code expired. Close this window and generate a new one.", true);
+    }, Math.max(1000, activeQrLogin.expiresAtMs - Date.now()));
+  } catch (error) {
+    console.error("Unable to create QR login request:", error);
+    image.textContent = "QR unavailable";
+    setQrLoginStatus(error?.message || "Unable to create QR login request.", true);
+  }
+};
+
+window.closeQrLoginPopup = function(){
+  stopQrLoginPolling();
+  activeQrLogin = null;
+  document.getElementById("qrLoginPopup")?.classList.remove("active");
+};
+
+/* ACCOUNT HELP POPUP */
+window.openAccountHelpPopup = function(){
+  document.getElementById("accountHelpPopup")?.classList.add("active");
+};
+
+window.closeAccountHelpPopup = function(){
+  document.getElementById("accountHelpPopup")?.classList.remove("active");
+};
+
+window.openResetFromHelp = function(){
+  closeAccountHelpPopup();
+  openResetPopup();
+};
+
+window.openResendFromHelp = function(){
+  closeAccountHelpPopup();
+  openResendPopup();
 };
 
 /* GUEST MODE */

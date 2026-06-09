@@ -61,6 +61,8 @@ const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 let currentUser = null;
 let currentRole = "user";
 let superUsersCache = [];
+let auditLogCache = [];
+let superDashboardLoading = false;
 let systemPopupAction = null;
 let systemPopupBusy = false;
 let contactInboxUnsubscribe = null;
@@ -68,6 +70,14 @@ const SUPER_ADMIN_STATUS_DEFAULT = "Manage roles, review the whole system, and c
 const SLOW_SUPER_ADMIN_LOAD_DELAY_MS = 5000;
 
 applyRoleNavigation("guest", "super-admin.html");
+
+function openAccessDenied(area, role) {
+  const params = new URLSearchParams({
+    area,
+    role: role || "unknown"
+  });
+  window.location.href = `access-denied.html?${params.toString()}`;
+}
 
 function setSuperAdminLoadStatus(message = SUPER_ADMIN_STATUS_DEFAULT, isWarning = false) {
   const status = document.getElementById("superAdminLoadStatus");
@@ -164,8 +174,18 @@ onAuthStateChanged(auth, async (user) => {
   applyRoleNavigation(role, "super-admin.html");
 
   if (role !== "super_admin") {
-    await writeSecurityAudit(db, user, "denied_super_admin_route", `Denied super-admin.html route for resolved role: ${role}`);
-    window.location.href = "dashboard.html";
+    await writeSecurityAudit(
+      db,
+      user,
+      "denied_super_admin_route",
+      `Denied super-admin.html route for resolved role: ${role}`,
+      {
+        route: "super-admin.html",
+        requiredRole: "super_admin",
+        resolvedRole: role
+      }
+    );
+    openAccessDenied("super-admin", role);
     return;
   }
 
@@ -186,76 +206,123 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadSuperAdminDashboard() {
+  if (superDashboardLoading) return;
+  superDashboardLoading = true;
+  setSuperRefreshState(true, "Refreshing super-admin data...");
   const slowLoadTimer = startSlowSuperAdminNotice();
-  const [
-    usersSnap,
-    securityProfilesSnap,
-    grantsSnap,
-    pendingUsersSnap
-  ] = await Promise.all([
-    safeGetDocs("users", collection(db, "users")),
-    safeGetDocs("securityProfiles", collection(db, "securityProfiles")),
-    safeGetDocs("accessRoles", collection(db, "accessRoles")),
-    safeGetDocs("pendingUsers", collection(db, "pendingUsers"))
-  ]);
 
-  const users = applyDemoAnalyticsOverlay(
-    usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
-  );
-  superUsersCache = users;
-  const securityProfiles = await addCurrentSessionMfaProfile(
-    securityProfilesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
-  );
-  const grants = grantsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-  const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-
-  renderAdminGridLoadingState("systemHealthGrid", "Loading system health");
-  renderAdminLoadingState("superModulePublishList", "Loading module drafts");
-  renderAdminLoadingState("superQuizPublishList", "Loading quiz drafts");
-  renderAdminLoadingState("manualImportChecklist", "Preparing checklist");
-  renderAdminLoadingState("auditLogList", "Loading audit trail");
-
-  renderAnalyticsPreviewNavCue();
-  renderDemoAnalyticsNotice();
-  renderOverview(users);
-  renderAccessGrantList(grants);
-  renderSystemHealth(users, grants, pendingUsers, [], [], []);
-  renderRetentionOversight(users);
-  renderTwoFactorOversight(users, securityProfiles);
-  renderSubjectCompletionBreakdown(users);
-  renderMostMissedTopics(users);
-  renderUserTable(users);
-  wireLearnerScoreExport();
-  wireAccessGrantForm();
-  wireIntakeForm();
-  stopSlowSuperAdminNotice(slowLoadTimer);
-
-  deferSuperAdminTask(async () => {
+  try {
     const [
-      moduleDrafts,
-      quizDrafts,
-      notesSnap,
-      auditSnap,
-      contactMessagesSnap
+      usersSnap,
+      securityProfilesSnap,
+      grantsSnap,
+      pendingUsersSnap
     ] = await Promise.all([
-      safeSupabaseRead("module drafts", fetchModuleDrafts),
-      safeSupabaseRead("quiz drafts", fetchQuizDrafts),
-      safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
-      safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12))),
-      safeGetDocs("contactMessages", collection(db, "contactMessages"))
+      safeGetDocs("users", collection(db, "users")),
+      safeGetDocs("securityProfiles", collection(db, "securityProfiles")),
+      safeGetDocs("accessRoles", collection(db, "accessRoles")),
+      safeGetDocs("pendingUsers", collection(db, "pendingUsers"))
     ]);
 
-    const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-    const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
-    const contactMessages = contactMessagesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+    const users = applyDemoAnalyticsOverlay(
+      usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
+    );
+    superUsersCache = users;
+    const securityProfiles = await addCurrentSessionMfaProfile(
+      securityProfilesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
+    );
+    const grants = grantsSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+    const pendingUsers = pendingUsersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
 
-    renderContactInboxCounts(contactMessages);
-    renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
-    renderPublishingQueue(moduleDrafts, quizDrafts);
-    renderManualImportChecklist();
-    renderAuditLog(audits);
+    renderAdminGridLoadingState("systemHealthGrid", "Loading system health");
+    renderAdminLoadingState("superModulePublishList", "Loading module drafts");
+    renderAdminLoadingState("superQuizPublishList", "Loading quiz drafts");
+    renderAdminLoadingState("manualImportChecklist", "Preparing checklist");
+    renderAdminLoadingState("auditLogList", "Loading audit trail");
+
+    renderAnalyticsPreviewNavCue();
+    renderDemoAnalyticsNotice();
+    renderOverview(users);
+    renderAccessGrantList(grants);
+    renderSystemHealth(users, grants, pendingUsers, [], [], []);
+    renderRetentionOversight(users);
+    renderTwoFactorOversight(users, securityProfiles);
+    renderSubjectCompletionBreakdown(users);
+    renderMostMissedTopics(users);
+    renderUserTable(users);
+    wireLearnerScoreExport();
+    wireDataExportCenter();
+    wireAccessGrantForm();
+    wireIntakeForm();
+    stopSlowSuperAdminNotice(slowLoadTimer);
+    setSuperRefreshState(false, "Data refreshed just now.");
+
+    deferSuperAdminTask(async () => {
+      const [
+        moduleDrafts,
+        quizDrafts,
+        notesSnap,
+        auditSnap,
+        contactMessagesSnap
+      ] = await Promise.all([
+        safeSupabaseRead("module drafts", fetchModuleDrafts),
+        safeSupabaseRead("quiz drafts", fetchQuizDrafts),
+        safeGetDocs("feedbackNotes", collection(db, "feedbackNotes")),
+        safeGetDocs("auditLogs", query(collection(db, "auditLogs"), orderBy("createdAt", "desc"), limit(12))),
+        safeGetDocs("contactMessages", collection(db, "contactMessages"))
+      ]);
+
+      const notes = notesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+      const audits = auditSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+      auditLogCache = audits;
+      const contactMessages = contactMessagesSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }));
+
+      renderContactInboxCounts(contactMessages);
+      renderSystemHealth(users, grants, pendingUsers, moduleDrafts, quizDrafts, notes);
+      renderPublishingQueue(moduleDrafts, quizDrafts);
+      renderManualImportChecklist();
+      wireAuditSearch();
+      renderAuditLog(getFilteredAuditEntries());
+    });
+  } catch (error) {
+    console.error("Unable to load super-admin dashboard data:", error);
+    stopSlowSuperAdminNotice(slowLoadTimer);
+    setSuperRefreshState(false, "Unable to refresh Firebase data. Check your connection, then retry.", true);
+    renderSuperLoadError();
+  } finally {
+    superDashboardLoading = false;
+  }
+}
+
+function setSuperRefreshState(isLoading, message, isWarning = false) {
+  const button = document.getElementById("superRefreshBtn");
+  const status = document.getElementById("superRefreshStatus");
+  if (button) {
+    button.disabled = isLoading;
+    button.textContent = isLoading ? "Refreshing..." : "Refresh Data";
+  }
+  if (status) {
+    status.textContent = message;
+    status.classList.toggle("warning", Boolean(isWarning));
+  }
+}
+
+function renderSuperLoadError() {
+  const empty = `
+    <article class="review-item">
+      <h5>Data could not be loaded</h5>
+      <p>Use Refresh Data after checking the connection or Firebase permissions.</p>
+    </article>
+  `;
+  ["systemHealthGrid", "superModulePublishList", "superQuizPublishList", "manualImportChecklist", "auditLogList"].forEach((id) => {
+    const target = document.getElementById(id);
+    if (target) target.innerHTML = empty;
   });
 }
+
+document.getElementById("superRefreshBtn")?.addEventListener("click", () => {
+  loadSuperAdminDashboard();
+});
 
 function renderDemoAnalyticsNotice() {
   document.body.classList.toggle("demo-analytics-mode", DEMO_ANALYTICS_MODE);
@@ -1492,13 +1559,75 @@ function renderUserTable(users) {
 
 function wireLearnerScoreExport() {
   const button = document.getElementById("superExportScoresBtn");
-  if (!button || button.dataset.bound === "true") return;
+  const answersButton = document.getElementById("superExportAnswersBtn");
 
-  button.dataset.bound = "true";
-  button.addEventListener("click", () => {
-    const learners = superUsersCache.filter((user) => getRoleFromUserData(user) === "user");
-    exportLearnerScoresCsv(learners, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
-  });
+  if (button && button.dataset.bound !== "true") {
+    button.dataset.bound = "true";
+    button.addEventListener("click", () => {
+      const learners = superUsersCache.filter((user) => getRoleFromUserData(user) === "user");
+      exportLearnerScoresCsv(learners, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+    });
+  }
+
+  if (answersButton && answersButton.dataset.bound !== "true") {
+    answersButton.dataset.bound = "true";
+    answersButton.addEventListener("click", () => {
+      const learners = superUsersCache.filter((user) => getRoleFromUserData(user) === "user");
+      exportLearnerAnswerDetailsCsv(learners, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+    });
+  }
+}
+
+function wireDataExportCenter() {
+  const scoresBtn = document.getElementById("superCenterScoresBtn");
+  const answersBtn = document.getElementById("superCenterAnswersBtn");
+  const auditBtn = document.getElementById("superCenterAuditBtn");
+  const snapshotBtn = document.getElementById("superCenterSnapshotBtn");
+
+  if (scoresBtn && scoresBtn.dataset.bound !== "true") {
+    scoresBtn.dataset.bound = "true";
+    scoresBtn.addEventListener("click", () => {
+      const learners = superUsersCache.filter((user) => getRoleFromUserData(user) === "user");
+      exportLearnerScoresCsv(learners, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+      setExportCenterStatus("Learner score summary CSV downloaded.");
+    });
+  }
+
+  if (answersBtn && answersBtn.dataset.bound !== "true") {
+    answersBtn.dataset.bound = "true";
+    answersBtn.addEventListener("click", () => {
+      const learners = superUsersCache.filter((user) => getRoleFromUserData(user) === "user");
+      exportLearnerAnswerDetailsCsv(learners, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+      setExportCenterStatus("Question-level answer CSV downloaded.");
+    });
+  }
+
+  if (auditBtn && auditBtn.dataset.bound !== "true") {
+    auditBtn.dataset.bound = "true";
+    auditBtn.addEventListener("click", () => {
+      exportAuditLogCsv().catch((error) => {
+        console.error("Unable to export audit log:", error);
+        setExportCenterStatus("Unable to export audit log right now.", true);
+      });
+    });
+  }
+
+  if (snapshotBtn && snapshotBtn.dataset.bound !== "true") {
+    snapshotBtn.dataset.bound = "true";
+    snapshotBtn.addEventListener("click", () => {
+      exportFirestoreSnapshotJson().catch((error) => {
+        console.error("Unable to export Firestore snapshot:", error);
+        setExportCenterStatus("Unable to export Firestore snapshot right now.", true);
+      });
+    });
+  }
+}
+
+function setExportCenterStatus(message, isWarning = false) {
+  const status = document.getElementById("superExportCenterStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("warning", Boolean(isWarning));
 }
 
 function exportLearnerScoresCsv(learners, mode) {
@@ -1516,16 +1645,29 @@ function exportLearnerScoresCsv(learners, mode) {
     "Exported At",
     "Name",
     "Email",
+    "Role",
     "XP",
+    "Badges",
     "Completed Modules",
+    "Certificate Status",
     "Electrical Pre-Test",
+    "Electrical Pre-Test Percent",
     "Electrical Quiz Track",
+    "Electrical Quiz Track Percent",
     "Electrical Post-Test",
+    "Electrical Post-Test Percent",
+    "Electrical Modules",
     "Electrical Completion",
+    "Electrical Certificate",
     "Hardware Pre-Test",
+    "Hardware Pre-Test Percent",
     "Hardware Quiz Track",
+    "Hardware Quiz Track Percent",
     "Hardware Post-Test",
-    "Hardware Completion"
+    "Hardware Post-Test Percent",
+    "Hardware Modules",
+    "Hardware Completion",
+    "Hardware Certificate"
   ];
 
   const rows = learners.map((learner) => {
@@ -1537,16 +1679,29 @@ function exportLearnerScoresCsv(learners, mode) {
       formatExportTimestamp(new Date()),
       learner.name || "User",
       learner.email || "",
+      getRoleFromUserData(learner),
       learner.xp || 0,
+      countLearnerBadges(learner),
       countCompletedModules(learner.progress || {}),
+      getOverallCertificateStatus(learner),
       electrical.pretest,
+      electrical.pretestPercent,
       electrical.quiz,
+      electrical.quizPercent,
       electrical.posttest,
+      electrical.posttestPercent,
+      electrical.modules,
       electrical.completion,
+      electrical.certificate,
       hardware.pretest,
+      hardware.pretestPercent,
       hardware.quiz,
+      hardware.quizPercent,
       hardware.posttest,
-      hardware.completion
+      hardware.posttestPercent,
+      hardware.modules,
+      hardware.completion,
+      hardware.certificate
     ];
   });
 
@@ -1562,29 +1717,53 @@ function exportLearnerScoresCsv(learners, mode) {
 function summarizeLearnerSubjectForExport(learner, subject) {
   const results = learner.results || {};
   const progress = learner.progress || {};
+  const pretest = getExportResultMetrics(results[`${subject}_pretest`]);
+  const quiz = getExportQuizTrackMetrics(results, subject);
+  const posttest = getExportResultMetrics(results[`${subject}_posttest`]);
 
   return {
-    pretest: formatExportResult(results[`${subject}_pretest`]),
-    quiz: formatExportQuizTrack(results, subject),
-    posttest: formatExportResult(results[`${subject}_posttest`]),
-    completion: progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] ? "Complete" : describeSubjectStage(progress, subject)
+    pretest: pretest.label,
+    pretestPercent: pretest.percentLabel,
+    quiz: quiz.label,
+    quizPercent: quiz.percentLabel,
+    posttest: posttest.label,
+    posttestPercent: posttest.percentLabel,
+    modules: `${countSubjectCompletedModules(progress, subject)}/${getSubjectModuleTarget()} modules`,
+    completion: progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] ? "Complete" : describeSubjectStage(progress, subject),
+    certificate: getSubjectCertificateStatus(learner, subject)
   };
 }
 
 function formatExportResult(result) {
-  if (!result) return "No live record yet";
+  return getExportResultMetrics(result).label;
+}
+
+function getExportResultMetrics(result) {
+  if (!result) return { label: "No live record yet", percentLabel: "No live record yet", percent: 0 };
 
   const score = readResultNumber(result, ["score", "correct", "correctAnswers", "points"]);
   const total = readResultNumber(result, ["total", "items", "questionCount", "totalQuestions", "maxScore"]);
   const percent = Number(result.percent);
 
-  if (Number.isFinite(score) && Number.isFinite(total)) return `${score}/${total}`;
-  if (Number.isFinite(percent)) return `${Math.round(percent)}%`;
-  if (Number.isFinite(score)) return `${score}`;
-  return "Recorded";
+  if (Number.isFinite(score) && Number.isFinite(total)) {
+    const computedPercent = getPercent(score, total);
+    return { label: `${score}/${total}`, percentLabel: `${computedPercent}%`, percent: computedPercent };
+  }
+
+  if (Number.isFinite(percent)) {
+    const roundedPercent = Math.round(percent);
+    return { label: `${roundedPercent}%`, percentLabel: `${roundedPercent}%`, percent: roundedPercent };
+  }
+
+  if (Number.isFinite(score)) return { label: `${score}`, percentLabel: "Recorded", percent: 0 };
+  return { label: "Recorded", percentLabel: "Recorded", percent: 0 };
 }
 
 function formatExportQuizTrack(results, subject) {
+  return getExportQuizTrackMetrics(results, subject).label;
+}
+
+function getExportQuizTrackMetrics(results, subject) {
   const entries = Object.entries(results || {})
     .filter(([key]) => key.startsWith(`${subject}_`) && key.includes("_quiz_level_") && key.endsWith("_result"));
   const summary = entries.reduce((total, [, value]) => {
@@ -1596,8 +1775,377 @@ function formatExportQuizTrack(results, subject) {
     return total;
   }, { score: 0, max: 0, count: 0 });
 
-  if (!summary.count) return "No live record yet";
-  return `${summary.score}/${summary.max || "?"} across ${summary.count} level${summary.count === 1 ? "" : "s"}`;
+  if (!summary.count) return { label: "No live record yet", percentLabel: "No live record yet", percent: 0, count: 0 };
+
+  const targetMax = DEMO_ANALYTICS_QUIZ_LEVELS * DEMO_ANALYTICS_DIFFICULTIES.length * DEMO_ANALYTICS_QUIZ_TOTAL;
+  const max = summary.max || targetMax;
+  const percent = getPercent(summary.score, max);
+
+  return {
+    label: `${summary.score}/${max} across ${summary.count} level${summary.count === 1 ? "" : "s"}`,
+    percentLabel: `${percent}%`,
+    percent,
+    count: summary.count
+  };
+}
+
+function getSubjectModuleTarget() {
+  return DEMO_ANALYTICS_DIFFICULTIES.length * DEMO_ANALYTICS_MODULES_PER_DIFFICULTY;
+}
+
+function getSubjectQuizTargetLevels() {
+  return DEMO_ANALYTICS_QUIZ_LEVELS * DEMO_ANALYTICS_DIFFICULTIES.length;
+}
+
+function countSubjectCompletedModules(progress = {}, subject) {
+  return Object.entries(progress || {}).filter(([key, value]) => {
+    return value === true && key.startsWith(`${subject}_`) && key.includes("_module_") && key.endsWith("_done");
+  }).length;
+}
+
+function getSubjectCompletionSteps(learner, subject) {
+  const progress = learner.progress || {};
+  const results = learner.results || {};
+  return [
+    { label: "Pre-Test", complete: progress[`${subject}_pretest`] === true || Boolean(results[`${subject}_pretest`]) },
+    { label: "Modules", complete: progress[`${subject}_modules`] === true || countSubjectCompletedModules(progress, subject) >= getSubjectModuleTarget() },
+    { label: "Quiz Track", complete: progress[`${subject}_quiz`] === true || getExportQuizTrackMetrics(results, subject).count >= getSubjectQuizTargetLevels() },
+    { label: "Post-Test", complete: progress[`${subject}_posttest`] === true || Boolean(results[`${subject}_posttest`]) }
+  ];
+}
+
+function getSubjectCertificateStatus(learner, subject) {
+  return getSubjectCompletionSteps(learner, subject).every((step) => step.complete) ? "Ready" : "Locked";
+}
+
+function getOverallCertificateStatus(learner) {
+  const hardwareReady = getSubjectCertificateStatus(learner, "hardware") === "Ready";
+  const electricalReady = getSubjectCertificateStatus(learner, "electrical") === "Ready";
+  if (hardwareReady && electricalReady) return "Dual certificate ready";
+  if (hardwareReady) return "Hardware certificate ready";
+  if (electricalReady) return "Electrical certificate ready";
+  return "No certificate yet";
+}
+
+function countLearnerBadges(learner) {
+  const badges = learner.badges || learner.earnedBadges || learner.unlockedBadges || [];
+  if (Array.isArray(badges)) return badges.length;
+  if (badges && typeof badges === "object") return Object.values(badges).filter(Boolean).length;
+  return 0;
+}
+
+function exportLearnerAnswerDetailsCsv(learners, mode) {
+  const button = document.getElementById("superExportAnswersBtn");
+  const previousText = button?.textContent || "Export Answer Details";
+  const status = document.getElementById("superExportStatus");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Preparing answers...";
+  }
+  if (status) status.textContent = `Preparing answer details for ${learners.length} learner record${learners.length === 1 ? "" : "s"}.`;
+
+  const headers = [
+    "Mode",
+    "Exported At",
+    "Name",
+    "Email",
+    "Subject",
+    "Assessment Type",
+    "Level",
+    "Question No.",
+    "Question",
+    "Learner Answer",
+    "Correct Answer",
+    "Result",
+    "Confidence",
+    "Wrong Count",
+    "Rationale",
+    "Source",
+    "Answered At"
+  ];
+
+  const exportedAt = formatExportTimestamp(new Date());
+  const rows = learners.flatMap((learner) => {
+    const details = collectLearnerAnswerDetails(learner);
+    if (!details.length) {
+      return [[
+        mode,
+        exportedAt,
+        learner.name || "User",
+        learner.email || "",
+        "",
+        "",
+        "",
+        "",
+        "No question-level answer records saved yet",
+        "",
+        "",
+        "No details",
+        "",
+        "",
+        "Older score-only attempts may not include selected answers.",
+        "summary",
+        ""
+      ]];
+    }
+
+    return details.map((item) => [
+      mode,
+      exportedAt,
+      learner.name || "User",
+      learner.email || "",
+      item.subject,
+      item.type,
+      item.level,
+      item.questionNumber,
+      item.question,
+      item.selectedAnswer,
+      item.correctAnswer,
+      item.result,
+      item.confidence,
+      item.wrongCount,
+      item.rationale,
+      item.source,
+      item.answeredAt
+    ]);
+  });
+
+  const filename = `code-recall-answer-details-${mode}-${formatExportDateStamp(new Date())}.csv`;
+  downloadCsv(filename, [headers, ...rows]);
+  if (status) status.textContent = `Answer-detail export ready: ${filename}`;
+  if (button) {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
+}
+
+async function exportAuditLogCsv() {
+  setExportCenterStatus("Preparing audit log CSV...");
+  setExportCenterBusy("superCenterAuditBtn", true);
+
+  try {
+    const auditSnap = await safeGetDocs("auditLogs", collection(db, "auditLogs"));
+    const entries = auditSnap.docs
+      .map((snap) => ({ id: snap.id, ...snap.data() }))
+      .sort((a, b) => toExportTimeMs(b.createdAt) - toExportTimeMs(a.createdAt));
+    const headers = [
+      "Exported At",
+      "Audit ID",
+      "Action",
+      "Title",
+      "Actor Email",
+      "Details",
+      "Route",
+      "Required Role",
+      "Resolved Role",
+      "Created At"
+    ];
+    const exportedAt = formatExportTimestamp(new Date());
+    const rows = entries.map((entry) => [
+      exportedAt,
+      entry.id || "",
+      formatAuditAction(entry.action),
+      formatAuditTitle(entry),
+      entry.actorEmail || "",
+      entry.details || "",
+      entry.metadata?.route || "",
+      formatRoleLabel(entry.metadata?.requiredRole || ""),
+      formatRoleLabel(entry.metadata?.resolvedRole || ""),
+      formatExportAnswerTimestamp(entry.createdAt || "")
+    ]);
+    const filename = `code-recall-audit-log-${formatExportDateStamp(new Date())}.csv`;
+    downloadCsv(filename, [headers, ...rows]);
+    setExportCenterStatus(`Audit log export ready: ${filename}`);
+  } finally {
+    setExportCenterBusy("superCenterAuditBtn", false);
+  }
+}
+
+async function exportFirestoreSnapshotJson() {
+  setExportCenterStatus("Preparing Firestore JSON snapshot...");
+  setExportCenterBusy("superCenterSnapshotBtn", true);
+
+  try {
+    const collectionNames = [
+      "users",
+      "leaderboard",
+      "accessRoles",
+      "pendingUsers",
+      "securityProfiles",
+      "auditLogs",
+      "feedbackNotes",
+      "contactMessages"
+    ];
+    const exportedAt = new Date();
+    const snapshots = await Promise.all(collectionNames.map(async (name) => {
+      try {
+        const snap = await safeGetDocs(name, collection(db, name));
+        return {
+          name,
+          records: snap.docs.map((docSnap) => ({
+            id: docSnap.id,
+            data: sanitizeForJsonExport(docSnap.data() || {})
+          }))
+        };
+      } catch (error) {
+        return {
+          name,
+          error: error?.message || "Unable to read collection.",
+          records: []
+        };
+      }
+    }));
+    const payload = {
+      app: "Code Recall",
+      kind: "firestore-app-data-snapshot",
+      mode: DEMO_ANALYTICS_MODE ? "analytics-preview" : "live",
+      exportedAt: exportedAt.toISOString(),
+      exportedBy: currentUser?.email || "",
+      collections: snapshots.reduce((summary, item) => {
+        summary[item.name] = item.error
+          ? { error: item.error, records: [] }
+          : item.records;
+        return summary;
+      }, {})
+    };
+    const filename = `code-recall-firestore-snapshot-${formatExportDateStamp(exportedAt)}.json`;
+    downloadJson(filename, payload);
+    setExportCenterStatus(`Firestore snapshot export ready: ${filename}`);
+  } finally {
+    setExportCenterBusy("superCenterSnapshotBtn", false);
+  }
+}
+
+function setExportCenterBusy(buttonId, isBusy) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  button.disabled = Boolean(isBusy);
+}
+
+function collectLearnerAnswerDetails(learner) {
+  const rows = [];
+  const seen = new Set();
+
+  Object.entries(learner.results || {}).forEach(([key, result]) => {
+    const answerItems = Array.isArray(result?.answerItems) ? result.answerItems : [];
+    answerItems.forEach((item, index) => {
+      const row = normalizeAnswerDetailRow({
+        ...item,
+        subject: item.subject || result.subject || parseSubjectFromResultKey(key),
+        type: item.type || result.type || parseTypeFromResultKey(key),
+        level: item.level || result.level || "",
+        questionNumber: item.questionNumber || index + 1,
+        source: item.source || "saved_attempt",
+        answeredAt: item.answeredAt || result.completedAt || ""
+      });
+      addAnswerDetailRow(rows, seen, row);
+    });
+  });
+
+  (Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview : []).forEach((item) => {
+    addAnswerDetailRow(rows, seen, normalizeAnswerDetailRow({
+      ...item,
+      type: item.quizType || item.type || "review",
+      questionNumber: item.sub || "",
+      result: "Wrong",
+      source: "wrong_answer_review",
+      answeredAt: item.lastAnsweredAt || item.updatedAt || ""
+    }));
+  });
+
+  (Array.isArray(learner.retentionQueue) ? learner.retentionQueue : []).forEach((item) => {
+    addAnswerDetailRow(rows, seen, normalizeAnswerDetailRow({
+      ...item,
+      type: item.quizType || item.type || "retention",
+      questionNumber: item.sub || "",
+      result: item.seedReason === "low_confidence_correct" ? "Correct" : "Wrong",
+      source: item.seedReason || "retention_queue",
+      answeredAt: item.lastAnsweredAt || item.updatedAt || item.createdAt || ""
+    }));
+  });
+
+  return rows.sort((a, b) =>
+    String(a.subject).localeCompare(String(b.subject)) ||
+    String(a.type).localeCompare(String(b.type)) ||
+    Number(a.questionNumber || 9999) - Number(b.questionNumber || 9999)
+  );
+}
+
+function addAnswerDetailRow(rows, seen, row) {
+  const key = [
+    row.subject,
+    row.type,
+    row.level,
+    row.question,
+    row.selectedAnswer,
+    row.source
+  ].join("|").toLowerCase();
+  if (seen.has(key)) return;
+  seen.add(key);
+  rows.push(row);
+}
+
+function normalizeAnswerDetailRow(item = {}) {
+  const result = item.result || (item.isCorrect === true ? "Correct" : item.isCorrect === false ? "Wrong" : "");
+  return {
+    subject: String(item.subject || ""),
+    type: String(item.quizType || item.type || ""),
+    level: String(item.quizLevel || item.level || ""),
+    questionNumber: String(item.questionNumber || item.number || item.sub || ""),
+    question: String(item.question || ""),
+    selectedAnswer: String(item.selectedAnswer || item.learnerAnswer || ""),
+    correctAnswer: String(item.correctAnswer || item.answer || ""),
+    result: result || "Recorded",
+    confidence: String(item.confidence || ""),
+    wrongCount: String(item.wrongCount || (result === "Wrong" ? 1 : "")),
+    rationale: String(item.rationale || ""),
+    source: String(item.source || ""),
+    answeredAt: formatExportAnswerTimestamp(item.answeredAt || item.lastAnsweredAt || item.updatedAt || item.completedAt || "")
+  };
+}
+
+function parseSubjectFromResultKey(key = "") {
+  const match = String(key).match(/^(hardware|electrical)_/);
+  return match?.[1] || "";
+}
+
+function parseTypeFromResultKey(key = "") {
+  if (String(key).includes("_pretest")) return "pretest";
+  if (String(key).includes("_posttest")) return "posttest";
+  if (String(key).includes("_quiz_")) return "quiz";
+  return "";
+}
+
+function formatExportAnswerTimestamp(value) {
+  if (!value) return "";
+  const date = value?.toDate
+    ? value.toDate()
+    : value?.seconds
+      ? new Date(value.seconds * 1000)
+      : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || "");
+  return formatExportTimestamp(date);
+}
+
+function toExportTimeMs(value) {
+  const date = value?.toDate
+    ? value.toDate()
+    : value?.seconds
+      ? new Date(value.seconds * 1000)
+      : new Date(value || 0);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function sanitizeForJsonExport(value) {
+  if (value?.toDate) return value.toDate().toISOString();
+  if (Array.isArray(value)) return value.map((item) => sanitizeForJsonExport(item));
+  if (value && typeof value === "object") {
+    return Object.entries(value).reduce((next, [key, item]) => {
+      next[key] = sanitizeForJsonExport(item);
+      return next;
+    }, {});
+  }
+  return value;
 }
 
 function countCompletedModules(progress) {
@@ -1630,9 +2178,26 @@ function readResultNumber(value, keys) {
   return NaN;
 }
 
+function getPercent(value, total) {
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, Math.round((Number(value || 0) / Number(total || 1)) * 100)));
+}
+
 function downloadCsv(filename, rows) {
   const csv = rows.map((row) => row.map(escapeCsvCell).join(",")).join("\r\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadJson(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -1822,19 +2387,110 @@ function renderAuditLog(entries) {
   if (!list) return;
 
   if (!entries.length) {
-    list.innerHTML = `<div class="review-item"><h5>No audit entries yet</h5><p>System actions will appear here as soon as admins and super admins start working.</p></div>`;
+    const hasSearch = Boolean(getAuditSearchTerm());
+    list.innerHTML = hasSearch
+      ? `<div class="review-item"><h5>No matching audit entries</h5><p>Try another action, email, route, or role keyword.</p></div>`
+      : `<div class="review-item"><h5>No audit entries yet</h5><p>System actions will appear here as soon as admins and super admins start working.</p></div>`;
     return;
   }
 
   list.innerHTML = entries.map((entry) => `
     <article class="review-item">
       <div class="review-meta">
-        <span class="meta-pill">${escapeHtml(entry.action || "action")}</span>
+        <span class="meta-pill">${escapeHtml(formatAuditAction(entry.action))}</span>
         <span class="meta-pill">${escapeHtml(entry.actorEmail || "system")}</span>
+        <span class="meta-pill">${escapeHtml(formatAdminDateTime(entry.createdAt))}</span>
+        ${entry.metadata?.route ? `<span class="meta-pill">${escapeHtml(entry.metadata.route)}</span>` : ""}
       </div>
+      <h5>${escapeHtml(formatAuditTitle(entry))}</h5>
       <p>${escapeHtml(entry.details || "No details recorded.")}</p>
+      ${renderAuditMetadata(entry.metadata)}
     </article>
   `).join("");
+}
+
+function wireAuditSearch() {
+  const input = document.getElementById("auditSearchInput");
+  if (!input || input.dataset.wired === "true") return;
+
+  input.dataset.wired = "true";
+  input.addEventListener("input", () => {
+    renderAuditLog(getFilteredAuditEntries());
+  });
+}
+
+function getAuditSearchTerm() {
+  return String(document.getElementById("auditSearchInput")?.value || "").trim().toLowerCase();
+}
+
+function getFilteredAuditEntries() {
+  const term = getAuditSearchTerm();
+  if (!term) return auditLogCache;
+
+  return auditLogCache.filter((entry) => {
+    const metadata = entry.metadata || {};
+    const haystack = [
+      entry.action,
+      formatAuditAction(entry.action),
+      formatAuditTitle(entry),
+      entry.actorEmail,
+      entry.details,
+      metadata.route,
+      metadata.requiredRole,
+      metadata.resolvedRole,
+      formatRoleLabel(metadata.requiredRole),
+      formatRoleLabel(metadata.resolvedRole),
+      formatAdminDateTime(entry.createdAt)
+    ].join(" ").toLowerCase();
+
+    return haystack.includes(term);
+  });
+}
+
+function formatAuditAction(action) {
+  const labels = {
+    denied_admin_route: "Access blocked",
+    denied_super_admin_route: "Access blocked",
+    mfa_required_privileged_route: "2FA required",
+    mfa_enrollment_required: "2FA enrollment",
+    reset_own_admin_mfa: "Admin 2FA reset",
+    reset_own_super_admin_mfa: "Super Admin 2FA reset"
+  };
+  return labels[action] || action || "Audit event";
+}
+
+function formatAuditTitle(entry) {
+  if (entry.action === "denied_admin_route") return "Admin route access was denied";
+  if (entry.action === "denied_super_admin_route") return "Super Admin route access was denied";
+  if (entry.action === "reset_own_admin_mfa") return "Admin reset their own Firebase 2FA";
+  if (entry.action === "reset_own_super_admin_mfa") return "Super Admin reset their own Firebase 2FA";
+  if (entry.action === "mfa_required_privileged_route") return "Privileged route required a 2FA check";
+  if (entry.action === "mfa_enrollment_required") return "Privileged account needs 2FA enrollment";
+  return "Security audit event";
+}
+
+function renderAuditMetadata(metadata = {}) {
+  const items = [
+    metadata.requiredRole ? `Required: ${formatRoleLabel(metadata.requiredRole)}` : "",
+    metadata.resolvedRole ? `Detected: ${formatRoleLabel(metadata.resolvedRole)}` : "",
+    metadata.method ? `Method: ${metadata.method}` : ""
+  ].filter(Boolean);
+
+  if (!items.length) return "";
+
+  return `
+    <div class="review-meta audit-detail-meta">
+      ${items.map((item) => `<span class="meta-pill">${escapeHtml(item)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function formatRoleLabel(role) {
+  if (role === "super_admin") return "Super Admin";
+  if (role === "admin") return "Admin";
+  if (role === "user") return "Learner";
+  if (role === "guest") return "Guest";
+  return role || "Unknown";
 }
 
 async function writeAuditLog(action, details) {

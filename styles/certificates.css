@@ -262,6 +262,12 @@
   border: 1px dashed rgba(255,255,255,0.14);
 }
 
+.certificate-vault-empty.is-error,
+.certificate-history-empty.is-error {
+  border-color: rgba(255, 94, 125, 0.24);
+  background: rgba(255, 94, 125, 0.08);
+}
+
 .certificate-vault-empty h4 {
   margin: 0 0 8px;
   font-size: 22px;
@@ -400,6 +406,12 @@ body.light-mode .certificate-vault-empty {
   background: rgba(255,255,255,0.7);
   border-color: rgba(17,24,39,0.1);
   color: #1a2146;
+}
+
+body.light-mode .certificate-vault-empty.is-error,
+body.light-mode .certificate-history-empty.is-error {
+  background: rgba(255, 94, 125, 0.08);
+  border-color: rgba(255, 94, 125, 0.18);
 }
 
 body.light-mode .certificate-history-card {

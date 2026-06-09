@@ -1,5 +1,17 @@
+.researchers-body{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
 .researchers-page{
   gap:30px;
+  flex:1;
+  padding-bottom:42px;
+}
+
+.researchers-footer{
+  margin-top:0;
 }
 
 body.modal-open{

@@ -69,6 +69,23 @@ const QUIZ_LEVEL_XP_PER_CORRECT = 2;
 const QUIZ_TRACK_MAX_LEVELS = Object.values(QUIZ_LEVEL_COUNTS).reduce((sum, count) => sum + count, 0);
 const QUIZ_TRACK_MAX_SCORE = QUIZ_TRACK_MAX_LEVELS * QUIZ_LEVEL_QUESTIONS;
 const QUIZ_TRACK_MAX_XP = QUIZ_TRACK_MAX_SCORE * QUIZ_LEVEL_XP_PER_CORRECT;
+const subjectCardConfig = {
+  modulesBtn: {
+    step: "modules",
+    defaultCopy: "Read the lessons",
+    lockedCopy: "Complete Pre-Test first"
+  },
+  quizzesBtn: {
+    step: "quiz",
+    defaultCopy: "Answer module quizzes",
+    lockedCopy: "Complete Modules first"
+  },
+  posttestBtn: {
+    step: "posttest",
+    defaultCopy: "Final assessment",
+    lockedCopy: "Complete Quiz Track first"
+  }
+};
 
 function showSubjectNotice(message) {
   const modal = document.getElementById("subjectNoticeModal");
@@ -190,6 +207,9 @@ function unlockButton(buttonId) {
 
   btn.classList.remove("locked");
   btn.classList.add("unlocked");
+  btn.removeAttribute("aria-describedby");
+  restoreSubjectCardCopy(btn, buttonId);
+  removeSubjectCardHint(btn);
 
   const badge = btn.querySelector(".lock-icon");
   if (badge) badge.remove();
@@ -198,14 +218,68 @@ function unlockButton(buttonId) {
 function lockButton(buttonId) {
   const btn = document.getElementById(buttonId);
   if (!btn) return;
+  const config = subjectCardConfig[buttonId];
   btn.classList.add("locked");
   btn.classList.remove("unlocked", "ready-card");
+  if (config) {
+    setSubjectCardCopy(btn, config.lockedCopy);
+    setSubjectCardHint(btn, getLockedMessage(config.step));
+  }
   if (!btn.querySelector(".lock-icon")) {
     const icon = document.createElement("span");
     icon.className = "lock-icon";
     icon.textContent = "🔒";
     btn.prepend(icon);
   }
+}
+
+function setSubjectCardCopy(button, copy) {
+  const text = button.querySelector(".subject-card-inner p");
+  if (text) text.textContent = copy;
+}
+
+function restoreSubjectCardCopy(button, buttonId) {
+  const config = subjectCardConfig[buttonId];
+  if (config) {
+    setSubjectCardCopy(button, config.defaultCopy);
+  }
+}
+
+function setSubjectCardHint(button, message) {
+  const inner = button.querySelector(".subject-card-inner");
+  if (!inner) return;
+  let hint = button.querySelector(".subject-lock-hint");
+  if (!hint) {
+    hint = document.createElement("span");
+    hint.className = "subject-lock-hint";
+    inner.appendChild(hint);
+  }
+  const hintId = `${button.id || "subject-card"}-lock-hint`;
+  hint.id = hintId;
+  hint.textContent = message;
+  button.setAttribute("aria-describedby", hintId);
+}
+
+function removeSubjectCardHint(button) {
+  const hint = button.querySelector(".subject-lock-hint");
+  if (hint) hint.remove();
+}
+
+function setSubjectCardCta(button, text) {
+  const inner = button.querySelector(".subject-card-inner");
+  if (!inner) return;
+  let cta = button.querySelector(".subject-card-cta");
+  if (!cta) {
+    cta = document.createElement("span");
+    cta.className = "subject-card-cta";
+    inner.appendChild(cta);
+  }
+  cta.textContent = text;
+}
+
+function removeSubjectCardCta(button) {
+  const cta = button.querySelector(".subject-card-cta");
+  if (cta) cta.remove();
 }
 
 function setPosttestReady(isReady) {
@@ -215,7 +289,21 @@ function setPosttestReady(isReady) {
   const badge = button.querySelector(".subject-badge");
   const copy = button.querySelector("p");
   if (badge) badge.textContent = isReady ? "READY" : "FINAL";
-  if (copy) copy.textContent = isReady ? "Post-test unlocked" : "Final assessment";
+  if (copy) {
+    copy.textContent = isReady
+      ? "Post-test unlocked"
+      : button.classList.contains("locked")
+        ? subjectCardConfig.posttestBtn.lockedCopy
+        : subjectCardConfig.posttestBtn.defaultCopy;
+  }
+  if (isReady) {
+    removeSubjectCardHint(button);
+    setSubjectCardCta(button, "Take Post-Test");
+    button.setAttribute("aria-label", "Post-Test unlocked. Take the final assessment.");
+  } else {
+    removeSubjectCardCta(button);
+    button.removeAttribute("aria-label");
+  }
 }
 
 function setChecklistItem(id, status, detail = "") {

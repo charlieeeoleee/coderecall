@@ -44,6 +44,10 @@
           <div>
           <h2 class="page-title">Super Admin</h2>
           <p class="page-subtitle" id="superAdminLoadStatus">Manage roles, review the whole system, and control app user records for the prototype.</p>
+          <div class="dashboard-refresh-row">
+            <button id="superRefreshBtn" type="button" class="secondary-action">Refresh Data</button>
+            <span id="superRefreshStatus" class="refresh-status">Dashboard data is ready.</span>
+          </div>
           </div>
         </div>
         <div class="user-top">
@@ -263,6 +267,38 @@
       </section>
 
       <section class="panel-card wide">
+        <div class="panel-header">
+          <div>
+            <h3>Data Export Center</h3>
+            <p>Download learner results, answer-level details, audit logs, or a Firestore app-data snapshot from one place.</p>
+          </div>
+        </div>
+        <div class="export-center-grid">
+          <button type="button" id="superCenterScoresBtn" class="export-center-card">
+            <span>Scores CSV</span>
+            <strong>Learner Score Summary</strong>
+            <small>Pre-Test, quiz track, Post-Test, modules, XP, and certificates.</small>
+          </button>
+          <button type="button" id="superCenterAnswersBtn" class="export-center-card">
+            <span>Answers CSV</span>
+            <strong>Question-Level Details</strong>
+            <small>Available correct/wrong answers, confidence, rationale, and source.</small>
+          </button>
+          <button type="button" id="superCenterAuditBtn" class="export-center-card">
+            <span>Audit CSV</span>
+            <strong>Security and Admin Actions</strong>
+            <small>Role changes, blocked access, 2FA actions, and system events.</small>
+          </button>
+          <button type="button" id="superCenterSnapshotBtn" class="export-center-card">
+            <span>JSON Backup</span>
+            <strong>Firestore Data Snapshot</strong>
+            <small>Users, roles, security profiles, contact records, notes, and audit logs.</small>
+          </button>
+        </div>
+        <p id="superExportCenterStatus" class="form-status">Exports are downloaded locally and do not change Firestore data.</p>
+      </section>
+
+      <section class="panel-card wide">
           <div class="panel-header">
             <div>
               <h3>User Access Control</h3>
@@ -270,7 +306,8 @@
             </div>
             <div class="export-action-group">
               <button type="button" id="superExportScoresBtn" class="secondary-action">Export Learner Scores</button>
-              <small id="superExportStatus">CSV includes live records or current analytics preview values.</small>
+              <button type="button" id="superExportAnswersBtn" class="secondary-action">Export Answer Details</button>
+              <small id="superExportStatus">CSV includes learner scores and available question-level answer records.</small>
             </div>
           </div>
         <div class="table-wrap">
@@ -327,6 +364,10 @@
             <h3>Audit Log</h3>
             <p>Review the latest role changes, approvals, and access-management actions.</p>
           </div>
+        </div>
+        <div class="audit-toolbar">
+          <label for="auditSearchInput">Search audit log</label>
+          <input id="auditSearchInput" type="search" placeholder="Search action, email, route, or role">
         </div>
         <div id="auditLogList" class="review-list"></div>
       </section>

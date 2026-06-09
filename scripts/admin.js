@@ -63,8 +63,17 @@ let currentUser = null;
 let currentRole = "user";
 let learnersCache = [];
 let contactInboxUnsubscribe = null;
+let adminDashboardLoading = false;
 
 applyRoleNavigation("guest", "admin.html");
+
+function openAccessDenied(area, role) {
+  const params = new URLSearchParams({
+    area,
+    role: role || "unknown"
+  });
+  window.location.href = `access-denied.html?${params.toString()}`;
+}
 
 function syncMobileSidebarButton() {
   const layout = document.querySelector(".layout");
@@ -102,8 +111,18 @@ onAuthStateChanged(auth, async (user) => {
   applyRoleNavigation(currentRole, "admin.html");
 
   if (!roleMeetsMinimum(currentRole, "admin")) {
-    await writeSecurityAudit(db, user, "denied_admin_route", `Denied admin.html route for resolved role: ${currentRole}`);
-    window.location.href = "dashboard.html";
+    await writeSecurityAudit(
+      db,
+      user,
+      "denied_admin_route",
+      `Denied admin.html route for resolved role: ${currentRole}`,
+      {
+        route: "admin.html",
+        requiredRole: "admin",
+        resolvedRole: currentRole
+      }
+    );
+    openAccessDenied("admin", currentRole);
     return;
   }
 
@@ -124,33 +143,83 @@ onAuthStateChanged(auth, async (user) => {
   startContactInboxSubscription();
 });
 
-async function loadAdminDashboard() {
-  const [usersSnap, moduleDrafts, quizDrafts, contactMessages] = await Promise.all([
-    getDocs(collection(db, "users")),
-    safeSupabaseRead("module drafts", fetchModuleDrafts),
-    safeSupabaseRead("quiz drafts", fetchQuizDrafts),
-    fetchAccessibleContactMessages()
-  ]);
+async function loadAdminDashboard(options = {}) {
+  if (adminDashboardLoading) return;
+  adminDashboardLoading = true;
+  setAdminRefreshState(true, options.manual ? "Refreshing admin data..." : "Loading admin data...");
 
-  const users = applyDemoAnalyticsOverlay(
-    usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
-  );
+  try {
+    const [usersSnap, moduleDrafts, quizDrafts, contactMessages] = await Promise.all([
+      getDocs(collection(db, "users")),
+      safeSupabaseRead("module drafts", fetchModuleDrafts),
+      safeSupabaseRead("quiz drafts", fetchQuizDrafts),
+      fetchAccessibleContactMessages()
+    ]);
 
-  learnersCache = users.filter((user) => getRoleFromUserData(user) === "user");
+    const users = applyDemoAnalyticsOverlay(
+      usersSnap.docs.map((snap) => ({ id: snap.id, ...snap.data() }))
+    );
 
-  renderAnalyticsPreviewNavCue();
-  renderDemoAnalyticsNotice();
-  renderContactInboxCounts(contactMessages);
-  renderOverview(learnersCache);
-  renderLearningInsights(learnersCache);
-  renderBottlenecks(learnersCache);
-  renderDifficultyAnalytics(learnersCache);
-  renderSubjectCompletionBreakdown(learnersCache);
-  renderStudentTable(learnersCache);
-  wireLearnerScoreExport();
-  renderDraftReviews(moduleDrafts, quizDrafts);
-  wireBuilderForms();
+    learnersCache = users.filter((user) => getRoleFromUserData(user) === "user");
+
+    renderAnalyticsPreviewNavCue();
+    renderDemoAnalyticsNotice();
+    renderContactInboxCounts(contactMessages);
+    renderOverview(learnersCache);
+    renderLearningInsights(learnersCache);
+    renderBottlenecks(learnersCache);
+    renderDifficultyAnalytics(learnersCache);
+    renderSubjectCompletionBreakdown(learnersCache);
+    renderStudentTable(learnersCache);
+    wireLearnerScoreExport();
+    renderDraftReviews(moduleDrafts, quizDrafts);
+    wireBuilderForms();
+    setAdminRefreshState(false, "Data refreshed just now.");
+  } catch (error) {
+    console.error("Unable to load admin dashboard data:", error);
+    setAdminRefreshState(false, "Unable to refresh Firebase data. Check your connection, then retry.", true);
+    renderAdminLoadError();
+  } finally {
+    adminDashboardLoading = false;
+  }
 }
+
+function setAdminRefreshState(isLoading, message, isWarning = false) {
+  const button = document.getElementById("adminRefreshBtn");
+  const status = document.getElementById("adminRefreshStatus");
+  if (button) {
+    button.disabled = isLoading;
+    button.textContent = isLoading ? "Refreshing..." : "Refresh Data";
+  }
+  if (status) {
+    status.textContent = message;
+    status.classList.toggle("warning", Boolean(isWarning));
+  }
+}
+
+function renderAdminLoadError() {
+  const empty = `
+    <article class="review-item">
+      <h5>Data could not be loaded</h5>
+      <p>Use Refresh Data after checking the connection or Firebase permissions.</p>
+    </article>
+  `;
+  [
+    "adminMostActiveLearners",
+    "adminReviewQueues",
+    "adminRetentionLoads",
+    "adminLowestRetentionRecovery",
+    "adminMostMissedTopics",
+    "adminCompletionBreakdown"
+  ].forEach((id) => {
+    const target = document.getElementById(id);
+    if (target) target.innerHTML = empty;
+  });
+}
+
+document.getElementById("adminRefreshBtn")?.addEventListener("click", () => {
+  loadAdminDashboard({ manual: true });
+});
 
 function renderDemoAnalyticsNotice() {
   document.body.classList.toggle("demo-analytics-mode", DEMO_ANALYTICS_MODE);
@@ -1001,12 +1070,21 @@ function renderStudentTable(learners) {
 
 function wireLearnerScoreExport() {
   const button = document.getElementById("adminExportScoresBtn");
-  if (!button || button.dataset.bound === "true") return;
+  const answersButton = document.getElementById("adminExportAnswersBtn");
 
-  button.dataset.bound = "true";
-  button.addEventListener("click", () => {
-    exportLearnerScoresCsv(learnersCache, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
-  });
+  if (button && button.dataset.bound !== "true") {
+    button.dataset.bound = "true";
+    button.addEventListener("click", () => {
+      exportLearnerScoresCsv(learnersCache, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+    });
+  }
+
+  if (answersButton && answersButton.dataset.bound !== "true") {
+    answersButton.dataset.bound = "true";
+    answersButton.addEventListener("click", () => {
+      exportLearnerAnswerDetailsCsv(learnersCache, DEMO_ANALYTICS_MODE ? "analytics-preview" : "live");
+    });
+  }
 }
 
 function exportLearnerScoresCsv(learners, mode) {
@@ -1024,16 +1102,29 @@ function exportLearnerScoresCsv(learners, mode) {
     "Exported At",
     "Name",
     "Email",
+    "Role",
     "XP",
+    "Badges",
     "Completed Modules",
+    "Certificate Status",
     "Electrical Pre-Test",
+    "Electrical Pre-Test Percent",
     "Electrical Quiz Track",
+    "Electrical Quiz Track Percent",
     "Electrical Post-Test",
+    "Electrical Post-Test Percent",
+    "Electrical Modules",
     "Electrical Completion",
+    "Electrical Certificate",
     "Hardware Pre-Test",
+    "Hardware Pre-Test Percent",
     "Hardware Quiz Track",
+    "Hardware Quiz Track Percent",
     "Hardware Post-Test",
-    "Hardware Completion"
+    "Hardware Post-Test Percent",
+    "Hardware Modules",
+    "Hardware Completion",
+    "Hardware Certificate"
   ];
 
   const rows = learners.map((learner) => {
@@ -1045,16 +1136,29 @@ function exportLearnerScoresCsv(learners, mode) {
       formatExportTimestamp(new Date()),
       learner.name || "User",
       learner.email || "",
+      getRoleFromUserData(learner),
       learner.xp || 0,
+      countLearnerBadges(learner),
       countCompletedModules(learner.progress || {}),
+      getOverallCertificateStatus(learner),
       electrical.pretest,
+      electrical.pretestPercent,
       electrical.quiz,
+      electrical.quizPercent,
       electrical.posttest,
+      electrical.posttestPercent,
+      electrical.modules,
       electrical.completion,
+      electrical.certificate,
       hardware.pretest,
+      hardware.pretestPercent,
       hardware.quiz,
+      hardware.quizPercent,
       hardware.posttest,
-      hardware.completion
+      hardware.posttestPercent,
+      hardware.modules,
+      hardware.completion,
+      hardware.certificate
     ];
   });
 
@@ -1070,29 +1174,53 @@ function exportLearnerScoresCsv(learners, mode) {
 function summarizeLearnerSubjectForExport(learner, subject) {
   const results = learner.results || {};
   const progress = learner.progress || {};
+  const pretest = getExportResultMetrics(results[`${subject}_pretest`]);
+  const quiz = getExportQuizTrackMetrics(results, subject);
+  const posttest = getExportResultMetrics(results[`${subject}_posttest`]);
 
   return {
-    pretest: formatExportResult(results[`${subject}_pretest`]),
-    quiz: formatExportQuizTrack(results, subject),
-    posttest: formatExportResult(results[`${subject}_posttest`]),
-    completion: progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] ? "Complete" : describeSubjectStage(progress, subject)
+    pretest: pretest.label,
+    pretestPercent: pretest.percentLabel,
+    quiz: quiz.label,
+    quizPercent: quiz.percentLabel,
+    posttest: posttest.label,
+    posttestPercent: posttest.percentLabel,
+    modules: `${countSubjectCompletedModules(progress, subject)}/${getSubjectModuleTarget()} modules`,
+    completion: progress[`${subject}_posttest`] === true || results[`${subject}_posttest`] ? "Complete" : describeSubjectStage(progress, subject),
+    certificate: getSubjectCertificateStatus(learner, subject)
   };
 }
 
 function formatExportResult(result) {
-  if (!result) return "No live record yet";
+  return getExportResultMetrics(result).label;
+}
+
+function getExportResultMetrics(result) {
+  if (!result) return { label: "No live record yet", percentLabel: "No live record yet", percent: 0 };
 
   const score = readResultNumber(result, ["score", "correct", "correctAnswers", "points"]);
   const total = readResultNumber(result, ["total", "items", "questionCount", "totalQuestions", "maxScore"]);
   const percent = Number(result.percent);
 
-  if (Number.isFinite(score) && Number.isFinite(total)) return `${score}/${total}`;
-  if (Number.isFinite(percent)) return `${Math.round(percent)}%`;
-  if (Number.isFinite(score)) return `${score}`;
-  return "Recorded";
+  if (Number.isFinite(score) && Number.isFinite(total)) {
+    const computedPercent = getPercent(score, total);
+    return { label: `${score}/${total}`, percentLabel: `${computedPercent}%`, percent: computedPercent };
+  }
+
+  if (Number.isFinite(percent)) {
+    const roundedPercent = Math.round(percent);
+    return { label: `${roundedPercent}%`, percentLabel: `${roundedPercent}%`, percent: roundedPercent };
+  }
+
+  if (Number.isFinite(score)) return { label: `${score}`, percentLabel: "Recorded", percent: 0 };
+  return { label: "Recorded", percentLabel: "Recorded", percent: 0 };
 }
 
 function formatExportQuizTrack(results, subject) {
+  return getExportQuizTrackMetrics(results, subject).label;
+}
+
+function getExportQuizTrackMetrics(results, subject) {
   const entries = Object.entries(results || {})
     .filter(([key]) => key.startsWith(`${subject}_`) && key.includes("_quiz_level_") && key.endsWith("_result"));
   const summary = entries.reduce((total, [, value]) => {
@@ -1104,8 +1232,253 @@ function formatExportQuizTrack(results, subject) {
     return total;
   }, { score: 0, max: 0, count: 0 });
 
-  if (!summary.count) return "No live record yet";
-  return `${summary.score}/${summary.max || "?"} across ${summary.count} level${summary.count === 1 ? "" : "s"}`;
+  if (!summary.count) return { label: "No live record yet", percentLabel: "No live record yet", percent: 0, count: 0 };
+
+  const targetMax = QUIZ_LEVELS_PER_DIFFICULTY * 3 * 3;
+  const max = summary.max || targetMax;
+  const percent = getPercent(summary.score, max);
+
+  return {
+    label: `${summary.score}/${max} across ${summary.count} level${summary.count === 1 ? "" : "s"}`,
+    percentLabel: `${percent}%`,
+    percent,
+    count: summary.count
+  };
+}
+
+function getSubjectModuleTarget() {
+  return DEMO_ANALYTICS_DIFFICULTIES.length * DEMO_ANALYTICS_MODULES_PER_DIFFICULTY;
+}
+
+function getSubjectQuizTargetLevels() {
+  return QUIZ_LEVELS_PER_DIFFICULTY * DEMO_ANALYTICS_DIFFICULTIES.length;
+}
+
+function countSubjectCompletedModules(progress = {}, subject) {
+  return Object.entries(progress || {}).filter(([key, value]) => {
+    return value === true && key.startsWith(`${subject}_`) && key.includes("_module_") && key.endsWith("_done");
+  }).length;
+}
+
+function getSubjectCompletionSteps(learner, subject) {
+  const progress = learner.progress || {};
+  const results = learner.results || {};
+  return [
+    { label: "Pre-Test", complete: progress[`${subject}_pretest`] === true || Boolean(results[`${subject}_pretest`]) },
+    { label: "Modules", complete: progress[`${subject}_modules`] === true || countSubjectCompletedModules(progress, subject) >= getSubjectModuleTarget() },
+    { label: "Quiz Track", complete: progress[`${subject}_quiz`] === true || getExportQuizTrackMetrics(results, subject).count >= getSubjectQuizTargetLevels() },
+    { label: "Post-Test", complete: progress[`${subject}_posttest`] === true || Boolean(results[`${subject}_posttest`]) }
+  ];
+}
+
+function getSubjectCertificateStatus(learner, subject) {
+  return getSubjectCompletionSteps(learner, subject).every((step) => step.complete) ? "Ready" : "Locked";
+}
+
+function getOverallCertificateStatus(learner) {
+  const hardwareReady = getSubjectCertificateStatus(learner, "hardware") === "Ready";
+  const electricalReady = getSubjectCertificateStatus(learner, "electrical") === "Ready";
+  if (hardwareReady && electricalReady) return "Dual certificate ready";
+  if (hardwareReady) return "Hardware certificate ready";
+  if (electricalReady) return "Electrical certificate ready";
+  return "No certificate yet";
+}
+
+function countLearnerBadges(learner) {
+  const badges = learner.badges || learner.earnedBadges || learner.unlockedBadges || [];
+  if (Array.isArray(badges)) return badges.length;
+  if (badges && typeof badges === "object") return Object.values(badges).filter(Boolean).length;
+  return 0;
+}
+
+function exportLearnerAnswerDetailsCsv(learners, mode) {
+  const button = document.getElementById("adminExportAnswersBtn");
+  const previousText = button?.textContent || "Export Answer Details";
+  const status = document.getElementById("adminExportStatus");
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Preparing answers...";
+  }
+  if (status) status.textContent = `Preparing answer details for ${learners.length} learner record${learners.length === 1 ? "" : "s"}.`;
+
+  const headers = [
+    "Mode",
+    "Exported At",
+    "Name",
+    "Email",
+    "Subject",
+    "Assessment Type",
+    "Level",
+    "Question No.",
+    "Question",
+    "Learner Answer",
+    "Correct Answer",
+    "Result",
+    "Confidence",
+    "Wrong Count",
+    "Rationale",
+    "Source",
+    "Answered At"
+  ];
+
+  const exportedAt = formatExportTimestamp(new Date());
+  const rows = learners.flatMap((learner) => {
+    const details = collectLearnerAnswerDetails(learner);
+    if (!details.length) {
+      return [[
+        mode,
+        exportedAt,
+        learner.name || "User",
+        learner.email || "",
+        "",
+        "",
+        "",
+        "",
+        "No question-level answer records saved yet",
+        "",
+        "",
+        "No details",
+        "",
+        "",
+        "Older score-only attempts may not include selected answers.",
+        "summary",
+        ""
+      ]];
+    }
+
+    return details.map((item) => [
+      mode,
+      exportedAt,
+      learner.name || "User",
+      learner.email || "",
+      item.subject,
+      item.type,
+      item.level,
+      item.questionNumber,
+      item.question,
+      item.selectedAnswer,
+      item.correctAnswer,
+      item.result,
+      item.confidence,
+      item.wrongCount,
+      item.rationale,
+      item.source,
+      item.answeredAt
+    ]);
+  });
+
+  const filename = `code-recall-answer-details-${mode}-${formatExportDateStamp(new Date())}.csv`;
+  downloadCsv(filename, [headers, ...rows]);
+  if (status) status.textContent = `Answer-detail export ready: ${filename}`;
+  if (button) {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
+}
+
+function collectLearnerAnswerDetails(learner) {
+  const rows = [];
+  const seen = new Set();
+
+  Object.entries(learner.results || {}).forEach(([key, result]) => {
+    const answerItems = Array.isArray(result?.answerItems) ? result.answerItems : [];
+    answerItems.forEach((item, index) => {
+      const row = normalizeAnswerDetailRow({
+        ...item,
+        subject: item.subject || result.subject || parseSubjectFromResultKey(key),
+        type: item.type || result.type || parseTypeFromResultKey(key),
+        level: item.level || result.level || "",
+        questionNumber: item.questionNumber || index + 1,
+        source: item.source || "saved_attempt",
+        answeredAt: item.answeredAt || result.completedAt || ""
+      });
+      addAnswerDetailRow(rows, seen, row);
+    });
+  });
+
+  (Array.isArray(learner.wrongAnswerReview) ? learner.wrongAnswerReview : []).forEach((item) => {
+    addAnswerDetailRow(rows, seen, normalizeAnswerDetailRow({
+      ...item,
+      type: item.quizType || item.type || "review",
+      questionNumber: item.sub || "",
+      result: "Wrong",
+      source: "wrong_answer_review",
+      answeredAt: item.lastAnsweredAt || item.updatedAt || ""
+    }));
+  });
+
+  (Array.isArray(learner.retentionQueue) ? learner.retentionQueue : []).forEach((item) => {
+    addAnswerDetailRow(rows, seen, normalizeAnswerDetailRow({
+      ...item,
+      type: item.quizType || item.type || "retention",
+      questionNumber: item.sub || "",
+      result: item.seedReason === "low_confidence_correct" ? "Correct" : "Wrong",
+      source: item.seedReason || "retention_queue",
+      answeredAt: item.lastAnsweredAt || item.updatedAt || item.createdAt || ""
+    }));
+  });
+
+  return rows.sort((a, b) =>
+    String(a.subject).localeCompare(String(b.subject)) ||
+    String(a.type).localeCompare(String(b.type)) ||
+    Number(a.questionNumber || 9999) - Number(b.questionNumber || 9999)
+  );
+}
+
+function addAnswerDetailRow(rows, seen, row) {
+  const key = [
+    row.subject,
+    row.type,
+    row.level,
+    row.question,
+    row.selectedAnswer,
+    row.source
+  ].join("|").toLowerCase();
+  if (seen.has(key)) return;
+  seen.add(key);
+  rows.push(row);
+}
+
+function normalizeAnswerDetailRow(item = {}) {
+  const result = item.result || (item.isCorrect === true ? "Correct" : item.isCorrect === false ? "Wrong" : "");
+  return {
+    subject: String(item.subject || ""),
+    type: String(item.quizType || item.type || ""),
+    level: String(item.quizLevel || item.level || ""),
+    questionNumber: String(item.questionNumber || item.number || item.sub || ""),
+    question: String(item.question || ""),
+    selectedAnswer: String(item.selectedAnswer || item.learnerAnswer || ""),
+    correctAnswer: String(item.correctAnswer || item.answer || ""),
+    result: result || "Recorded",
+    confidence: String(item.confidence || ""),
+    wrongCount: String(item.wrongCount || (result === "Wrong" ? 1 : "")),
+    rationale: String(item.rationale || ""),
+    source: String(item.source || ""),
+    answeredAt: formatExportAnswerTimestamp(item.answeredAt || item.lastAnsweredAt || item.updatedAt || item.completedAt || "")
+  };
+}
+
+function parseSubjectFromResultKey(key = "") {
+  const match = String(key).match(/^(hardware|electrical)_/);
+  return match?.[1] || "";
+}
+
+function parseTypeFromResultKey(key = "") {
+  if (String(key).includes("_pretest")) return "pretest";
+  if (String(key).includes("_posttest")) return "posttest";
+  if (String(key).includes("_quiz_")) return "quiz";
+  return "";
+}
+
+function formatExportAnswerTimestamp(value) {
+  if (!value) return "";
+  const date = value?.toDate
+    ? value.toDate()
+    : value?.seconds
+      ? new Date(value.seconds * 1000)
+      : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value || "");
+  return formatExportTimestamp(date);
 }
 
 function downloadCsv(filename, rows) {
@@ -1365,6 +1738,7 @@ async function openStudentProfile(learner) {
   const studyHistory = summarizeLearnerStudyHistory(learner);
   const assessmentBars = buildLearnerAssessmentBars(learner);
   const assessmentSummary = buildLearnerAssessmentSummary(learner);
+  const subjectStatusCards = buildLearnerSubjectStatusCards(learner);
   const retentionSnapshot = summarizeLearnerRetentionSnapshot(learner);
   const dueRetentionItems = summarizeLearnerDueRetentionItems(learner);
 
@@ -1376,6 +1750,12 @@ async function openStudentProfile(learner) {
         <div class="profile-stat-card"><span>Electrical Stage</span><strong>${describeSubjectStage(progress, "electrical")}</strong></div>
         <div class="profile-stat-card"><span>Hardware Stage</span><strong>${describeSubjectStage(progress, "hardware")}</strong></div>
       </div>
+      <section class="profile-section">
+        <h4>Learning Path Status</h4>
+        <div class="profile-subject-status-grid">
+          ${subjectStatusCards}
+        </div>
+      </section>
       <section class="profile-section">
         <h4>Assessment Summary</h4>
         <div class="profile-assessment-summary">
@@ -1753,6 +2133,40 @@ function buildLearnerAssessmentSummary(learner) {
       <strong>${escapeHtml(item.value)}</strong>
     </article>
   `).join("");
+}
+
+function buildLearnerSubjectStatusCards(learner) {
+  return [
+    { subject: "hardware", label: "Computer Hardware" },
+    { subject: "electrical", label: "Electrical" }
+  ].map((item) => {
+    const steps = getSubjectCompletionSteps(learner, item.subject);
+    const completed = steps.filter((step) => step.complete).length;
+    const percent = getPercent(completed, steps.length);
+    const certificateStatus = getSubjectCertificateStatus(learner, item.subject);
+
+    return `
+      <article class="profile-subject-status-card ${certificateStatus === "Ready" ? "ready" : "locked"}">
+        <div class="profile-subject-status-head">
+          <div>
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${completed}/${steps.length} requirements</strong>
+          </div>
+          <span class="status-pill ${certificateStatus === "Ready" ? "" : "warning"}">${certificateStatus}</span>
+        </div>
+        <div class="profile-subject-progress" aria-hidden="true">
+          <span style="width:${percent}%"></span>
+        </div>
+        <div class="profile-subject-checklist">
+          ${steps.map((step) => `
+            <span class="${step.complete ? "done" : ""}">
+              <b>${step.complete ? "✓" : "○"}</b>${escapeHtml(step.label)}
+            </span>
+          `).join("")}
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 function formatScoreTotal(score, total) {
