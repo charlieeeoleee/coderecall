@@ -60,19 +60,22 @@
         <div class="secret-box recovery-box">
           <label>Recovery Policy</label>
           <ul class="recovery-list">
-            <li>Code Recall now uses Firebase Auth native multi-factor enrollment.</li>
+            <li>Code Recall uses app-level authenticator 2FA for Spark plan compatibility.</li>
             <li>Keep your authenticator app backed up before finishing setup.</li>
-            <li>If you lose access, reset the enrolled factor from Firebase Console or the Admin SDK.</li>
+            <li>Save the backup codes shown during setup. Each backup code can be used once.</li>
           </ul>
         </div>
       </div>
 
       <div id="verifyPanel" class="panel-block" hidden>
         <h2>Authenticator Already Connected</h2>
-        <p class="hint-text">No code is needed on this setup page. Log out and sign in again; Firebase will ask for your authenticator code during login.</p>
+        <p class="hint-text">Enter the current code from your authenticator app, or use one unused backup code.</p>
         <div class="secret-box recovery-box">
           <label>Recovery Status</label>
           <p id="mfaRecoveryNotice" class="hint-text">Checking your backup-code reserve...</p>
+          <div class="verify-help-actions">
+            <button id="mfaResetInlineBtn" type="button" class="ghost-btn danger-outline-btn" onclick="resetCurrentMfaEnrollment()">Lost Access? Reset 2FA</button>
+          </div>
         </div>
       </div>
 
@@ -92,7 +95,21 @@
     </section>
   </main>
 
+  <div id="mfaResetModal" class="mfa-modal" aria-hidden="true">
+    <section class="mfa-modal-card" role="dialog" aria-modal="true" aria-labelledby="mfaResetModalTitle">
+      <div class="mfa-modal-icon" aria-hidden="true">!</div>
+      <div class="mfa-modal-copy">
+        <h2 id="mfaResetModalTitle">Reset 2FA Setup?</h2>
+        <p>This clears your current authenticator setup and starts a fresh enrollment. Continue only if you are ready to scan a new QR code.</p>
+      </div>
+      <div class="mfa-modal-actions">
+        <button id="mfaResetCancelBtn" type="button" class="secondary-btn">Cancel</button>
+        <button id="mfaResetConfirmBtn" type="button" class="primary-btn danger-btn">Reset 2FA</button>
+      </div>
+    </section>
+  </div>
+
   <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/super-admin-mfa.js?v=20260516b"></script>
+  <script type="module" src="scripts/super-admin-mfa.js?v=20260804a"></script>
 </body>
 </html>

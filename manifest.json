@@ -1,0 +1,22 @@
+{
+  "name": "Code Recall Auth Companion",
+  "short_name": "Recall Auth",
+  "description": "A Spark-safe local authenticator companion for Code Recall privileged access.",
+  "start_url": "./auth-companion.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#160f3d",
+  "theme_color": "#160f3d",
+  "icons": [
+    {
+      "src": "assets/logo-dark.png",
+      "sizes": "any",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/logo-light.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}

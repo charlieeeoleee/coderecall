@@ -1,7 +1,6 @@
 import { app } from "./firebase-config.js";
 import {
   getAuth,
-  multiFactor,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -32,12 +31,10 @@ import {
   reviewModuleDraft,
   reviewQuizDraft
 } from "./supabase-content.js";
-import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { clearAdminMfaSession } from "./admin-mfa-session.js";
-import { enforcePrivilegedMfa } from "./firebase-native-mfa.js";
-import { syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { clearSuperAdminMfaSession, isSuperAdminMfaVerified } from "./super-admin-mfa-session.js";
+import { clearAdminMfaSession, isAdminMfaVerified } from "./admin-mfa-session.js";
 import { writeSecurityAudit } from "./security-audit.js";
-import { describeAutomaticMfaResetError, resetOwnMfaEnrollment } from "./privileged-mfa-reset.js";
+import { resetOwnAppMfaProfile } from "./app-level-mfa-profile.js";
 
 
 const auth = getAuth(app);
@@ -126,17 +123,25 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  if (!await enforcePrivilegedMfa({
-    auth,
-    user,
-    setupPath: currentRole === "super_admin" ? "super-admin-mfa.html" : "admin-mfa.html"
-  })) {
+  const hasPrivilegedMfaSession = currentRole === "super_admin"
+    ? isSuperAdminMfaVerified(user.uid)
+    : isAdminMfaVerified(user.uid);
+  if (!hasPrivilegedMfaSession) {
+    await writeSecurityAudit(
+      db,
+      user,
+      "mfa_required_privileged_route",
+      "Admin route requires app-level 2FA verification.",
+      {
+        route: "admin.html",
+        requiredRole: "admin",
+        resolvedRole: currentRole
+      }
+    );
+    window.location.replace(currentRole === "super_admin" ? "super-admin-mfa.html" : "admin-mfa.html");
     return;
   }
 
-  await syncNativeMfaProfile(db, user, currentRole, {
-    method: "firebase_totp_admin_access"
-  });
   await updateUserUI(user);
   setAdminMfaPanelVisibility(currentRole);
   await loadAdminDashboard();
@@ -2580,55 +2585,29 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
-async function markOwnMfaProfileReset() {
-  if (!currentUser) return;
-  await setDoc(doc(db, "securityProfiles", currentUser.uid), {
-    uid: currentUser.uid,
-    email: currentUser.email || "",
-    role: currentRole,
-    firebaseMfaEnrolled: false,
-    firebaseMfaProvider: "",
-    firebaseMfaSource: "firebase_auth",
-    lastVerificationMethod: "firebase_totp_reset",
-    updatedAt: serverTimestamp()
-  }, { merge: true });
-}
-
 window.resetMyAdminMfa = async function() {
   if (!currentUser) return;
-  const enrolledCount = multiFactor(currentUser).enrolledFactors?.length || 0;
-  const message = enrolledCount
-    ? "Reset your current authenticator enrollment? You will be signed out and asked to set up 2FA again on your next login."
-    : "No Firebase 2FA factor is recorded on this session. Open the setup page so you can enroll again?";
-  if (!window.confirm(message)) return;
+  if (!window.confirm("Reset your current authenticator setup? You will be asked to enroll a fresh 2FA code before opening admin controls again.")) return;
 
   const resetBtn = document.getElementById("adminMfaResetBtn");
   if (resetBtn) resetBtn.disabled = true;
-  setMfaStatus(enrolledCount ? "Resetting your Firebase 2FA. Please wait..." : "Opening 2FA setup...");
+  setMfaStatus("Resetting app-level 2FA...");
 
   clearAdminMfaSession();
   try {
-    await resetOwnMfaEnrollment();
-    await currentUser.reload();
-    await markOwnMfaProfileReset();
+    await resetOwnAppMfaProfile(db, currentUser, currentRole);
     await writeSecurityAudit(
       db,
       currentUser,
       "reset_own_admin_mfa",
-      "Admin reset their own Firebase Auth multi-factor enrollment."
+      "Admin reset their own app-level authenticator enrollment."
     );
 
-    if (!enrolledCount) {
-      window.location.href = currentRole === "super_admin" ? "super-admin-mfa.html" : "admin-mfa.html";
-      return;
-    }
-
-    setMfaStatus("2FA reset. Signing out so you can enroll a fresh authenticator.");
-    await signOut(auth);
-    window.location.href = "auth.html";
+    setMfaStatus("2FA reset. Opening setup so you can enroll a fresh authenticator.");
+    window.location.href = currentRole === "super_admin" ? "super-admin-mfa.html" : "admin-mfa.html";
   } catch (error) {
     console.error("Unable to reset admin MFA.", error);
-    setMfaStatus(describeAutomaticMfaResetError(error));
+    setMfaStatus("Unable to reset 2FA right now. Check your connection and try again.");
     if (resetBtn) resetBtn.disabled = false;
   }
 };

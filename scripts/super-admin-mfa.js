@@ -1,32 +1,38 @@
 import { app } from "./firebase-config.js";
 import {
   getAuth,
-  multiFactor,
   onAuthStateChanged,
-  signOut,
-  TotpMultiFactorGenerator
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
   getFirestore
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  createPendingAppMfaSetup,
+  hasAppMfaEnrollment,
+  loadAppMfaProfile,
+  resetOwnAppMfaProfile,
+  savePendingAppMfaSetup,
+  verifyPendingAppMfaSetupCode,
+  verifyAppMfaProfileCode
+} from "./app-level-mfa-profile.js";
 import { resolveUserRole, syncUserRole } from "./role-utils.js";
-import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { hasTotpFactor, signedInWithSecondFactor } from "./firebase-native-mfa.js";
-import { markNativeMfaEnrolled, syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { clearSuperAdminMfaSession, markSuperAdminMfaVerified } from "./super-admin-mfa-session.js";
 import { renderQrSvgMarkup } from "./local-qr.js";
-import { describeAutomaticMfaResetError, resetOwnMfaEnrollment } from "./privileged-mfa-reset.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
-let pendingTotpSecret = null;
+let currentProfile = null;
+let pendingSetup = null;
 let currentMfaSetupUri = "";
+let resetModalBusy = false;
 
 function updateThemeIcon() {
   const icon = document.getElementById("themeIcon");
   if (!icon) return;
-  icon.textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  icon.textContent = document.body.classList.contains("light-mode") ? "\u2600\uFE0F" : "\uD83C\uDF19";
 }
 
 function loadTheme() {
@@ -49,28 +55,16 @@ function setStatus(message, isError = false) {
   status.style.color = isError ? "#ff97b6" : "#8ef7cf";
 }
 
-function setSetupUnavailable(message) {
-  pendingTotpSecret = null;
-  currentMfaSetupUri = "";
-  const secretValue = document.getElementById("mfaSecretValue");
-  if (secretValue) secretValue.textContent = "Setup unavailable";
-  const qrImage = document.getElementById("mfaQrImage");
-  if (qrImage) qrImage.textContent = "QR unavailable";
-  setStatus(message, true);
-}
-
-function describeSetupError(error) {
-  const code = String(error?.code || "");
-  if (code.includes("operation-not-allowed") || code.includes("unsupported") || code.includes("invalid-argument")) {
-    return "Firebase native TOTP is not enabled for this project yet. Run npm.cmd run auth:enable-totp with Firebase Admin credentials, then sign in again.";
+function describeMfaError(error) {
+  const code = String(error?.code || "").trim();
+  const message = String(error?.message || "").trim();
+  if (code.includes("permission-denied")) {
+    return "Unable to save 2FA setup because Firestore denied the profile update. Refresh and try again after the latest rules deploy.";
   }
-  if (code.includes("requires-recent-login")) {
-    return "Firebase requires a fresh sign-in before enrolling 2FA. Log out, sign in again, then return here.";
+  if (code || message) {
+    return `Unable to verify 2FA${code ? ` (${code})` : ""}${message ? `: ${message}` : "."}`;
   }
-  if (code.includes("unverified-email")) {
-    return "Firebase requires a verified email before enrolling 2FA. Verify this account's email, then sign in again.";
-  }
-  return `Unable to create the Firebase Auth 2FA setup${code ? ` (${code})` : ""}. Sign in again and try once more.`;
+  return "Unable to verify 2FA. Check the code and try again.";
 }
 
 function showSetupUi(email) {
@@ -78,87 +72,82 @@ function showSetupUi(email) {
   document.getElementById("verifyPanel").hidden = true;
   document.getElementById("mfaForm").hidden = false;
   document.getElementById("mfaResetBtn").hidden = false;
+  document.getElementById("mfaResetInlineBtn")?.removeAttribute("disabled");
   document.getElementById("mfaTitle").textContent = "Set Up Super Admin 2FA";
-  document.getElementById("mfaSubtitle").textContent = "Before you can use super-admin controls, connect an authenticator app and verify one code.";
+  document.getElementById("mfaSubtitle").textContent = "Connect an authenticator app, then verify one code to open super-admin controls.";
   document.getElementById("mfaAccountLabel").textContent = `Code Recall (${email || "super-admin"})`;
   updateRecoveryNotice(false);
 }
 
-function showAlreadyEnrolledUi() {
+function showVerifyUi() {
   document.getElementById("setupPanel").hidden = true;
   document.getElementById("verifyPanel").hidden = false;
-  document.getElementById("mfaForm").hidden = true;
+  document.getElementById("mfaForm").hidden = false;
   document.getElementById("mfaResetBtn").hidden = false;
-  document.getElementById("mfaTitle").textContent = "Super Admin 2FA Is Enabled";
-  document.getElementById("mfaSubtitle").textContent = "Sign in again and Firebase will ask for your authenticator code before privileged access opens.";
+  document.getElementById("mfaTitle").textContent = "Verify Super Admin Access";
+  document.getElementById("mfaSubtitle").textContent = "Enter the current code from your authenticator app to continue.";
   updateRecoveryNotice(true);
-  setStatus("2FA is already enrolled. Log out, then sign in again to verify with your authenticator code.");
+  setStatus("Enter your authenticator code or one unused backup code.");
 }
 
 function updateRecoveryNotice(enrolled) {
   const notice = document.getElementById("mfaRecoveryNotice");
   if (!notice) return;
   notice.textContent = enrolled
-    ? "Use Reset and Re-Enroll 2FA below if you changed phones or need a fresh authenticator setup."
-    : "After enrollment, privileged sign-ins require the current code from your authenticator app.";
+    ? "Backup codes are accepted here too. Each backup code can be used once."
+    : "Save your backup codes after setup. They are the fallback if your authenticator app is unavailable.";
   notice.style.color = "#8ef7cf";
 }
 
-async function prepareEnrollment(user) {
-  try {
-    showSetupUi(user.email || "");
-    setStatus("Preparing authenticator setup...");
-    const session = await multiFactor(user).getSession();
-    pendingTotpSecret = await TotpMultiFactorGenerator.generateSecret(session);
-    currentMfaSetupUri = pendingTotpSecret.generateQrCodeUrl(user.email || user.uid, "Code Recall");
-
-    document.getElementById("mfaSecretValue").textContent = pendingTotpSecret.secretKey;
-    const qrImage = document.getElementById("mfaQrImage");
-    if (qrImage) {
-      qrImage.innerHTML = renderQrSvgMarkup(currentMfaSetupUri, 220);
-    }
-    setStatus("Scan the QR code, then enter the 6-digit code from your authenticator app.");
-  } catch (error) {
-    console.error("Unable to prepare Firebase MFA enrollment.", error);
-    setSetupUnavailable(describeSetupError(error));
-  }
+function renderBackupCodes(codes = []) {
+  const recoveryBox = document.querySelector(".recovery-box");
+  if (!recoveryBox || !codes.length) return;
+  const existing = document.getElementById("mfaBackupCodes");
+  if (existing) existing.remove();
+  const list = document.createElement("ul");
+  list.id = "mfaBackupCodes";
+  list.className = "recovery-list";
+  codes.forEach((code) => {
+    const item = document.createElement("li");
+    item.textContent = code;
+    list.appendChild(item);
+  });
+  recoveryBox.appendChild(list);
 }
 
-async function completeEnrollment(code) {
-  if (!pendingTotpSecret) {
-    setStatus("2FA setup is not ready yet. Refresh and try again.", true);
-    return;
+async function prepareEnrollment(user) {
+  showSetupUi(user.email || "");
+  setStatus("Preparing authenticator setup...");
+  pendingSetup = createPendingAppMfaSetup(user, "super_admin");
+  currentMfaSetupUri = pendingSetup.setupUri;
+
+  document.getElementById("mfaSecretValue").textContent = pendingSetup.formattedSecret;
+  const qrImage = document.getElementById("mfaQrImage");
+  if (qrImage) {
+    qrImage.innerHTML = renderQrSvgMarkup(currentMfaSetupUri, 220);
+  }
+  renderBackupCodes(pendingSetup.backupCodes);
+  setStatus("Scan the QR code, save the backup codes, then enter the 6-digit authenticator code.");
+}
+
+async function completeVerification(code) {
+  if (pendingSetup) {
+    if (!await verifyPendingAppMfaSetupCode(pendingSetup, code)) {
+      setStatus("That code did not match this setup. Use the current 6-digit code and try again.", true);
+      return;
+    }
+    await savePendingAppMfaSetup(db, pendingSetup);
+  } else {
+    const result = await verifyAppMfaProfileCode(db, currentUser, currentProfile, code, "app_totp_login");
+    if (!result.ok) {
+      setStatus("That code was not accepted. Use your current authenticator code or an unused backup code.", true);
+      return;
+    }
   }
 
-  const assertion = TotpMultiFactorGenerator.assertionForEnrollment(pendingTotpSecret, code);
-  await multiFactor(currentUser).enroll(assertion, "Code Recall Super Admin");
-  await markNativeMfaEnrolled(db, currentUser, "super_admin", {
-    method: "firebase_totp_enrollment",
-    provider: "totp"
-  });
-  clearSuperAdminMfaSession();
-  setStatus("Super-admin 2FA is now enabled. Checking your secure session...");
-
-  await currentUser.reload();
-  currentUser = auth.currentUser || currentUser;
-
-  if (await signedInWithSecondFactor(currentUser)) {
-    await syncNativeMfaProfile(db, currentUser, "super_admin", {
-      method: "firebase_totp_enrollment"
-    });
-    window.location.replace("super-admin.html");
-    return;
-  }
-
-  sessionStorage.setItem(
-    "code_recall_mfa_notice",
-    "Your authenticator is enrolled. Sign in one more time so Firebase can issue a 2FA-verified session."
-  );
-  setStatus("2FA is enrolled. Sign in once more so Firebase can verify this privileged session.");
-  window.setTimeout(async () => {
-    await signOut(auth);
-    window.location.replace("auth.html");
-  }, 900);
+  markSuperAdminMfaVerified(currentUser.uid);
+  setStatus("Super admin 2FA verified. Opening super-admin controls...");
+  window.location.replace("super-admin.html");
 }
 
 document.getElementById("mfaForm")?.addEventListener("submit", async (event) => {
@@ -178,10 +167,10 @@ document.getElementById("mfaForm")?.addEventListener("submit", async (event) => 
   }
 
   try {
-    await completeEnrollment(code);
+    await completeVerification(code);
   } catch (error) {
-    console.error("Super-admin MFA enrollment failed.", error);
-    setStatus("Unable to enroll 2FA. Use the current authenticator code and try again.", true);
+    console.error("Super-admin app-level MFA verification failed.", error);
+    setStatus(describeMfaError(error), true);
   } finally {
     if (button) {
       button.disabled = false;
@@ -191,17 +180,17 @@ document.getElementById("mfaForm")?.addEventListener("submit", async (event) => 
 });
 
 window.copyMfaSecret = async function() {
-  if (!pendingTotpSecret?.secretKey) {
-    setStatus("The setup key is not ready yet.", true);
+  if (!pendingSetup?.secret) {
+    setStatus("The setup key is only available during new enrollment.", true);
     return;
   }
-  await copyText(pendingTotpSecret.secretKey);
+  await copyText(pendingSetup.secret);
   setStatus("Authenticator key copied.");
 };
 
 window.copyMfaSetupLink = async function() {
   if (!currentMfaSetupUri) {
-    setStatus("The setup link is not ready yet.", true);
+    setStatus("The setup link is only available during new enrollment.", true);
     return;
   }
   await copyText(currentMfaSetupUri);
@@ -210,11 +199,59 @@ window.copyMfaSetupLink = async function() {
 
 window.openAuthenticatorApp = function() {
   if (!currentMfaSetupUri) {
-    setStatus("The setup link is not ready yet.", true);
+    setStatus("The setup link is only available during new enrollment.", true);
     return;
   }
   window.location.href = currentMfaSetupUri;
 };
+
+function setResetModalOpen(isOpen) {
+  const modal = document.getElementById("mfaResetModal");
+  const confirmBtn = document.getElementById("mfaResetConfirmBtn");
+  if (!modal) return;
+  modal.classList.toggle("active", isOpen);
+  modal.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  if (isOpen) {
+    window.setTimeout(() => confirmBtn?.focus(), 50);
+  }
+}
+
+async function performCurrentMfaReset() {
+  if (!currentUser || resetModalBusy) return;
+  resetModalBusy = true;
+  const button = document.getElementById("mfaResetBtn");
+  const inlineButton = document.getElementById("mfaResetInlineBtn");
+  const confirmBtn = document.getElementById("mfaResetConfirmBtn");
+  const cancelBtn = document.getElementById("mfaResetCancelBtn");
+  if (button) button.disabled = true;
+  if (inlineButton) inlineButton.disabled = true;
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Resetting...";
+  }
+  if (cancelBtn) cancelBtn.disabled = true;
+  try {
+    setResetModalOpen(false);
+    setStatus("Resetting app-level 2FA...");
+    await resetOwnAppMfaProfile(db, currentUser, "super_admin");
+    clearSuperAdminMfaSession();
+    pendingSetup = null;
+    currentProfile = null;
+    await prepareEnrollment(currentUser);
+  } catch (error) {
+    console.error("Unable to reset super-admin app-level MFA.", error);
+    setStatus(describeMfaError(error), true);
+  } finally {
+    resetModalBusy = false;
+    if (button) button.disabled = false;
+    if (inlineButton) inlineButton.disabled = false;
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Reset 2FA";
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
+  }
+}
 
 async function copyText(value) {
   if (navigator.clipboard?.writeText) {
@@ -235,21 +272,7 @@ async function copyText(value) {
 
 window.resetCurrentMfaEnrollment = async function() {
   if (!currentUser) return;
-  if (!window.confirm("Reset your current 2FA setup and start enrollment again?")) return;
-  const button = document.getElementById("mfaResetBtn");
-  if (button) button.disabled = true;
-  try {
-    setStatus("Resetting your Firebase 2FA. Please wait...");
-    await resetOwnMfaEnrollment();
-    clearSuperAdminMfaSession();
-    setStatus("2FA reset. Signing out so you can enroll a fresh authenticator.");
-    await signOut(auth);
-    window.location.replace("auth.html");
-  } catch (error) {
-    console.error("Unable to reset super-admin MFA from setup page.", error);
-    setStatus(describeAutomaticMfaResetError(error), true);
-    if (button) button.disabled = false;
-  }
+  setResetModalOpen(true);
 };
 
 window.logoutMfa = async function() {
@@ -273,16 +296,26 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  if (hasTotpFactor(user)) {
-    await markNativeMfaEnrolled(db, user, "super_admin", {
-      method: "firebase_totp_existing_factor",
-      provider: "totp"
-    });
-    showAlreadyEnrolledUi();
+  currentProfile = await loadAppMfaProfile(db, user.uid);
+  if (hasAppMfaEnrollment(currentProfile)) {
+    showVerifyUi();
     return;
   }
 
   await prepareEnrollment(user);
+});
+
+document.getElementById("mfaResetCancelBtn")?.addEventListener("click", () => setResetModalOpen(false));
+document.getElementById("mfaResetConfirmBtn")?.addEventListener("click", performCurrentMfaReset);
+document.getElementById("mfaResetModal")?.addEventListener("click", (event) => {
+  if (event.target?.id === "mfaResetModal" && !resetModalBusy) {
+    setResetModalOpen(false);
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !resetModalBusy) {
+    setResetModalOpen(false);
+  }
 });
 
 loadTheme();

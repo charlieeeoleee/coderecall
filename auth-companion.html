@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Recall Auth Companion</title>
+  <meta name="theme-color" content="#160f3d">
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/auth-companion.css?v=20260804a">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+  <main class="companion-shell">
+    <section class="companion-card">
+      <div class="brand-row">
+        <p class="logo">CODE:RECALL!</p>
+        <span class="mode-pill">AUTH COMPANION</span>
+      </div>
+
+      <section id="lockedView" class="view">
+        <h1>Authenticator Companion</h1>
+        <p>Keep your Code Recall 2FA code on this phone, protected by a local passphrase.</p>
+
+        <form id="unlockForm" class="companion-form">
+          <label for="unlockPassphrase">Passphrase</label>
+          <input id="unlockPassphrase" type="password" autocomplete="current-password" placeholder="Enter passphrase">
+          <button type="submit" class="primary-btn">Unlock</button>
+        </form>
+
+        <button id="startSetupBtn" type="button" class="secondary-btn">Set Up This Phone</button>
+        <p id="lockStatus" class="status-text"></p>
+      </section>
+
+      <section id="setupView" class="view" hidden>
+        <h1>Set Up This Phone</h1>
+        <p>Paste the setup link or manual setup key from Code Recall's 2FA enrollment screen.</p>
+
+        <form id="setupForm" class="companion-form">
+          <label for="accountLabel">Account Label</label>
+          <input id="accountLabel" type="text" autocomplete="username" placeholder="Code Recall Super Admin">
+
+          <label for="setupSecret">Setup Link or Manual Key</label>
+          <textarea id="setupSecret" rows="4" spellcheck="false" placeholder="otpauth://... or ABCD EFGH ..."></textarea>
+
+          <label for="setupPassphrase">New Passphrase</label>
+          <input id="setupPassphrase" type="password" autocomplete="new-password" placeholder="Use a private passphrase">
+
+          <button type="submit" class="primary-btn">Save Companion</button>
+        </form>
+
+        <button id="cancelSetupBtn" type="button" class="secondary-btn">Cancel</button>
+        <p id="setupStatus" class="status-text"></p>
+      </section>
+
+      <section id="codeView" class="view" hidden>
+        <div class="code-header">
+          <div>
+            <span class="eyebrow">Current Code</span>
+            <h1 id="savedAccountLabel">Code Recall</h1>
+          </div>
+          <button id="lockBtn" type="button" class="icon-btn" aria-label="Lock companion">Lock</button>
+        </div>
+
+        <div class="code-display" aria-live="polite">
+          <strong id="totpCode">------</strong>
+          <div class="timer-track">
+            <span id="timerFill"></span>
+          </div>
+          <p id="timerLabel">Refreshing...</p>
+        </div>
+
+        <div class="action-grid">
+          <button id="copyCodeBtn" type="button" class="primary-btn">Copy Code</button>
+          <button id="resetCompanionBtn" type="button" class="secondary-btn danger-btn">Reset Phone</button>
+        </div>
+
+        <p id="codeStatus" class="status-text"></p>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="scripts/auth-companion.js?v=20260804a"></script>
+</body>
+</html>

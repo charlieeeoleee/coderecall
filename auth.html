@@ -58,7 +58,8 @@
           </button>
         </div>
 
-        <button class="qr-login-btn" onclick="openQrLoginPopup()">Login with Phone QR</button>
+        <button class="qr-login-btn" onclick="openQrLoginPopup()">Phone QR Unavailable on Spark</button>
+        <a class="auth-companion-link" href="auth-companion.html">Open Auth Companion</a>
 
         <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
 
@@ -198,15 +199,15 @@
   <!-- QR LOGIN POPUP -->
   <div id="qrLoginPopup" class="popup">
     <div class="popup-box qr-login-box">
-      <h3>Login with Phone QR</h3>
-      <p class="qr-login-intro">Scan this QR using your phone. After approval, this browser will sign in automatically.</p>
-      <div id="qrLoginImage" class="qr-login-image">Preparing QR...</div>
+      <h3>Phone QR Login Unavailable</h3>
+      <p class="qr-login-intro">Phone QR login requires a trusted backend and is disabled while Code Recall is configured for Spark.</p>
+      <div id="qrLoginImage" class="qr-login-image">QR unavailable</div>
       <div class="qr-login-steps">
-        <span>1. Scan QR</span>
-        <span>2. Approve on phone</span>
-        <span>3. Continue here</span>
+        <span>1. Use Google or Email</span>
+        <span>2. Verify Authenticator</span>
+        <span>3. Continue</span>
       </div>
-      <p id="qrLoginStatus" class="status-text">Generating one-time login request...</p>
+      <p id="qrLoginStatus" class="status-text">Phone QR login is unavailable on Spark.</p>
       <div class="popup-actions">
         <button class="secondary-popup-btn" onclick="closeQrLoginPopup()">Cancel</button>
       </div>
@@ -234,6 +235,9 @@
         <div class="secret-box">
           <label>Authenticator Ready</label>
           <p class="hint-text">This account is already enrolled, so there is no QR code to scan.</p>
+          <div class="mfa-recovery-actions">
+            <button type="button" class="mfa-recovery-btn" onclick="showNativeMfaRecovery()">Lost Access? Reset 2FA</button>
+          </div>
         </div>
       </div>
 

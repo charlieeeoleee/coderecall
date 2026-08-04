@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260520e";
+const CACHE_VERSION = "code-recall-v20260804a";
 const APP_SHELL = [
   "./",
   "./offline.html",
@@ -7,6 +7,8 @@ const APP_SHELL = [
   "./faq.html",
   "./subjects-preview.html",
   "./auth.html",
+  "./auth-companion.html",
+  "./manifest.json",
   "./dashboard.html",
   "./subjects.html",
   "./subject.html",
@@ -28,6 +30,7 @@ const APP_SHELL = [
   "./privacy.html",
   "./styles/styles.css",
   "./styles/auth.css",
+  "./styles/auth-companion.css",
   "./styles/dashboard.css",
   "./styles/subjects.css",
   "./styles/subject.css",
@@ -43,6 +46,8 @@ const APP_SHELL = [
   "./styles/contact.css",
   "./styles/privacy.css",
   "./scripts/loading.js",
+  "./scripts/auth-companion.js",
+  "./scripts/mfa-totp.js",
   "./scripts/sound.js",
   "./scripts/role-utils.js",
   "./scripts/career-path.js",

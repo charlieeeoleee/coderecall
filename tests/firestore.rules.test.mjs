@@ -31,15 +31,6 @@ function unauthContext() {
   return testEnv.unauthenticatedContext().firestore();
 }
 
-function mfaToken(extra = {}) {
-  return {
-    ...extra,
-    firebase: {
-      sign_in_second_factor: "phone"
-    }
-  };
-}
-
 before(async () => {
   testEnv = await initializeTestEnvironment({
     projectId,
@@ -128,43 +119,23 @@ test("users can read their own profile but cannot promote themselves", async () 
   }));
 });
 
-test("admin custom claims require Firebase MFA for cross-user reads", async () => {
-  const adminWithoutMfa = authContext("claimAdmin", {
+test("admin custom claims allow cross-user reads in Spark app-level 2FA mode", async () => {
+  const claimAdmin = authContext("claimAdmin", {
     email: "claim-admin@example.com",
     role: "admin",
     admin: true
   });
-  const adminWithMfa = authContext("claimAdmin", mfaToken({
-    email: "claim-admin@example.com",
-    role: "admin",
-    admin: true
-  }));
 
-  await assertFails(getDoc(doc(adminWithoutMfa, "users", "learner")));
-  await assertSucceeds(getDoc(doc(adminWithMfa, "users", "learner")));
+  await assertSucceeds(getDoc(doc(claimAdmin, "users", "learner")));
 });
 
-test("super-admin custom claims with MFA can manage user access fields", async () => {
-  const superWithoutMfa = authContext("claimSuper", {
+test("super-admin custom claims can manage user access fields in Spark app-level 2FA mode", async () => {
+  const db = authContext("claimSuper", {
     email: "super@example.com",
     role: "super_admin",
     admin: true,
     super_admin: true
   });
-  const db = authContext("claimSuper", mfaToken({
-    email: "super@example.com",
-    role: "super_admin",
-    admin: true,
-    super_admin: true
-  }));
-
-  await assertFails(updateDoc(doc(superWithoutMfa, "users", "learner"), {
-    role: "admin",
-    status: "active",
-    progress: {
-      role: "admin"
-    }
-  }));
 
   await assertSucceeds(updateDoc(doc(db, "users", "learner"), {
     role: "admin",
@@ -212,84 +183,76 @@ test("signed-in users can write only safe security audit events", async () => {
   await assertFails(getDoc(doc(db, "auditLogs", "safeDeniedRoute")));
 });
 
-test("admins with MFA can read unassigned or assigned tickets but not another admin's assigned ticket", async () => {
-  const db = authContext("claimAdmin", mfaToken({
+test("admins can read unassigned or assigned tickets but not another admin's assigned ticket", async () => {
+  const db = authContext("claimAdmin", {
     email: "claim-admin@example.com",
     role: "admin",
     admin: true
-  }));
+  });
 
   await assertSucceeds(getDoc(doc(db, "contactMessages", "ownedTicket")));
   await assertFails(getDoc(doc(db, "contactMessages", "assignedOther")));
 });
 
-test("super-admins with MFA can list privileged collections", async () => {
-  const db = authContext("claimSuper", mfaToken({
+test("super-admins can list privileged collections in Spark app-level 2FA mode", async () => {
+  const db = authContext("claimSuper", {
     email: "super@example.com",
     role: "super_admin",
     admin: true,
     super_admin: true
-  }));
+  });
 
   const usersByRole = query(collection(db, "users"), where("role", "==", "admin"));
   await assertSucceeds(getDocs(usersByRole));
   await assertSucceeds(getDocs(collection(db, "accessRoles")));
 });
 
-test("privileged users with Firebase MFA can mirror their native 2FA profile without secrets", async () => {
-  const adminWithoutMfa = authContext("claimAdmin", {
+test("privileged users can manage their own app-level 2FA profile", async () => {
+  const claimAdmin = authContext("claimAdmin", {
     email: "claim-admin@example.com",
     role: "admin",
     admin: true
   });
-  const adminWithMfa = authContext("claimAdmin", mfaToken({
-    email: "claim-admin@example.com",
-    role: "admin",
-    admin: true
-  }));
 
-  await assertFails(setDoc(doc(adminWithoutMfa, "securityProfiles", "claimAdmin"), {
+  await assertSucceeds(setDoc(doc(claimAdmin, "securityProfiles", "claimAdmin"), {
     uid: "claimAdmin",
     email: "claim-admin@example.com",
     role: "admin",
-    firebaseMfaEnrolled: true,
-    firebaseMfaProvider: "totp",
-    firebaseMfaSource: "firebase_auth",
+    appMfaEnabled: true,
+    appMfaSource: "app_totp",
+    totpSecret: "BASE32SECRET",
+    backupCodeHashes: ["hash-one", "hash-two"],
+    backupCodesRemaining: 2,
     lastVerifiedAt: "2026-05-09T00:00:00.000Z",
-    lastVerificationMethod: "firebase_totp",
+    lastVerificationMethod: "app_totp_enrollment",
     updatedAt: "2026-05-09T00:00:00.000Z"
   }));
 
-  await assertSucceeds(setDoc(doc(adminWithMfa, "securityProfiles", "claimAdmin"), {
-    uid: "claimAdmin",
+  await assertFails(setDoc(doc(claimAdmin, "securityProfiles", "otherUser"), {
+    uid: "otherUser",
     email: "claim-admin@example.com",
     role: "admin",
-    firebaseMfaEnrolled: true,
-    firebaseMfaProvider: "totp",
-    firebaseMfaSource: "firebase_auth",
-    lastVerifiedAt: "2026-05-09T00:00:00.000Z",
-    lastVerificationMethod: "firebase_totp",
-    updatedAt: "2026-05-09T00:00:00.000Z"
+    appMfaEnabled: true,
+    appMfaSource: "app_totp",
+    totpSecret: "BASE32SECRET",
+    backupCodeHashes: [],
+    backupCodesRemaining: 0
   }));
 
-  await assertFails(setDoc(doc(adminWithMfa, "securityProfiles", "claimAdmin"), {
+  await assertFails(setDoc(doc(claimAdmin, "securityProfiles", "claimAdmin"), {
     uid: "claimAdmin",
     email: "claim-admin@example.com",
-    role: "admin",
-    firebaseMfaEnrolled: true,
-    firebaseMfaProvider: "totp",
-    firebaseMfaSource: "firebase_auth",
-    lastVerifiedAt: "2026-05-09T00:00:00.000Z",
-    lastVerificationMethod: "firebase_totp",
-    updatedAt: "2026-05-09T00:00:00.000Z",
-    totpSecret: "should-not-write"
+    role: "super_admin",
+    appMfaEnabled: true,
+    appMfaSource: "app_totp",
+    totpSecret: "BASE32SECRET",
+    backupCodeHashes: [],
+    backupCodesRemaining: 0
   }));
 });
 
-test("stored role access still requires Firebase MFA for cross-user reads", async () => {
+test("stored role access allows cross-user reads in Spark app-level 2FA mode", async () => {
   const storedAdminWithoutMfa = authContext("adminStored", { email: "stored-admin@example.com" });
-  const storedAdminWithMfa = authContext("adminStored", mfaToken({ email: "stored-admin@example.com" }));
 
-  await assertFails(getDoc(doc(storedAdminWithoutMfa, "users", "learner")));
-  await assertSucceeds(getDoc(doc(storedAdminWithMfa, "users", "learner")));
+  await assertSucceeds(getDoc(doc(storedAdminWithoutMfa, "users", "learner")));
 });

@@ -12,7 +12,7 @@ This checks the hosting cache headers, deploy scripts, ignored private files, an
 
 ## Deploy App Code
 
-Deploy Functions and Hosting together when a change affects both browser code and callable functions:
+Deploy Hosting and Firestore Rules together for the Spark-compatible app:
 
 ```powershell
 npm.cmd run firebase:deploy:app

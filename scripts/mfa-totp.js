@@ -74,6 +74,13 @@ async function generateHotp(secret, counter) {
   return String(binary % 1000000).padStart(6, "0");
 }
 
+export async function generateTotpCode(secret, options = {}) {
+  const stepSeconds = options.stepSeconds || 30;
+  const now = options.now || Date.now();
+  const counter = Math.floor(now / 1000 / stepSeconds);
+  return generateHotp(secret, counter);
+}
+
 export async function verifyTotpCode(secret, code, options = {}) {
   const normalizedCode = String(code || "").replace(/\D/g, "");
   if (normalizedCode.length !== 6) return false;

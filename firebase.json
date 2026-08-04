@@ -2,10 +2,6 @@
   "firestore": {
     "rules": "firestore.rules"
   },
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs22"
-  },
   "emulators": {
     "firestore": {
       "port": 18080
@@ -22,7 +18,16 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "manuals/tmp/**"
+      "functions/**",
+      "manuals/**",
+      "outputs/**",
+      "supabase/**",
+      "tests/**",
+      "*.md",
+      "package.json",
+      "package-lock.json",
+      "postgres-backup.env.example",
+      "tmp*"
     ],
     "headers": [
       {
@@ -30,7 +35,7 @@
         "headers": [
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://i.pravatar.cc https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self'; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://apis.google.com https://accounts.google.com https://www.google.com https://*.google.com https://us-central1-gamifiedlearningsystem.cloudfunctions.net https://vlpmvirvokgbjzejxdqk.supabase.co; frame-src 'self' https://*.firebaseapp.com https://*.firebaseio.com https://accounts.google.com https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; object-src 'none'; upgrade-insecure-requests"
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://i.pravatar.cc https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self'; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://apis.google.com https://accounts.google.com https://www.google.com https://*.google.com https://vlpmvirvokgbjzejxdqk.supabase.co; frame-src 'self' https://*.firebaseapp.com https://*.firebaseio.com https://accounts.google.com https://www.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; object-src 'none'; upgrade-insecure-requests"
           },
           {
             "key": "X-Content-Type-Options",

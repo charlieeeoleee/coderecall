@@ -1,7 +1,6 @@
 import { app } from "./firebase-config.js";
 import {
   getAuth,
-  multiFactor,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -28,11 +27,9 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { applyRoleNavigation, getRoleFromUserData, resolveUserRole, syncUserRole } from "./role-utils.js?v=20260525a";
-import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
-import { enforcePrivilegedMfa, getFirebaseSecondFactorProvider, signedInWithSecondFactor } from "./firebase-native-mfa.js";
-import { syncNativeMfaProfile } from "./native-mfa-profile.js";
+import { clearSuperAdminMfaSession, isSuperAdminMfaVerified } from "./super-admin-mfa-session.js";
 import { writeSecurityAudit } from "./security-audit.js";
-import { describeAutomaticMfaResetError, resetOwnMfaEnrollment } from "./privileged-mfa-reset.js";
+import { resetOwnAppMfaProfile } from "./app-level-mfa-profile.js";
 import {
   fetchModuleDrafts,
   fetchQuizDrafts
@@ -189,17 +186,22 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  if (!await enforcePrivilegedMfa({
-    auth,
-    user,
-    setupPath: "super-admin-mfa.html"
-  })) {
+  if (!isSuperAdminMfaVerified(user.uid)) {
+    await writeSecurityAudit(
+      db,
+      user,
+      "mfa_required_privileged_route",
+      "Super-admin route requires app-level 2FA verification.",
+      {
+        route: "super-admin.html",
+        requiredRole: "super_admin",
+        resolvedRole: role
+      }
+    );
+    window.location.replace("super-admin-mfa.html");
     return;
   }
 
-  await syncNativeMfaProfile(db, user, role, {
-    method: "firebase_totp_super_admin_access"
-  });
   await updateUserUI(user);
   await loadSuperAdminDashboard();
   startContactInboxSubscription();
@@ -817,17 +819,15 @@ function summarizeTwoFactorOversight(users, profiles) {
   const rows = privilegedUsers.map((user) => {
     const role = getRoleFromUserData(user);
     const profile = getSecurityProfileForUser(user, profileIndex);
-    const nativeEnrolled = Boolean(profile?.firebaseMfaEnrolled || user.firebaseMfaEnrolled);
+    const appEnrolled = Boolean(profile?.appMfaEnabled && profile?.totpSecret);
     const legacyEnrolled = Boolean(profile?.totpEnabled && profile?.totpSecret);
-    const enrolled = nativeEnrolled || legacyEnrolled;
-    const backupCodesRemaining = legacyEnrolled && Array.isArray(profile?.backupCodeHashes)
+    const enrolled = appEnrolled || legacyEnrolled;
+    const backupCodesRemaining = (appEnrolled || legacyEnrolled) && Array.isArray(profile?.backupCodeHashes)
       ? profile.backupCodeHashes.length
       : null;
-    const lastVerifiedMs = toTimestampMs(profile?.lastVerifiedAt || user.firebaseMfaSyncedAt);
+    const lastVerifiedMs = toTimestampMs(profile?.lastVerifiedAt);
     const enrolledMs = toTimestampMs(profile?.enrolledAt);
-    const providerLabel = nativeEnrolled
-      ? `Firebase Auth ${profile?.firebaseMfaProvider || user.firebaseMfaProvider || "TOTP"}`
-      : "Legacy app 2FA";
+    const providerLabel = appEnrolled ? "App authenticator 2FA" : "Legacy app 2FA";
 
     return {
       id: user.id,
@@ -835,12 +835,13 @@ function summarizeTwoFactorOversight(users, profiles) {
       email: user.email || "No email",
       role,
       enrolled,
-      nativeEnrolled,
+      nativeEnrolled: false,
       legacyEnrolled,
+      appEnrolled,
       providerLabel,
       backupCodesRemaining,
       backupCodeUseCount: Math.max(0, Number(profile?.backupCodeUseCount || 0)),
-      lastVerificationMethod: String(profile?.lastVerificationMethod || (user.firebaseMfaEnrolled ? "firebase_totp_admin_sync" : "")),
+      lastVerificationMethod: String(profile?.lastVerificationMethod || ""),
       lastVerifiedMs,
       lastVerifiedLabel: lastVerifiedMs ? formatAdminDateTime(lastVerifiedMs) : "Not verified yet",
       enrolledLabel: enrolledMs ? formatAdminDateTime(enrolledMs) : "Not enrolled yet",
@@ -853,45 +854,14 @@ function summarizeTwoFactorOversight(users, profiles) {
     enrolledCount: rows.filter((row) => row.enrolled).length,
     pendingCount: rows.filter((row) => !row.enrolled).length,
     verifiedTodayCount: rows.filter((row) => row.verifiedToday).length,
-    lowBackupCount: rows.filter((row) => row.legacyEnrolled && row.backupCodesRemaining <= 2).length,
+    lowBackupCount: rows.filter((row) => row.enrolled && row.backupCodesRemaining <= 2).length,
     backupUseCount: rows.reduce((sum, row) => sum + row.backupCodeUseCount, 0),
     rows
   };
 }
 
 async function addCurrentSessionMfaProfile(profiles) {
-  if (!currentUser || !["admin", "super_admin"].includes(currentRole)) return profiles;
-  const secondFactorProvider = await getFirebaseSecondFactorProvider(currentUser);
-  if (!secondFactorProvider && !await signedInWithSecondFactor(currentUser)) return profiles;
-
-  const currentEmail = normalizeEmail(currentUser.email);
-  const existingIndex = profiles.findIndex((profile) => {
-    const ids = [profile.id, profile.uid].filter(Boolean).map(String);
-    return ids.includes(currentUser.uid) || normalizeEmail(profile.email) === currentEmail;
-  });
-
-  const sessionProfile = {
-    id: currentUser.uid,
-    uid: currentUser.uid,
-    email: currentUser.email || "",
-    role: currentRole,
-    firebaseMfaEnrolled: true,
-    firebaseMfaProvider: secondFactorProvider || "TOTP",
-    firebaseMfaSource: "firebase_auth",
-    lastVerifiedAt: Date.now(),
-    lastVerificationMethod: "firebase_totp_current_session",
-    updatedAt: Date.now()
-  };
-
-  if (existingIndex >= 0) {
-    return profiles.map((profile, index) => (
-      index === existingIndex
-        ? { ...profile, ...sessionProfile }
-        : profile
-    ));
-  }
-
-  return [...profiles, sessionProfile];
+  return profiles;
 }
 
 function buildSecurityProfileIndex(profiles) {
@@ -1061,14 +1031,14 @@ function renderTwoFactorOversight(users, profiles) {
   setText(
     "superMfaEnrolledCountDetail",
     summary.enrolledCount
-      ? `${summary.enrolledCount} privileged account(s) have Firebase Auth 2FA recorded.`
+      ? `${summary.enrolledCount} privileged account(s) have app-level authenticator 2FA recorded.`
       : "No privileged accounts are enrolled yet."
   );
   setText("superMfaPendingCount", summary.pendingCount);
   setText(
     "superMfaPendingCountDetail",
     summary.pendingCount
-      ? `${summary.pendingCount} privileged account(s) still need a recorded Firebase 2FA verification.`
+      ? `${summary.pendingCount} privileged account(s) still need app-level 2FA enrollment.`
       : "No enrollment gaps found."
   );
   setText("superMfaVerifiedTodayCount", summary.verifiedTodayCount);
@@ -1082,8 +1052,8 @@ function renderTwoFactorOversight(users, profiles) {
   setText(
     "superMfaLowBackupCountDetail",
     summary.lowBackupCount
-      ? `${summary.lowBackupCount} legacy 2FA account(s) should re-enroll soon because only 2 or fewer backup codes remain.`
-      : "Native Firebase 2FA accounts do not use app backup-code reserves."
+      ? `${summary.lowBackupCount} app-level 2FA account(s) should re-enroll soon because only 2 or fewer backup codes remain.`
+      : "No app-level 2FA account has a low backup-code reserve."
   );
   setText("superMfaBackupUseCount", summary.backupUseCount);
   setText(
@@ -1117,7 +1087,7 @@ function renderTwoFactorOversight(users, profiles) {
     }));
 
   const recoveryRiskRows = summary.rows
-    .filter((row) => row.legacyEnrolled)
+    .filter((row) => row.enrolled)
     .sort((a, b) => a.backupCodesRemaining - b.backupCodesRemaining || b.backupCodeUseCount - a.backupCodeUseCount || a.name.localeCompare(b.name))
     .slice(0, 6)
     .map((row) => ({
@@ -1139,7 +1109,7 @@ function renderTwoFactorOversight(users, profiles) {
   renderInsightList(
     "superMfaRecoveryRiskList",
     recoveryRiskRows,
-    "No legacy backup-code risk is being tracked for native Firebase 2FA accounts."
+    "No app-level backup-code risk is currently being tracked."
   );
 }
 
@@ -2462,8 +2432,8 @@ function formatAuditAction(action) {
 function formatAuditTitle(entry) {
   if (entry.action === "denied_admin_route") return "Admin route access was denied";
   if (entry.action === "denied_super_admin_route") return "Super Admin route access was denied";
-  if (entry.action === "reset_own_admin_mfa") return "Admin reset their own Firebase 2FA";
-  if (entry.action === "reset_own_super_admin_mfa") return "Super Admin reset their own Firebase 2FA";
+  if (entry.action === "reset_own_admin_mfa") return "Admin reset their own app-level 2FA";
+  if (entry.action === "reset_own_super_admin_mfa") return "Super Admin reset their own app-level 2FA";
   if (entry.action === "mfa_required_privileged_route") return "Privileged route required a 2FA check";
   if (entry.action === "mfa_enrollment_required") return "Privileged account needs 2FA enrollment";
   return "Security audit event";
@@ -2506,7 +2476,7 @@ async function writeAuditLog(action, details) {
 function formatFirebaseError(error) {
   const code = error?.code || "";
   if (code === "permission-denied") {
-    return "Permission denied. Make sure your super admin session has completed Firebase 2FA.";
+    return "Permission denied. Make sure your super admin session has completed app-level 2FA.";
   }
 
   return error?.message || "Please try again.";
@@ -2527,47 +2497,20 @@ function setMfaStatus(message) {
   if (el) el.textContent = message;
 }
 
-async function markOwnMfaProfileReset(role) {
+async function resetOwnAppMfa(role, setupPath) {
   if (!currentUser) return;
-  await setDoc(doc(db, "securityProfiles", currentUser.uid), {
-    uid: currentUser.uid,
-    email: currentUser.email || "",
-    role,
-    firebaseMfaEnrolled: false,
-    firebaseMfaProvider: "",
-    firebaseMfaSource: "firebase_auth",
-    lastVerificationMethod: "firebase_totp_reset",
-    updatedAt: serverTimestamp()
-  }, { merge: true });
-}
-
-async function resetOwnFirebaseMfa(role, setupPath) {
-  if (!currentUser) return;
-  const factorUser = multiFactor(currentUser);
-  const enrolledFactors = factorUser.enrolledFactors || [];
-
   clearSuperAdminMfaSession();
-  if (!enrolledFactors.length) {
-    await markOwnMfaProfileReset(role);
-    setMfaStatus("No Firebase 2FA factor was found. Opening setup so you can enroll again.");
-    window.location.href = setupPath;
-    return;
-  }
-
-  setMfaStatus("Resetting your Firebase 2FA. Please wait...");
-  await resetOwnMfaEnrollment();
-  await currentUser.reload();
-  await markOwnMfaProfileReset(role);
+  setMfaStatus("Resetting app-level 2FA...");
+  await resetOwnAppMfaProfile(db, currentUser, role);
   await writeSecurityAudit(
     db,
     currentUser,
     "reset_own_super_admin_mfa",
-    "Super admin reset their own Firebase Auth multi-factor enrollment."
+    "Super admin reset their own app-level authenticator enrollment."
   );
 
-  setMfaStatus("2FA reset. Signing out so you can enroll a fresh authenticator.");
-  await signOut(auth);
-  window.location.href = "auth.html";
+  setMfaStatus("2FA reset. Opening setup so you can enroll a fresh authenticator.");
+  window.location.href = setupPath;
 }
 
 async function updateUserUI(user) {
@@ -2692,26 +2635,23 @@ window.logout = async function() {
 
 window.resetMySuperAdminMfa = function() {
   if (!currentUser) return;
-  const enrolledCount = multiFactor(currentUser).enrolledFactors?.length || 0;
   openSystemPopup(
     "Reset Super Admin 2FA",
-    enrolledCount
-      ? "This will remove your current authenticator enrollment, clear this privileged session, and sign you out. After signing in again, you can set up a new authenticator."
-      : "No Firebase 2FA factor is recorded on this session. This will clear your privileged session and open the setup page.",
+    "This will clear your current app-level authenticator setup and open enrollment so you can connect a fresh authenticator.",
     async () => {
       const resetBtn = document.getElementById("superAdminMfaResetBtn");
       if (resetBtn) resetBtn.disabled = true;
       try {
-        await resetOwnFirebaseMfa(currentRole, "super-admin-mfa.html");
+        await resetOwnAppMfa(currentRole, "super-admin-mfa.html");
       } catch (error) {
         console.error("Unable to reset super-admin MFA.", error);
-        setMfaStatus(describeAutomaticMfaResetError(error));
+        setMfaStatus("Unable to reset 2FA right now. Check your connection and try again.");
         if (resetBtn) resetBtn.disabled = false;
         closeSystemPopup();
       }
     },
     {
-      confirmLabel: enrolledCount ? "Reset My 2FA" : "Open Setup"
+      confirmLabel: "Reset My 2FA"
     }
   );
 };

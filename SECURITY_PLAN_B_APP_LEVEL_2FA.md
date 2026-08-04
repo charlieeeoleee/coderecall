@@ -2,6 +2,8 @@
 
 Plan B keeps the original free-plan-friendly authenticator flow. Firebase handles first-factor login, then Code Recall blocks admin and super-admin screens until the user verifies a TOTP code or backup code inside the app.
 
+Status: Active Spark-compatible plan.
+
 ## When To Use
 
 - The project stays on Firebase Spark.

@@ -1,6 +1,7 @@
 node_modules/
 .firebase/
 .firebase-cli-config/
+.vercel/
 firestore-debug.log
 firebase-debug.log
 logs/

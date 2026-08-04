@@ -71,19 +71,12 @@ service cloud.firestore {
         );
     }
 
-    function hasFirebaseMfa() {
-      return isSignedIn()
-        && request.auth.token.firebase is map
-        && request.auth.token.firebase.sign_in_second_factor is string
-        && request.auth.token.firebase.sign_in_second_factor.size() > 0;
-    }
-
     function isMfaAdmin() {
-      return isAdmin() && hasFirebaseMfa();
+      return isAdmin();
     }
 
     function isMfaSuperAdmin() {
-      return isSuperAdmin() && hasFirebaseMfa();
+      return isSuperAdmin();
     }
 
     function isOwner(uid) {
@@ -156,48 +149,49 @@ service cloud.firestore {
         && userAccessFieldsUnchanged();
     }
 
-    function validLegacySecurityProfileWrite() {
-      return isMfaSuperAdmin()
-        && !("totpSecret" in request.resource.data)
-        && !("backupCodeHashes" in request.resource.data);
-    }
-
-    function validNativeMfaSecurityProfileData(userId) {
-      return isOwner(userId)
-        && hasFirebaseMfa()
-        && request.resource.data.uid == userId
-        && request.resource.data.firebaseMfaEnrolled == true
-        && request.resource.data.firebaseMfaSource == "firebase_auth"
-        && request.resource.data.role in ["admin", "super_admin"];
-    }
-
-    function nativeMfaProfileKeys() {
+    function appMfaProfileKeys() {
       return [
         "uid",
         "email",
         "role",
+        "appMfaEnabled",
+        "appMfaSource",
+        "totpSecret",
+        "backupCodeHashes",
+        "backupCodesRemaining",
+        "backupCodeUseCount",
+        "totpEnabled",
         "firebaseMfaEnrolled",
         "firebaseMfaProvider",
         "firebaseMfaSource",
-        "lastVerifiedAt",
+        "firebaseMfaSyncedAt",
+        "enrolledAt",
         "lastVerificationMethod",
+        "lastVerifiedAt",
+        "createdAt",
         "updatedAt"
       ];
     }
 
-    function validNativeMfaSecurityProfileCreate(userId) {
-      return validNativeMfaSecurityProfileData(userId)
-        && request.resource.data.keys().hasOnly(nativeMfaProfileKeys());
+    function validOwnerAppMfaSecurityProfileData(userId) {
+      return isOwner(userId)
+        && request.resource.data.keys().hasOnly(appMfaProfileKeys())
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.get("email", "")
+        && request.resource.data.role in ["admin", "super_admin"]
+        && isAdmin()
+        && (request.resource.data.role != "super_admin" || isSuperAdmin())
+        && request.resource.data.appMfaSource == "app_totp"
+        && request.resource.data.backupCodeHashes is list
+        && request.resource.data.backupCodesRemaining is int;
     }
 
-    function validNativeMfaSecurityProfileUpdate(userId) {
-      return validNativeMfaSecurityProfileData(userId)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(nativeMfaProfileKeys());
+    function validOwnerAppMfaSecurityProfileCreate(userId) {
+      return validOwnerAppMfaSecurityProfileData(userId);
     }
 
-    function securityProfileHasNoStoredSecrets() {
-      return !("totpSecret" in resource.data)
-        && !("backupCodeHashes" in resource.data);
+    function validOwnerAppMfaSecurityProfileUpdate(userId) {
+      return validOwnerAppMfaSecurityProfileData(userId);
     }
 
     function keepsContactTicketIdentity() {
@@ -300,9 +294,9 @@ service cloud.firestore {
     }
 
     match /securityProfiles/{userId} {
-      allow read: if isMfaSuperAdmin() || (isOwner(userId) && securityProfileHasNoStoredSecrets());
-      allow create: if validLegacySecurityProfileWrite() || validNativeMfaSecurityProfileCreate(userId);
-      allow update: if validLegacySecurityProfileWrite() || validNativeMfaSecurityProfileUpdate(userId);
+      allow read: if isOwner(userId) || isMfaSuperAdmin();
+      allow create: if validOwnerAppMfaSecurityProfileCreate(userId);
+      allow update: if validOwnerAppMfaSecurityProfileUpdate(userId);
       allow delete: if isMfaSuperAdmin() && request.auth.uid != userId;
     }
 
