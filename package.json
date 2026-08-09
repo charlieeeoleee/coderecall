@@ -29,7 +29,7 @@
     "test:rules:claims-only": "npm run rules:build-claims-only && powershell -ExecutionPolicy Bypass -File scripts/run-firestore-rules-tests.ps1 firestore.claims-only.rules firebase.claims-only.json"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "^5.0.0",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "firebase-admin": "^13.8.0",
     "firebase-tools": "^15.26.0",
     "pg": "^8.16.3"
