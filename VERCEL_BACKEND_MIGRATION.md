@@ -51,7 +51,7 @@ Do not prefix these names with public/frontend prefixes. Do not commit values. E
 
 ## Auth, Authorization, CSRF
 
-Protected API calls use `Authorization: Bearer <Firebase ID token>`. The API verifies the token with Firebase Admin and derives `uid`, email, and claims from the verified token only.
+Protected API routes use the Bearer authentication scheme with a Firebase ID token. The API verifies the token with Firebase Admin and derives `uid`, email, and claims from the verified token only.
 
 Privileged operations fetch trusted role state server-side from claims, `accessRoles`, and existing user-role fallbacks. UI visibility is not authorization.
 
