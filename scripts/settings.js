@@ -39,6 +39,7 @@ import {
 import { clearWrongAnswerReview } from "./review-store.js";
 import { hasTotpFactor } from "./firebase-native-mfa.js";
 import { buildCareerSubjectsFromProgress, getCareerProgress } from "./career-path.js";
+import { submitGamificationEvent } from "./gamification-api.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -1289,22 +1290,9 @@ window.resetProgress = function() {
         const docSnap = await getDoc(userRef);
 
         if (docSnap.exists()) {
-          const data = docSnap.data();
-          await setDoc(userRef, {
-            ...data,
-            xp: 0,
-            xpWeekly: 0,
-            xpChange: 0,
-            progress: {},
-            results: {}
-          });
-
-          await syncPublicLeaderboardEntry(db, currentUser.uid, {
-            name: data.name || currentUser.displayName || currentUser.email || "User",
-            photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-            xp: 0,
-            xpWeekly: 0,
-            xpChange: 0
+          await submitGamificationEvent({
+            action: "reset_all_progress",
+            eventId: `reset-all:${currentUser.uid}:${Date.now()}`
           });
         }
       }
@@ -1382,12 +1370,6 @@ window.resetSubjectProgress = function(subject) {
 
         if (docSnap.exists()) {
           const data = docSnap.data() || {};
-          const nextProgress = Object.fromEntries(
-            Object.entries(data.progress || {}).filter(([key]) => !key.startsWith(`${subject}_`))
-          );
-          const nextResults = Object.fromEntries(
-            Object.entries(data.results || {}).filter(([key]) => !key.startsWith(`${subject}_`))
-          );
           const nextWrongAnswerReview = Array.isArray(data.wrongAnswerReview)
             ? data.wrongAnswerReview.filter((item) => item?.subject !== subject)
             : [];
@@ -1397,29 +1379,18 @@ window.resetSubjectProgress = function(subject) {
           const nextRetentionQueue = Array.isArray(data.retentionQueue)
             ? data.retentionQueue.filter((item) => item?.subject !== subject)
             : [];
-          const nextXP = computeSystemXP(nextProgress, nextResults);
-          const nextWeeklyXP = Math.min(Number(data.xpWeekly || 0), nextXP);
+          await submitGamificationEvent({
+            action: "reset_subject_progress",
+            eventId: `reset-subject:${currentUser.uid}:${subject}:${Date.now()}`,
+            subject
+          });
 
           await setDoc(userRef, {
-            ...data,
-            xp: nextXP,
-            xpWeekly: nextWeeklyXP,
-            xpChange: 0,
-            progress: nextProgress,
-            results: nextResults,
             wrongAnswerReview: nextWrongAnswerReview,
             studyHistory: nextStudyHistory,
             retentionQueue: nextRetentionQueue,
             resumeActivity: data.resumeActivity?.subject === subject ? null : (data.resumeActivity || null)
-          });
-
-          await syncPublicLeaderboardEntry(db, currentUser.uid, {
-            name: data.name || currentUser.displayName || currentUser.email || "User",
-            photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-            xp: nextXP,
-            xpWeekly: nextWeeklyXP,
-            xpChange: 0
-          });
+          }, { merge: true });
         }
       }
 

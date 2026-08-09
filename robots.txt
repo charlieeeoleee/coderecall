@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /admin-mfa
+Disallow: /super-admin-mfa
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /achievements
+Disallow: /certificates
+Disallow: /certificate
+Disallow: /review
+Disallow: /history
+Disallow: /module
+Disallow: /module-difficulty
+Disallow: /module-levels
+Disallow: /quiz
+Disallow: /quiz-difficulty
+Disallow: /quiz-level
+Disallow: /quiz-levels
+Disallow: /auth
+Disallow: /auth-companion
+Disallow: /qr-approve
+Disallow: /access-denied
+
+Sitemap: https://coderecall.online/sitemap.xml

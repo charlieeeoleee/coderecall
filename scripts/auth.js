@@ -9,6 +9,7 @@ import {
   signInWithRedirect,
   setPersistence,
   getRedirectResult,
+  signInWithCustomToken,
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -27,6 +28,9 @@ import { resolveUserRole, syncUserRole } from "./role-utils.js?v=20260525a";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { clearAdminMfaSession } from "./admin-mfa-session.js";
+import { submitGamificationEvent } from "./gamification-api.js";
+import { apiRequest, describeBackendError } from "./backend-api.js";
+import { renderQrSvgMarkup } from "./local-qr.js";
 
 
 const auth = getAuth(app);
@@ -43,6 +47,8 @@ let activeMfaResolver = null;
 let activeMfaProvider = "password";
 let googleSignInInFlight = false;
 let hasCheckedGoogleRedirectResult = false;
+let qrLoginPollTimer = null;
+let qrLoginActiveRequest = null;
 
 if (sessionStorage.getItem(googleRedirectPendingKey) === "true") {
   isHandlingAuthFlow = true;
@@ -723,7 +729,37 @@ function setQrLoginStatus(message, isError = false) {
 }
 
 function stopQrLoginPolling() {
-  // QR login previously depended on Firebase Cloud Functions. It is disabled on Spark.
+  if (qrLoginPollTimer) {
+    window.clearInterval(qrLoginPollTimer);
+    qrLoginPollTimer = null;
+  }
+  qrLoginActiveRequest = null;
+}
+
+async function pollQrLoginExchange() {
+  if (!qrLoginActiveRequest) return;
+
+  try {
+    const result = await apiRequest("/api/auth/qr/exchange", {
+      method: "POST",
+      auth: false,
+      body: qrLoginActiveRequest,
+      timeoutMs: 8000
+    });
+
+    if (!result.approved) {
+      setQrLoginStatus("Waiting for approval on your phone...");
+      return;
+    }
+
+    stopQrLoginPolling();
+    setQrLoginStatus("Approved. Signing you in...");
+    await signInWithCustomToken(auth, result.customToken);
+    document.getElementById("qrLoginPopup")?.classList.remove("active");
+  } catch (error) {
+    stopQrLoginPolling();
+    setQrLoginStatus(describeBackendError(error, "QR login could not be completed. Generate a new code and try again."), true);
+  }
 }
 
 window.openQrLoginPopup = async function(){
@@ -733,8 +769,36 @@ window.openQrLoginPopup = async function(){
 
   stopQrLoginPolling();
   popup.classList.add("active");
-  image.textContent = "QR unavailable";
-  setQrLoginStatus("Phone QR login is disabled while Code Recall is on the Firebase Spark plan. Use Google or Email sign-in, then verify with your authenticator code.", true);
+  image.textContent = "Generating QR...";
+  setQrLoginStatus("Preparing a secure QR login request...");
+
+  try {
+    const result = await apiRequest("/api/auth/qr/create", {
+      method: "POST",
+      auth: false,
+      body: {},
+      timeoutMs: 8000
+    });
+    qrLoginActiveRequest = {
+      requestId: result.requestId,
+      secret: result.secret
+    };
+    const approvalUrl = new URL("qr-approve.html", window.location.href);
+    approvalUrl.searchParams.set("requestId", result.requestId);
+    approvalUrl.searchParams.set("secret", result.secret);
+    image.innerHTML = renderQrSvgMarkup(approvalUrl.toString(), 220);
+    setQrLoginStatus("Scan this QR code with your phone, then approve the sign-in.");
+    qrLoginPollTimer = window.setInterval(pollQrLoginExchange, 2500);
+    window.setTimeout(() => {
+      if (!qrLoginActiveRequest || qrLoginActiveRequest.requestId !== result.requestId) return;
+      stopQrLoginPolling();
+      image.textContent = "Expired";
+      setQrLoginStatus("This QR code expired. Generate a new one to continue.", true);
+    }, Math.max(1000, Number(result.expiresAtMs || 0) - Date.now()));
+  } catch (error) {
+    image.textContent = "Unavailable";
+    setQrLoginStatus(describeBackendError(error, "QR login is unavailable right now. Use Google or Email sign-in."), true);
+  }
 };
 
 window.closeQrLoginPopup = function(){
@@ -778,10 +842,6 @@ async function transferGuestProgressIfNeeded(uid) {
     return;
   }
 
-  const userRef = doc(db, "users", uid);
-  const docSnap = await getDoc(userRef);
-  const existingData = docSnap.exists() ? docSnap.data() : {};
-
   const guestXP = parseInt(localStorage.getItem("guest_xp")) || 0;
 
   const guestProgress = {
@@ -795,16 +855,11 @@ async function transferGuestProgressIfNeeded(uid) {
     electrical_posttest: localStorage.getItem("electrical_posttest") === "true"
   };
 
-  const mergedXP = (existingData.xp || 0) + guestXP;
-  const mergedProgress = {
-    ...(existingData.progress || {}),
-    ...guestProgress
-  };
-
-  await setDoc(userRef, {
-    ...existingData,
-    xp: mergedXP,
-    progress: mergedProgress
+  await submitGamificationEvent({
+    action: "import_guest_progress",
+    eventId: `guest-transfer:${uid}`,
+    xp: guestXP,
+    progress: guestProgress
   });
 
   clearGuestAfterTransfer();

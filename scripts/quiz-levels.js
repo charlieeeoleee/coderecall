@@ -220,20 +220,7 @@ async function syncOverallQuizCompletion(progress) {
     localStorage.setItem(getLegacyOverallQuizKey(), "true");
   }
 
-  if (currentUser) {
-    const userRef = await ensureUserDoc(currentUser.uid);
-    const snap = await getDoc(userRef);
-    const data = snap.data() || {};
-    const existingProgress = data.progress || {};
-    existingProgress[getOverallQuizKey()] = true;
-    if (difficulty === "hard") {
-      existingProgress[getLegacyOverallQuizKey()] = true;
-    }
-
-    await updateDoc(userRef, {
-      progress: existingProgress
-    });
-  }
+  // Aggregate completion is derived from server-authoritative per-quiz flags.
 }
 
 async function renderLevels() {

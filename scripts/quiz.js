@@ -20,11 +20,11 @@ import {
   handleSoundToggle,
   handleMusicToggle
 } from "./sound.js";
-import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview, loadWrongAnswerReview } from "./review-store.js";
 import { saveRetentionReview, resolveRetentionReview, loadRetentionQueue } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
+import { submitGamificationEvent } from "./gamification-api.js";
 import { electricalPosttestQuestions } from "../data/electrical-posttest-data.js";
 import { hardwarePosttestQuestions } from "../data/hardware-posttest-data.js";
 import {
@@ -300,6 +300,17 @@ function mergeCachedUserData(partial = {}) {
 
   cachedUserData = nextData;
   return nextData;
+}
+
+function mergeGamificationResponse(response = {}) {
+  const next = {};
+  ["xp", "xpWeekly", "xpChange", "progress", "results"].forEach((key) => {
+    if (response[key] !== undefined) {
+      next[key] = response[key];
+    }
+  });
+  mergeCachedUserData(next);
+  return next;
 }
 
 async function getCachedUserRef(uid) {
@@ -1367,39 +1378,14 @@ async function addXP(amount) {
     "quiz";
 
   if (currentUser) {
-    const userRef = await ensureUserDoc(currentUser.uid);
-    const data = await getCachedUserData(currentUser.uid);
-    const currentWeek = getWeekKey();
-    const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
-    const currentXP = Number(data.xp || 0);
-    const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
-
-    const updatePayload = {
-      xp: currentXP + amount,
-      xpWeekly: currentWeeklyXP + amount,
-      xpChange: amount,
-      lastWeeklyReset: currentWeek
-    };
-
-    await updateDoc(userRef, updatePayload);
-    mergeCachedUserData(updatePayload);
-
     traceXPEvent({
       channel: "firestore",
       source: sourceLabel,
       subject,
       level,
       amount,
-      nextXP: currentXP + amount,
+      nextXP: Number(cachedUserData?.xp || 0) + amount,
       uid: currentUser.uid
-    });
-
-    await syncPublicLeaderboardEntry(db, currentUser.uid, {
-      name: data.name || currentUser.displayName || currentUser.email || "User",
-      photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-      xp: currentXP + amount,
-      xpWeekly: currentWeeklyXP + amount,
-      xpChange: amount
     });
 
     return;
@@ -1475,31 +1461,28 @@ async function saveQuizResultToStorageAndFirestore() {
 
   if (!currentUser) return;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const data = await getCachedUserData(currentUser.uid);
-  const progress = data.progress || {};
-  const results = data.results || {};
-
-  if (type === "pretest") {
-    progress[flags.pretestKey] = true;
-    progress[`${canonicalSubject}_pretest`] = true;
-  } else if (type === "posttest") {
-    progress[flags.posttestKey] = true;
-    progress[`${canonicalSubject}_posttest`] = true;
-  } else {
-    progress[flags.quizKey] = true;
-    progress[`${canonicalSubject}_quiz`] = true;
-  }
-  progress[`${resultKey}_xp_awarded`] = xpEarned;
-  progress[`${canonicalResultKey}_xp_awarded`] = xpEarned;
-
-  results[resultKey] = resultPayload;
-  results[canonicalResultKey] = {
-    ...resultPayload,
-    subject: canonicalSubject
-  };
-  await updateDoc(userRef, { progress, results });
-  mergeCachedUserData({ progress, results });
+  await ensureUserDoc(currentUser.uid);
+  const eventId = [
+    "quiz",
+    canonicalSubject,
+    type,
+    level,
+    resultPayload.xpAwardedQuestionIds.join("-") || resultPayload.completedAt
+  ].join(":").replace(/[^a-zA-Z0-9:_-]/g, "_").slice(0, 150);
+  const response = await submitGamificationEvent({
+    action: "record_quiz_result",
+    eventId,
+    subject: canonicalSubject,
+    type,
+    difficulty: level,
+    level,
+    score,
+    total,
+    xpAwarded: xpEarned,
+    answerItems: answeredQuestionsThisRun,
+    xpAwardedQuestionIds: resultPayload.xpAwardedQuestionIds
+  });
+  mergeGamificationResponse(response);
 }
 
 async function finishAttempt() {

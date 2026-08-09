@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260804a";
+const CACHE_VERSION = "code-recall-v20260809-vercel-api";
 const APP_SHELL = [
   "./",
   "./offline.html",
@@ -46,6 +46,8 @@ const APP_SHELL = [
   "./styles/contact.css",
   "./styles/privacy.css",
   "./scripts/loading.js",
+  "./scripts/backend-api.js",
+  "./scripts/gamification-api.js",
   "./scripts/auth-companion.js",
   "./scripts/mfa-totp.js",
   "./scripts/sound.js",

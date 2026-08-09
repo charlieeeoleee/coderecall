@@ -7,9 +7,9 @@ import {
   tryStartMusic,
   restartThemeMusic
 } from "./sound.js";
-import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
+import { submitGamificationEvent } from "./gamification-api.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
 
 /* =========================
@@ -80,6 +80,30 @@ function mergeCachedUserData(partial = {}) {
 
   cachedUserData = nextData;
   return nextData;
+}
+
+function mergeGamificationResponse(response = {}) {
+  const next = {};
+  ["xp", "xpWeekly", "xpChange", "progress", "results"].forEach((key) => {
+    if (response[key] !== undefined) {
+      next[key] = response[key];
+    }
+  });
+  mergeCachedUserData(next);
+  return next;
+}
+
+async function submitModuleGamification(action, eventId, extra = {}) {
+  const response = await submitGamificationEvent({
+    action,
+    eventId,
+    subject,
+    difficulty,
+    moduleNumber,
+    ...extra
+  });
+  mergeGamificationResponse(response);
+  return response;
 }
 
 async function getCachedUserRef(uid) {
@@ -1562,12 +1586,12 @@ async function markModuleReadBottom() {
 
   if (!currentUser) return;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const data = await getCachedUserData(currentUser.uid);
-  const progress = data.progress || {};
-  progress[getModuleReadKey()] = true;
-  await updateDoc(userRef, { progress });
-  mergeCachedUserData({ progress });
+  await ensureUserDoc(currentUser.uid);
+  await submitModuleGamification(
+    "mark_module_progress",
+    `module:${subject}:${difficulty}:${moduleNumber}:read_bottom`,
+    { marker: "read_bottom" }
+  );
 }
 
 async function markQuickCheckAttempted() {
@@ -1576,12 +1600,12 @@ async function markQuickCheckAttempted() {
 
   if (!currentUser) return;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const data = await getCachedUserData(currentUser.uid);
-  const progress = data.progress || {};
-  progress[getQuickCheckAttemptKey()] = true;
-  await updateDoc(userRef, { progress });
-  mergeCachedUserData({ progress });
+  await ensureUserDoc(currentUser.uid);
+  await submitModuleGamification(
+    "mark_module_progress",
+    `module:${subject}:${difficulty}:${moduleNumber}:quick_check_attempted`,
+    { marker: "quick_check_attempted" }
+  );
 }
 
 async function markMatchingActivityCompleted() {
@@ -1590,12 +1614,12 @@ async function markMatchingActivityCompleted() {
 
   if (!currentUser) return;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const data = await getCachedUserData(currentUser.uid);
-  const progress = data.progress || {};
-  progress[getMatchingActivityDoneKey()] = true;
-  await updateDoc(userRef, { progress });
-  mergeCachedUserData({ progress });
+  await ensureUserDoc(currentUser.uid);
+  await submitModuleGamification(
+    "mark_module_progress",
+    `module:${subject}:${difficulty}:${moduleNumber}:matching_activity_done`,
+    { marker: "matching_activity_done" }
+  );
 }
 
 async function markDragDropActivityCompleted() {
@@ -1604,12 +1628,12 @@ async function markDragDropActivityCompleted() {
 
   if (!currentUser) return;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const data = await getCachedUserData(currentUser.uid);
-  const progress = data.progress || {};
-  progress[getDragDropActivityDoneKey()] = true;
-  await updateDoc(userRef, { progress });
-  mergeCachedUserData({ progress });
+  await ensureUserDoc(currentUser.uid);
+  await submitModuleGamification(
+    "mark_module_progress",
+    `module:${subject}:${difficulty}:${moduleNumber}:drag_drop_activity_done`,
+    { marker: "drag_drop_activity_done" }
+  );
 }
 
 async function getModuleGateState() {
@@ -1647,13 +1671,12 @@ async function markModuleCompleted() {
 
   if (!currentUser) return;
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const data = await getCachedUserData(currentUser.uid);
-  const progress = data.progress || {};
-  progress[getModuleDoneKey()] = true;
-
-  await updateDoc(userRef, { progress });
-  mergeCachedUserData({ progress });
+  await ensureUserDoc(currentUser.uid);
+  await submitModuleGamification(
+    "mark_module_progress",
+    `module:${subject}:${difficulty}:${moduleNumber}:module_done`,
+    { marker: "module_done" }
+  );
   await clearModuleResumeState();
 }
 
@@ -1686,27 +1709,13 @@ async function awardModuleXPOnce() {
   localStorage.setItem(getModuleXPKey(), "true");
 
   if (currentUser) {
-    const userRef = await ensureUserDoc(currentUser.uid);
-    const data = await getCachedUserData(currentUser.uid);
-    const currentWeek = getWeekKey();
-    const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
-    const currentXP = Number(data.xp || 0);
-    const currentWeeklyXP =
-      lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
-    const progress = data.progress || {};
-
-    progress[getModuleXPKey()] = true;
-
-      const updatePayload = {
-        xp: currentXP + MODULE_XP_REWARD,
-        xpWeekly: currentWeeklyXP + MODULE_XP_REWARD,
-        xpChange: MODULE_XP_REWARD,
-        lastWeeklyReset: currentWeek,
-        progress
-      };
-
-      await updateDoc(userRef, updatePayload);
-      mergeCachedUserData(updatePayload);
+    await ensureUserDoc(currentUser.uid);
+    const response = await submitModuleGamification(
+      "award_module_xp",
+      `module:${subject}:${difficulty}:${moduleNumber}:xp`,
+      {}
+    );
+    const earned = Number(response.xpDelta || 0);
 
       traceXPEvent({
         channel: "firestore",
@@ -1714,19 +1723,12 @@ async function awardModuleXPOnce() {
         subject,
         difficulty,
         module: moduleNumber,
-        amount: MODULE_XP_REWARD,
-        nextXP: currentXP + MODULE_XP_REWARD,
+        amount: earned,
+        nextXP: response.xp,
         uid: currentUser.uid
       });
 
-      await syncPublicLeaderboardEntry(db, currentUser.uid, {
-      name: data.name || currentUser.displayName || currentUser.email || "User",
-      photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-      xp: currentXP + MODULE_XP_REWARD,
-      xpWeekly: currentWeeklyXP + MODULE_XP_REWARD,
-      xpChange: MODULE_XP_REWARD
-    });
-    return MODULE_XP_REWARD;
+    return earned;
   }
 
   const guestXP = parseInt(localStorage.getItem("guest_xp") || "0", 10);
@@ -1782,27 +1784,13 @@ async function awardQuickCheckXP(score) {
   localStorage.setItem(getQuickCheckBestScoreKey(), String(earnedScore));
 
   if (currentUser) {
-    const userRef = await ensureUserDoc(currentUser.uid);
-    const data = await getCachedUserData(currentUser.uid);
-    const currentWeek = getWeekKey();
-    const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
-    const currentXP = Number(data.xp || 0);
-    const currentWeeklyXP =
-      lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
-    const progress = data.progress || {};
-
-    progress[getQuickCheckBestScoreKey()] = earnedScore;
-
-      const updatePayload = {
-        xp: currentXP + delta,
-        xpWeekly: currentWeeklyXP + delta,
-        xpChange: delta,
-        lastWeeklyReset: currentWeek,
-        progress
-      };
-
-      await updateDoc(userRef, updatePayload);
-      mergeCachedUserData(updatePayload);
+    await ensureUserDoc(currentUser.uid);
+    const response = await submitModuleGamification(
+      "award_quick_check_xp",
+      `module:${subject}:${difficulty}:${moduleNumber}:quick_check:${earnedScore}`,
+      { score: earnedScore }
+    );
+    const earned = Number(response.xpDelta || 0);
 
       traceXPEvent({
         channel: "firestore",
@@ -1810,22 +1798,14 @@ async function awardQuickCheckXP(score) {
         subject,
         difficulty,
         module: moduleNumber,
-        amount: delta,
+        amount: earned,
         score: earnedScore,
         bestScore,
-        nextXP: currentXP + delta,
+        nextXP: response.xp,
         uid: currentUser.uid
       });
 
-      await syncPublicLeaderboardEntry(db, currentUser.uid, {
-      name: data.name || currentUser.displayName || currentUser.email || "User",
-      photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-      xp: currentXP + delta,
-      xpWeekly: currentWeeklyXP + delta,
-      xpChange: delta
-    });
-
-    return delta;
+    return earned;
   }
 
   const guestXP = parseInt(localStorage.getItem("guest_xp") || "0", 10);

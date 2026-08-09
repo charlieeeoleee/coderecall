@@ -123,11 +123,7 @@ async function loadRealUser() {
     const lastReset = data.lastWeeklyReset || currentWeek;
 
     if (lastReset !== currentWeek) {
-      await updateDoc(userRef, {
-        xpWeekly: 0,
-        lastWeeklyReset: currentWeek
-      });
-      xpWeekly = 0;
+      xpWeekly = data.xpWeekly || 0;
     } else {
       xpWeekly = data.xpWeekly || 0;
     }

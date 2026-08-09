@@ -111,6 +111,33 @@ test("users can read their own profile but cannot promote themselves", async () 
   await assertSucceeds(updateDoc(doc(db, "users", "learner"), {
     name: "Updated Learner"
   }));
+  await assertSucceeds(updateDoc(doc(db, "users", "learner"), {
+    resumeActivity: {
+      kind: "module",
+      subject: "hardware",
+      updatedAt: "2026-08-09T00:00:00.000Z"
+    }
+  }));
+  await assertFails(updateDoc(doc(db, "users", "learner"), {
+    xp: 999999
+  }));
+  await assertFails(updateDoc(doc(db, "users", "learner"), {
+    progress: {
+      role: "user",
+      hardware_pretest: true
+    }
+  }));
+  await assertFails(updateDoc(doc(db, "users", "learner"), {
+    results: {
+      hardware_pretest: {
+        score: 30,
+        total: 30
+      }
+    }
+  }));
+  await assertFails(updateDoc(doc(db, "users", "otherLearner"), {
+    name: "Not Mine"
+  }));
   await assertFails(updateDoc(doc(db, "users", "learner"), {
     role: "admin",
     progress: {
@@ -159,6 +186,9 @@ test("signed-in users can write only safe security audit events", async () => {
   await assertSucceeds(setDoc(doc(db, "auditLogs", "safeDeniedRoute"), {
     action: "denied_admin_route",
     details: "Denied direct admin route visit.",
+    metadata: {
+      route: "admin.html"
+    },
     actorUid: "learner",
     actorEmail: "learner@example.com",
     createdAt: serverTimestamp()
@@ -181,6 +211,144 @@ test("signed-in users can write only safe security audit events", async () => {
   }));
 
   await assertFails(getDoc(doc(db, "auditLogs", "safeDeniedRoute")));
+});
+
+test("contact tickets must use the approved learner-owned shape", async () => {
+  const db = authContext("learner", { email: "learner@example.com" });
+  const safeTicket = {
+    ticketId: "TCK-123456789",
+    category: "feedback",
+    subject: "Question about a lesson",
+    message: "I need help understanding the module.",
+    status: "open",
+    createdByUid: "learner",
+    createdByName: "Learner",
+    createdByEmail: "learner@example.com",
+    createdByRole: "user",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    assignedAdminUid: "",
+    assignedAdminName: "",
+    assignedAdminRole: "",
+    replyText: "",
+    replyHistory: [],
+    conversationHistory: [{
+      type: "learner",
+      text: "I need help understanding the module.",
+      byUid: "learner",
+      byName: "Learner",
+      byRole: "user",
+      at: "2026-08-09T00:00:00.000Z"
+    }],
+    repliedAt: null,
+    repliedByUid: "",
+    repliedByName: "",
+    repliedByRole: "",
+    resolvedAt: null,
+    resolvedByUid: "",
+    resolvedByName: "",
+    resolvedByRole: ""
+  };
+
+  await assertSucceeds(setDoc(doc(db, "contactMessages", "safeTicket"), safeTicket));
+  await assertFails(setDoc(doc(db, "contactMessages", "oversizedTicket"), {
+    ...safeTicket,
+    message: "x".repeat(3001),
+    conversationHistory: [{
+      ...safeTicket.conversationHistory[0],
+      text: "x".repeat(3001)
+    }]
+  }));
+  await assertFails(setDoc(doc(db, "contactMessages", "spoofedTicket"), {
+    ...safeTicket,
+    createdByUid: "someoneElse"
+  }));
+});
+
+test("users cannot create profiles with preloaded gamification data", async () => {
+  const db = authContext("newLearner", { email: "new@example.com" });
+
+  await assertSucceeds(setDoc(doc(db, "users", "newLearner"), {
+    email: "new@example.com",
+    name: "New Learner",
+    role: "user",
+    status: "active",
+    progress: {},
+    results: {},
+    xp: 0,
+    xpWeekly: 0,
+    xpChange: 0
+  }));
+
+  const loadedDb = authContext("loadedLearner", { email: "loaded@example.com" });
+  await assertFails(setDoc(doc(loadedDb, "users", "loadedLearner"), {
+    email: "new@example.com",
+    name: "Loaded Learner",
+    role: "user",
+    status: "active",
+    progress: {
+      hardware_pretest: true
+    },
+    results: {},
+    xp: 500,
+    xpWeekly: 500,
+    xpChange: 500
+  }));
+});
+
+test("public leaderboard entries must mirror owner score fields", async () => {
+  const db = authContext("learner", { email: "learner@example.com" });
+
+  await assertSucceeds(setDoc(doc(db, "leaderboard_public", "learner"), {
+    name: "Learner",
+    photo: "https://i.pravatar.cc/40?img=12",
+    xp: 10,
+    xpWeekly: 0,
+    xpChange: 0,
+    updatedAt: "2026-08-09T00:00:00.000Z"
+  }));
+
+  await assertFails(setDoc(doc(db, "leaderboard_public", "learner"), {
+    name: "Learner",
+    photo: "https://i.pravatar.cc/40?img=12",
+    xp: 999999,
+    xpWeekly: 999999,
+    xpChange: 999999,
+    updatedAt: "2026-08-09T00:00:00.000Z"
+  }));
+
+  const otherDb = authContext("otherLearner", { email: "other@example.com" });
+  await assertFails(setDoc(doc(otherDb, "leaderboard_public", "learner"), {
+    name: "Other",
+    photo: "https://i.pravatar.cc/40?img=12",
+    xp: 10,
+    xpWeekly: 0,
+    xpChange: 0,
+    updatedAt: "2026-08-09T00:00:00.000Z"
+  }));
+});
+
+test("sanitized client error reports can be created but not read by normal users", async () => {
+  const db = authContext("learner", { email: "learner@example.com" });
+
+  await assertSucceeds(setDoc(doc(db, "clientErrorReports", "safeReport"), {
+    event: "uncaught_error",
+    message: "Something failed",
+    source: "dashboard.html",
+    route: "/dashboard",
+    userAgent: "Rules test",
+    createdAt: serverTimestamp()
+  }));
+
+  await assertFails(getDoc(doc(db, "clientErrorReports", "safeReport")));
+  await assertFails(setDoc(doc(db, "clientErrorReports", "oversizedReport"), {
+    event: "uncaught_error",
+    message: "x".repeat(241),
+    source: "dashboard.html",
+    route: "/dashboard",
+    userAgent: "Rules test",
+    createdAt: serverTimestamp()
+  }));
 });
 
 test("admins can read unassigned or assigned tickets but not another admin's assigned ticket", async () => {

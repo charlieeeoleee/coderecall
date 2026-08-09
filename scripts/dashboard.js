@@ -495,145 +495,17 @@ async function loadDashboard() {
 }
 
 async function reconcileLocalProgressToFirestore(userRef, data) {
-  const progress = { ...(data.progress || {}) };
-  const results = { ...(data.results || {}) };
-  const currentWeek = getWeekKey();
-  const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
-
-  let xpDelta = 0;
-  let progressChanged = false;
-  let resultsChanged = false;
-
-  const markProgress = (key, value = true) => {
-    if (progress[key] === value) return false;
-    progress[key] = value;
-    progressChanged = true;
-    return true;
-  };
-
-  const hasLocalDone = (baseKey) =>
-    localStorage.getItem(baseKey) === "true" ||
-    localStorage.getItem(`${baseKey}_done`) === "true" ||
-    localStorage.getItem(`${baseKey}_attempt_done`) === "true";
-
-  ["hardware", "electrical"].forEach((subject) => {
-    ["pretest", "posttest"].forEach((type) => {
-      const baseKey = `${subject}_${type}`;
-      const alreadyTracked = progress[baseKey] === true || results[baseKey] != null;
-
-      if (!alreadyTracked && hasLocalDone(baseKey)) {
-        markProgress(baseKey);
-        results[baseKey] = {
-          subject,
-          type,
-          score: Number(localStorage.getItem(`${baseKey}_score`) || 0),
-          percent: Number(localStorage.getItem(`${baseKey}_percent`) || 0),
-          completedAt: new Date().toISOString()
-        };
-        resultsChanged = true;
-      }
-
-      const expectedXP = getAssessmentXP(type, results[baseKey]);
-      const xpProgressKey = `${baseKey}_xp_awarded`;
-      const trackedXP = Number(progress[xpProgressKey] || 0);
-
-      if (expectedXP > trackedXP) {
-        progress[xpProgressKey] = expectedXP;
-        progressChanged = true;
-        xpDelta += expectedXP - trackedXP;
-      }
-    });
-  });
-
-  Object.keys(localStorage).forEach((key) => {
-    if (/_module_\d+_done$/.test(key) && localStorage.getItem(key) === "true") {
-      markProgress(key);
-    }
-
-    if (/_module_\d+_done_xp_awarded$/.test(key) && localStorage.getItem(key) === "true") {
-      if (markProgress(key)) {
-        xpDelta += MODULE_XP_REWARD;
-      }
-    }
-
-    if (/_module_\d+_done_quick_check_best_score$/.test(key)) {
-      const localBest = Number(localStorage.getItem(key) || 0);
-      const remoteBest = Number(progress[key] || 0);
-      if (localBest > remoteBest) {
-        progress[key] = localBest;
-        progressChanged = true;
-        xpDelta += localBest - remoteBest;
-      }
-    }
-
-    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_done$/.test(key) && localStorage.getItem(key) === "true") {
-      markProgress(key);
-    }
-
-    if (/^(hardware|electrical)_(easy|medium|hard)_quiz_level_\d+_result$/.test(key)) {
-      const doneKey = key.replace(/_result$/, "_done");
-      const alreadyTracked = progress[doneKey] === true;
-      const raw = localStorage.getItem(key);
-      if (!raw) return;
-
-      try {
-        const parsed = JSON.parse(raw);
-        if (!alreadyTracked) {
-          progress[doneKey] = true;
-          progressChanged = true;
-          xpDelta += Math.max(0, Number(parsed.score) || 0) * QUIZ_LEVEL_XP_PER_CORRECT;
-        }
-      } catch {
-        // ignore malformed local quiz level payloads
-      }
-    }
-
-    if (/^(hardware|electrical)_(easy|medium|hard)_quiz$/.test(key) && localStorage.getItem(key) === "true") {
-      markProgress(key);
-    }
-  });
-
-  const currentXP = Number(data.xp || 0);
-  const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
-  const expectedXP = computeExpectedSystemXP(progress, results);
-  const canonicalDelta = Math.max(0, expectedXP - (currentXP + xpDelta));
-  const finalDelta = xpDelta + canonicalDelta;
-
-  if (!progressChanged && !resultsChanged && finalDelta <= 0) {
-    return data;
-  }
-
-  const nextData = {
-    ...data,
-    xp: currentXP + finalDelta,
-    xpWeekly: currentWeeklyXP + finalDelta,
-    xpChange: finalDelta > 0 ? finalDelta : Number(data.xpChange || 0),
-    lastWeeklyReset: currentWeek,
-    progress,
-    results
-  };
-
   traceXPEvent({
     channel: "dashboard_reconcile",
-    source: "local_progress_sync",
-    amount: finalDelta,
-    nextXP: nextData.xp,
+    source: "server_authoritative_skip",
+    amount: 0,
+    nextXP: Number(data?.xp || 0),
     uid: currentUser?.uid || "",
-    progressChanged,
-    resultsChanged,
-    canonicalDelta
+    progressChanged: false,
+    resultsChanged: false,
+    canonicalDelta: 0
   });
-
-  await updateDoc(userRef, {
-    xp: nextData.xp,
-    xpWeekly: nextData.xpWeekly,
-    xpChange: nextData.xpChange,
-    lastWeeklyReset: nextData.lastWeeklyReset,
-    progress: nextData.progress,
-    results: nextData.results
-  });
-
-  return nextData;
+  return data;
 }
 
 /* =========================

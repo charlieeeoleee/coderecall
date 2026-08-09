@@ -1,15 +1,11 @@
-import { app } from "./firebase-config.js";
-import {
-  getFunctions,
-  httpsCallable
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions.js";
-
-const functions = getFunctions(app, "us-central1");
+import { apiRequest } from "./backend-api.js";
 
 export async function resetOwnMfaEnrollment() {
-  const reset = httpsCallable(functions, "resetOwnMfaEnrollment");
-  const result = await reset({});
-  return result.data || {};
+  return await apiRequest("/api/admin/mfa/reset-own", {
+    method: "POST",
+    body: {},
+    auth: true
+  });
 }
 
 export function describeAutomaticMfaResetError(error) {
@@ -22,7 +18,7 @@ export function describeAutomaticMfaResetError(error) {
     return "Only admin and super-admin accounts can reset privileged 2FA.";
   }
   if (code.includes("not-found")) {
-    return "The automatic 2FA reset service is not deployed yet. Deploy Firebase Functions, then try again.";
+    return "The automatic 2FA reset service is not deployed yet. Deploy the Vercel API, then try again.";
   }
   if (code || message) {
     return `Automatic 2FA reset is unavailable right now${code ? ` (${code})` : ""}${message ? `: ${message}` : "."}`;

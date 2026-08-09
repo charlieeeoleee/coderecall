@@ -80,3 +80,60 @@ export function initializeCodeRecallAppCheck() {
 }
 
 initializeCodeRecallAppCheck();
+
+const ERROR_REPORT_LIMIT_KEY = "code_recall_error_report_last_sent";
+const ERROR_REPORT_COOLDOWN_MS = 60 * 1000;
+
+function sanitizeErrorValue(value, maxLength = 240) {
+  return String(value || "")
+    .replace(/(apiKey|token|secret|password|authorization)=?[^&\s]*/gi, "$1=[redacted]")
+    .slice(0, maxLength);
+}
+
+function shouldSendErrorReport() {
+  try {
+    const lastSent = Number(sessionStorage.getItem(ERROR_REPORT_LIMIT_KEY) || 0);
+    if (Date.now() - lastSent < ERROR_REPORT_COOLDOWN_MS) return false;
+    sessionStorage.setItem(ERROR_REPORT_LIMIT_KEY, String(Date.now()));
+  } catch {
+    // Keep reporting available when sessionStorage is blocked.
+  }
+  return true;
+}
+
+async function reportClientError(event, payload = {}) {
+  if (!shouldSendErrorReport()) return;
+
+  try {
+    await fetch("/api/errors/report", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        event,
+        message: sanitizeErrorValue(payload.message),
+        source: sanitizeErrorValue(payload.source, 180),
+        route: sanitizeErrorValue(location.pathname + location.search, 180),
+        userAgent: sanitizeErrorValue(navigator.userAgent, 180)
+      })
+    });
+  } catch {
+    // Avoid recursive reporting loops.
+  }
+}
+
+window.addEventListener("error", (event) => {
+  reportClientError("uncaught_error", {
+    message: event.message,
+    source: event.filename
+  });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  reportClientError("unhandled_rejection", {
+    message: event.reason?.message || event.reason,
+    source: "promise"
+  });
+});

@@ -99,6 +99,15 @@ service cloud.firestore {
         && request.resource.data.get("firebaseMfaSyncedAt", null) == resource.data.get("firebaseMfaSyncedAt", null);
     }
 
+    function userProtectedGamificationFieldsUnchanged() {
+      return request.resource.data.get("xp", 0) == resource.data.get("xp", 0)
+        && request.resource.data.get("xpWeekly", 0) == resource.data.get("xpWeekly", 0)
+        && request.resource.data.get("xpChange", 0) == resource.data.get("xpChange", 0)
+        && request.resource.data.get("lastWeeklyReset", "") == resource.data.get("lastWeeklyReset", "")
+        && request.resource.data.get("progress", {}) == resource.data.get("progress", {})
+        && request.resource.data.get("results", {}) == resource.data.get("results", {});
+    }
+
     function userDocumentHasAllowedKeys(data) {
       return data.keys().hasOnly([
         "xp",
@@ -132,6 +141,11 @@ service cloud.firestore {
     function validOwnerUserCreate(userId) {
       return isOwner(userId)
         && userDocumentHasAllowedKeys(request.resource.data)
+        && request.resource.data.get("xp", 0) == 0
+        && request.resource.data.get("xpWeekly", 0) == 0
+        && request.resource.data.get("xpChange", 0) == 0
+        && request.resource.data.get("progress", {}) == {}
+        && request.resource.data.get("results", {}) == {}
         && (!("role" in request.resource.data) || request.resource.data.role == "user")
         && (!("status" in request.resource.data) || request.resource.data.status == "active")
         && progressRole(request.resource.data) == "user";
@@ -140,13 +154,15 @@ service cloud.firestore {
     function validOwnerUserUpdate(userId) {
       return isOwner(userId)
         && userDocumentHasAllowedKeys(request.resource.data)
-        && userAccessFieldsUnchanged();
+        && userAccessFieldsUnchanged()
+        && userProtectedGamificationFieldsUnchanged();
     }
 
     function validAdminUserUpdate() {
       return isMfaAdmin()
         && userDocumentHasAllowedKeys(request.resource.data)
-        && userAccessFieldsUnchanged();
+        && userAccessFieldsUnchanged()
+        && userProtectedGamificationFieldsUnchanged();
     }
 
     function appMfaProfileKeys() {
@@ -257,6 +273,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           "action",
           "details",
+          "metadata",
           "actorUid",
           "actorEmail",
           "createdAt"
@@ -271,6 +288,152 @@ service cloud.firestore {
         && request.resource.data.actorEmail == request.auth.token.get("email", "")
         && request.resource.data.details is string
         && request.resource.data.details.size() <= 500
+        && (!("metadata" in request.resource.data) || request.resource.data.metadata is map)
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function publicLeaderboardKeys() {
+      return [
+        "name",
+        "photo",
+        "xp",
+        "xpWeekly",
+        "xpChange",
+        "updatedAt"
+      ];
+    }
+
+    function validPublicLeaderboardWrite(userId) {
+      let owner = get(/databases/$(database)/documents/users/$(userId)).data;
+      return isOwner(userId)
+        && signedInUserDocExists()
+        && request.resource.data.keys().hasOnly(publicLeaderboardKeys())
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() <= 500
+        && request.resource.data.xp is number
+        && request.resource.data.xpWeekly is number
+        && request.resource.data.xpChange is number
+        && request.resource.data.xp >= 0
+        && request.resource.data.xpWeekly >= 0
+        && request.resource.data.xpChange >= 0
+        && request.resource.data.xp == owner.get("xp", 0)
+        && request.resource.data.xpWeekly == owner.get("xpWeekly", 0)
+        && request.resource.data.xpChange == owner.get("xpChange", 0)
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedAt.size() <= 40;
+    }
+
+    function contactMessageCreateKeys() {
+      return [
+        "ticketId",
+        "category",
+        "subject",
+        "message",
+        "status",
+        "createdByUid",
+        "createdByName",
+        "createdByEmail",
+        "createdByRole",
+        "createdAt",
+        "updatedAt",
+        "assignedAdminUid",
+        "assignedAdminName",
+        "assignedAdminRole",
+        "replyText",
+        "replyHistory",
+        "conversationHistory",
+        "repliedAt",
+        "repliedByUid",
+        "repliedByName",
+        "repliedByRole",
+        "resolvedAt",
+        "resolvedByUid",
+        "resolvedByName",
+        "resolvedByRole"
+      ];
+    }
+
+    function validInitialContactConversationEntry() {
+      return request.resource.data.conversationHistory is list
+        && request.resource.data.conversationHistory.size() == 1
+        && request.resource.data.conversationHistory[0].type == "learner"
+        && request.resource.data.conversationHistory[0].text == request.resource.data.message
+        && request.resource.data.conversationHistory[0].byUid == request.auth.uid
+        && request.resource.data.conversationHistory[0].byName is string
+        && request.resource.data.conversationHistory[0].byName.size() <= 120
+        && request.resource.data.conversationHistory[0].byRole is string
+        && request.resource.data.conversationHistory[0].byRole in ["user", "admin", "super_admin"]
+        && request.resource.data.conversationHistory[0].at is string
+        && request.resource.data.conversationHistory[0].at.size() <= 40;
+    }
+
+    function validContactMessageCreate() {
+      return isSignedIn()
+        && request.resource.data.keys().hasOnly(contactMessageCreateKeys())
+        && request.resource.data.ticketId is string
+        && request.resource.data.ticketId.matches("^TCK-[0-9]{9}$")
+        && request.resource.data.category in [
+          "concern",
+          "privacy",
+          "item_feedback",
+          "feedback",
+          "comment",
+          "bug",
+          "idea"
+        ]
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 3000
+        && request.resource.data.status == "open"
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.createdByName is string
+        && request.resource.data.createdByName.size() <= 120
+        && request.resource.data.createdByEmail == request.auth.token.get("email", "")
+        && request.resource.data.createdByRole is string
+        && request.resource.data.createdByRole in ["user", "admin", "super_admin"]
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.assignedAdminUid == ""
+        && request.resource.data.assignedAdminName == ""
+        && request.resource.data.assignedAdminRole == ""
+        && request.resource.data.replyText == ""
+        && request.resource.data.replyHistory is list
+        && request.resource.data.replyHistory.size() == 0
+        && validInitialContactConversationEntry()
+        && request.resource.data.repliedAt == null
+        && request.resource.data.repliedByUid == ""
+        && request.resource.data.repliedByName == ""
+        && request.resource.data.repliedByRole == ""
+        && request.resource.data.resolvedAt == null
+        && request.resource.data.resolvedByUid == ""
+        && request.resource.data.resolvedByName == ""
+        && request.resource.data.resolvedByRole == "";
+    }
+
+    function validClientErrorReportCreate() {
+      return request.resource.data.keys().hasOnly([
+          "event",
+          "message",
+          "source",
+          "route",
+          "userAgent",
+          "createdAt"
+        ])
+        && request.resource.data.event in ["uncaught_error", "unhandled_rejection"]
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 240
+        && request.resource.data.source is string
+        && request.resource.data.source.size() <= 180
+        && request.resource.data.route is string
+        && request.resource.data.route.size() <= 180
+        && request.resource.data.userAgent is string
+        && request.resource.data.userAgent.size() <= 180
         && request.resource.data.createdAt == request.time;
     }
 
@@ -283,7 +446,7 @@ service cloud.firestore {
 
     match /leaderboard_public/{userId} {
       allow read: if true;
-      allow create, update: if isOwner(userId) || isMfaAdmin();
+      allow create, update: if validPublicLeaderboardWrite(userId) || isMfaAdmin();
       allow delete: if isMfaSuperAdmin() && request.auth.uid != userId;
     }
 
@@ -314,14 +477,7 @@ service cloud.firestore {
     }
 
     match /contactMessages/{messageId} {
-      allow create: if isSignedIn()
-        && request.resource.data.createdByUid == request.auth.uid
-        && request.resource.data.subject is string
-        && request.resource.data.subject.size() > 0
-        && request.resource.data.message is string
-        && request.resource.data.message.size() > 0
-        && request.resource.data.assignedAdminUid is string
-        && request.resource.data.status is string;
+      allow create: if validContactMessageCreate();
 
       allow read: if isOwner(resource.data.createdByUid)
         || isMfaSuperAdmin()
@@ -342,6 +498,11 @@ service cloud.firestore {
           )
         )
         || validLearnerContactFollowUp();
+    }
+
+    match /clientErrorReports/{reportId} {
+      allow create: if validClientErrorReportCreate();
+      allow read, update, delete: if isMfaAdmin();
     }
   }
 }

@@ -10,10 +10,10 @@ import {
   handleSoundToggle,
   handleMusicToggle
 } from "./sound.js";
-import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { saveWrongAnswerReview, resolveWrongAnswerReview, loadWrongAnswerReview } from "./review-store.js";
 import { saveRetentionReview, resolveRetentionReview, loadRetentionQueue } from "./retention-store.js";
 import { saveStudyHistory } from "./study-history-store.js";
+import { submitGamificationEvent } from "./gamification-api.js";
 
 
 const auth = getAuth(app);
@@ -1370,27 +1370,7 @@ async function addLevelXP(amount) {
 
   const userRef = await ensureUserDoc(currentUser.uid);
   const snap = await getDoc(userRef);
-  const data = snap.data() || {};
-  const currentWeek = getWeekKey();
-  const lastWeeklyReset = data.lastWeeklyReset || currentWeek;
-  const currentXP = Number(data.xp || 0);
-  const currentWeeklyXP = lastWeeklyReset === currentWeek ? Number(data.xpWeekly || 0) : 0;
-
-  await updateDoc(userRef, {
-    xp: currentXP + amount,
-    xpWeekly: currentWeeklyXP + amount,
-    xpChange: amount,
-    lastWeeklyReset: currentWeek
-  });
-
-  await syncPublicLeaderboardEntry(db, currentUser.uid, {
-    name: data.name || currentUser.displayName || currentUser.email || "User",
-    photo: data.photo || currentUser.photoURL || "https://i.pravatar.cc/40?img=12",
-    xp: currentXP + amount,
-    xpWeekly: currentWeeklyXP + amount,
-    xpChange: amount
-  });
-  renderXpDock(currentXP + amount);
+  renderXpDock(Number(snap.data()?.xp || 0) + amount);
 }
 
 async function saveLevelCompletion({ earnedXP, awardedIds }) {
@@ -1426,33 +1406,29 @@ async function saveLevelCompletion({ earnedXP, awardedIds }) {
     return;
   }
 
-  const userRef = await ensureUserDoc(currentUser.uid);
-  const snap = await getDoc(userRef);
-  const data = snap.data() || {};
-  const progress = data.progress || {};
-  const results = data.results || {};
-
-  progress[getLevelDoneKey()] = true;
-  if (difficulty === "easy") {
-    progress[getLegacyLevelDoneKey()] = true;
-  }
-  if (allDone) {
-    progress[getOverallQuizKey()] = true;
-  }
-
-  results[getResultKey()] = {
+  await ensureUserDoc(currentUser.uid);
+  const response = await submitGamificationEvent({
+    action: "record_quiz_result",
+    eventId: [
+      "quiz-level",
+      subject,
+      difficulty,
+      quizLevel,
+      awardedIdList.join("-") || Date.now()
+    ].join(":").replace(/[^a-zA-Z0-9:_-]/g, "_").slice(0, 150),
     subject,
+    type: "quiz",
     difficulty,
-    quizLevel,
+    levelNumber: quizLevel,
     score,
     total: questions.length,
-    earnedXP,
+    xpAwarded: earnedXP,
     answerItems: answeredQuestionsThisRun,
-    xpAwardedQuestionIds: awardedIdList,
-    completedAt: new Date().toISOString()
-  };
-
-  await updateDoc(userRef, { progress, results });
+    xpAwardedQuestionIds: awardedIdList
+  });
+  if (typeof response.xp === "number") {
+    renderXpDock(response.xp);
+  }
 }
 
 async function finishLevel() {

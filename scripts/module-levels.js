@@ -186,31 +186,7 @@ async function syncOverallModulesCompletion(progress) {
     localStorage.setItem(`${subject}_hard_modules_done`, "true");
   }
 
-  if (currentUser) {
-    const userRef = await ensureUserDoc(currentUser.uid);
-    const snap = await getDoc(userRef);
-    const data = snap.data() || {};
-    const existingProgress = data.progress || {};
-
-    existingProgress[getOverallModulesKey()] = true;
-
-    if (difficulty === "easy") {
-      existingProgress[`${subject}_easy_modules_done`] = true;
-      existingProgress[`${subject}_modules`] = true;
-    }
-
-    if (difficulty === "medium") {
-      existingProgress[`${subject}_medium_modules_done`] = true;
-    }
-
-    if (difficulty === "hard") {
-      existingProgress[`${subject}_hard_modules_done`] = true;
-    }
-
-    await updateDoc(userRef, {
-      progress: existingProgress
-    });
-  }
+  // Aggregate completion is derived from server-authoritative per-module flags.
 }
 
 async function renderLevels() {

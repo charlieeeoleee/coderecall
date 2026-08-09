@@ -26,14 +26,19 @@ function checkRuntimeConfig(warnings) {
     throw new Error("Runtime Firebase config appears to contain private credential material.");
   }
 
-  const authDomainMatch = runtimeConfig.match(/authDomain\s*:\s*["']([^"']+)["']/);
+  const authDomainMatch = runtimeConfig.match(/["']?authDomain["']?\s*:\s*["']([^"']+)["']/);
   if (!authDomainMatch) {
     warnings.push("Runtime Firebase config does not expose an authDomain value.");
     return;
   }
 
-  if (authDomainMatch[1] !== "coderecall.online") {
-    warnings.push(`Runtime authDomain is ${authDomainMatch[1]}; production custom-domain OAuth should use coderecall.online.`);
+  const allowedAuthDomains = new Set([
+    "gamifiedlearningsystem.firebaseapp.com",
+    "coderecall.online"
+  ]);
+
+  if (!allowedAuthDomains.has(authDomainMatch[1])) {
+    warnings.push(`Runtime authDomain is ${authDomainMatch[1]}; expected Firebase default auth domain or verified production custom auth domain.`);
   }
 }
 
@@ -42,6 +47,8 @@ function main() {
   const packageConfig = readJson("package.json");
   const gitignore = readFileSync(".gitignore", "utf8");
   const serviceWorker = existsSync("service-worker.js") ? readFileSync("service-worker.js", "utf8") : "";
+  const robots = existsSync("robots.txt") ? readFileSync("robots.txt", "utf8") : "";
+  const sitemap = existsSync("sitemap.xml") ? readFileSync("sitemap.xml", "utf8") : "";
   const headers = firebaseConfig.hosting?.headers || [];
   const errors = [];
   const warnings = [];
@@ -60,6 +67,33 @@ function main() {
 
   if (!hasHeader(headers, "assets/**", "Cache-Control", "immutable")) {
     errors.push("Missing immutable cache header for assets.");
+  }
+
+  if (!existsSync("robots.txt")) {
+    errors.push("robots.txt is missing.");
+  } else if (!robots.includes("Sitemap: https://coderecall.online/sitemap.xml")) {
+    errors.push("robots.txt must reference the production sitemap URL.");
+  }
+
+  if (!existsSync("sitemap.xml")) {
+    errors.push("sitemap.xml is missing.");
+  } else {
+    if (!sitemap.includes("<urlset")) {
+      errors.push("sitemap.xml does not look like a valid sitemap.");
+    }
+    [
+      "/dashboard",
+      "/admin",
+      "/super-admin",
+      "/settings",
+      "/quiz",
+      "/module",
+      "/auth"
+    ].forEach((privatePath) => {
+      if (sitemap.includes(`https://coderecall.online${privatePath}`)) {
+        errors.push(`sitemap.xml includes private or authenticated path ${privatePath}.`);
+      }
+    });
   }
 
   if (!packageConfig.scripts?.["firebase:deploy:app"]) {

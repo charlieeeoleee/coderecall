@@ -58,7 +58,7 @@
           </button>
         </div>
 
-        <button class="qr-login-btn" onclick="openQrLoginPopup()">Phone QR Unavailable on Spark</button>
+        <button class="qr-login-btn" onclick="openQrLoginPopup()">Login with Phone QR</button>
         <a class="auth-companion-link" href="auth-companion.html">Open Auth Companion</a>
 
         <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
@@ -199,15 +199,15 @@
   <!-- QR LOGIN POPUP -->
   <div id="qrLoginPopup" class="popup">
     <div class="popup-box qr-login-box">
-      <h3>Phone QR Login Unavailable</h3>
-      <p class="qr-login-intro">Phone QR login requires a trusted backend and is disabled while Code Recall is configured for Spark.</p>
-      <div id="qrLoginImage" class="qr-login-image">QR unavailable</div>
+      <h3>Phone QR Login</h3>
+      <p class="qr-login-intro">Scan this QR code on your phone, sign in there, and approve this browser.</p>
+      <div id="qrLoginImage" class="qr-login-image">Preparing QR...</div>
       <div class="qr-login-steps">
-        <span>1. Use Google or Email</span>
-        <span>2. Verify Authenticator</span>
-        <span>3. Continue</span>
+        <span>1. Scan QR</span>
+        <span>2. Sign in on Phone</span>
+        <span>3. Approve Desktop</span>
       </div>
-      <p id="qrLoginStatus" class="status-text">Phone QR login is unavailable on Spark.</p>
+      <p id="qrLoginStatus" class="status-text">Generate a QR code to begin.</p>
       <div class="popup-actions">
         <button class="secondary-popup-btn" onclick="closeQrLoginPopup()">Cancel</button>
       </div>
