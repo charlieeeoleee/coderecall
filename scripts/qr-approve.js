@@ -9,12 +9,20 @@ import {
   signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { apiRequest, describeBackendError } from "./backend-api.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const params = new URLSearchParams(window.location.search);
-const requestId = String(params.get("requestId") || "").trim();
-const secret = String(params.get("secret") || "").trim();
+let requestId = String(params.get("requestId") || "").trim();
+let secret = String(params.get("secret") || "").trim();
+
+if (requestId || secret) {
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.searchParams.delete("requestId");
+  cleanUrl.searchParams.delete("secret");
+  window.history.replaceState({}, document.title, `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+}
 
 let currentUser = null;
 
@@ -43,6 +51,7 @@ function syncState() {
   const approveBtn = document.getElementById("approveQrBtn");
   const googleBtn = document.getElementById("phoneGoogleBtn");
   const passwordToggleBtn = document.getElementById("phonePasswordToggleBtn");
+  const switchBtn = document.getElementById("phoneSwitchAccountBtn");
   const copy = document.getElementById("approvalCopy");
 
   setAccountText();
@@ -59,6 +68,7 @@ function syncState() {
   if (approveBtn) approveBtn.disabled = !currentUser;
   if (googleBtn) googleBtn.hidden = Boolean(currentUser);
   if (passwordToggleBtn) passwordToggleBtn.hidden = Boolean(currentUser);
+  if (switchBtn) switchBtn.hidden = !currentUser;
   if (copy) {
     copy.textContent = currentUser
       ? "Confirm that the QR code is still visible on your own computer."
@@ -92,6 +102,22 @@ async function approveRequest() {
 }
 
 document.getElementById("approveQrBtn")?.addEventListener("click", approveRequest);
+
+document.getElementById("phoneSwitchAccountBtn")?.addEventListener("click", async () => {
+  try {
+    await signOutWithSessionCleanup(auth, { clearTransientAccountState: true });
+    setStatus("Signed out. Choose the account that should approve this login.");
+  } catch {
+    setStatus("Could not switch accounts. Try again before approving.", true);
+  }
+});
+
+document.getElementById("cancelQrBtn")?.addEventListener("click", () => {
+  requestId = "";
+  secret = "";
+  syncState();
+  setStatus("Approval cancelled. You may close this page.");
+});
 
 document.getElementById("phoneGoogleBtn")?.addEventListener("click", async () => {
   try {

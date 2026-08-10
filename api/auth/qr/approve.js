@@ -1,4 +1,4 @@
-const { requireFirebaseUser } = require("../../_lib/auth");
+const { requireFirebaseUser, resolvePrivilegedRole } = require("../../_lib/auth");
 const { approveQrLoginRequest } = require("../../_lib/qr-login");
 const { assertRateLimit } = require("../../_lib/rate-limit");
 const { methodAllowed, readJsonBody, requestId, safeErrorPayload, sendJson } = require("../../_lib/http");
@@ -11,9 +11,11 @@ module.exports = async function handler(req, res) {
     const payload = await readJsonBody(req);
     const user = await requireFirebaseUser(req, { requestId: id, endpoint });
     await assertRateLimit("approveQrLoginRequest", user.uid);
+    const role = await resolvePrivilegedRole(user.uid, user.token);
     const data = await approveQrLoginRequest({
       uid: user.uid,
       token: user.token,
+      role,
       payload,
       context: { requestId: id, endpoint }
     });
