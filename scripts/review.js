@@ -10,6 +10,7 @@ import {
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadWrongAnswerReview, clearWrongAnswerReview, resolveWrongAnswerReview } from "./review-store.js";
 import { loadRetentionQueue, clearRetentionQueue, resolveRetentionReview, clearAllLocalRetentionQueueStorage } from "./retention-store.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -634,9 +635,7 @@ window.logout = async function() {
     return;
   }
 
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
   window.location.href = "auth.html";
 };
 

@@ -18,6 +18,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -298,9 +299,7 @@ window.logout = async function() {
 
   localStorage.removeItem("guest");
 
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
 
   window.location.href = "auth.html";
 };

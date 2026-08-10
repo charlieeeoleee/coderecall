@@ -35,6 +35,7 @@ import { loadStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
 import { getCareerProgress } from "./career-path.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -1731,9 +1732,7 @@ window.logout = async function() {
     }
   }
 
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
 
   window.location.href = "auth.html";
 };

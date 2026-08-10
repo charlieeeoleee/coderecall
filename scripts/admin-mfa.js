@@ -20,6 +20,7 @@ import { resolveUserRole, syncUserRole } from "./role-utils.js";
 import { clearAdminMfaSession, markAdminMfaVerified } from "./admin-mfa-session.js";
 import { clearSuperAdminMfaSession } from "./super-admin-mfa-session.js";
 import { renderQrSvgMarkup } from "./local-qr.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -278,8 +279,7 @@ window.resetCurrentMfaEnrollment = async function() {
 };
 
 window.logoutMfa = async function() {
-  clearAdminMfaSession();
-  await signOut(auth);
+  await signOutWithSessionCleanup(auth);
   window.location.replace("auth.html");
 };
 

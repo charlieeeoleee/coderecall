@@ -9,6 +9,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { clearAllLocalRetentionQueueStorage } from "./retention-store.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -609,9 +610,7 @@ window.logout = async function() {
     openGuestLogoutPopup(hasGuestProgress());
     return;
   }
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
   window.location.href = "auth.html";
 };
 

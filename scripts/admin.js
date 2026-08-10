@@ -35,6 +35,7 @@ import { clearSuperAdminMfaSession, isSuperAdminMfaVerified } from "./super-admi
 import { clearAdminMfaSession, isAdminMfaVerified } from "./admin-mfa-session.js";
 import { writeSecurityAudit } from "./security-audit.js";
 import { resetOwnAppMfaProfile } from "./app-level-mfa-profile.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -2572,11 +2573,7 @@ function escapeHtml(text) {
 window.logout = async function() {
   closeMobileSidebar();
   stopContactInboxSubscription();
-  clearAdminMfaSession();
-  clearSuperAdminMfaSession();
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
   window.location.href = "auth.html";
 };
 

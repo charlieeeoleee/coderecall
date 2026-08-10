@@ -35,6 +35,7 @@ import {
   fetchQuizDrafts
 } from "./supabase-content.js";
 import { SUPER_ADMIN_EMAILS } from "../data/admin-config.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -2626,10 +2627,7 @@ function initializeSystemPopup() {
 window.logout = async function() {
   closeMobileSidebar();
   stopContactInboxSubscription();
-  clearSuperAdminMfaSession();
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
   window.location.href = "auth.html";
 };
 

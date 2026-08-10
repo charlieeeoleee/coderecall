@@ -40,6 +40,7 @@ import { clearWrongAnswerReview } from "./review-store.js";
 import { hasTotpFactor } from "./firebase-native-mfa.js";
 import { buildCareerSubjectsFromProgress, getCareerProgress } from "./career-path.js";
 import { submitGamificationEvent } from "./gamification-api.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -1719,9 +1720,7 @@ window.logout = async function() {
     }
   }
 
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
 
   window.location.href = "auth.html";
 };

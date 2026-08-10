@@ -9,6 +9,7 @@ import {
 } from "./sound.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { loadStudyHistory, clearStudyHistory, setStudyHistory } from "./study-history-store.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -252,9 +253,7 @@ window.logout = async function() {
     return;
   }
 
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
   window.location.href = "auth.html";
 };
 

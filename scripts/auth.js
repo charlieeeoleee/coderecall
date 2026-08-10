@@ -31,6 +31,10 @@ import { clearAdminMfaSession } from "./admin-mfa-session.js";
 import { submitGamificationEvent } from "./gamification-api.js";
 import { apiRequest, describeBackendError } from "./backend-api.js";
 import { renderQrSvgMarkup } from "./local-qr.js";
+import {
+  SWITCH_ACCOUNT_SESSION_KEY,
+  signOutWithSessionCleanup
+} from "./auth-session.js";
 
 
 const auth = getAuth(app);
@@ -41,7 +45,9 @@ const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch
 
 const pendingGoogleKey = "pendingGoogleRegistration";
 const googleRedirectPendingKey = "codeRecallGoogleRedirectPending";
-const switchAccountKey = "code_recall_switch_account";
+const switchAccountKey = SWITCH_ACCOUNT_SESSION_KEY;
+const authMode = new URLSearchParams(window.location.search).get("mode");
+let switchAccountModePending = authMode === "switch" || sessionStorage.getItem(switchAccountKey) === "1";
 let isHandlingAuthFlow = false;
 let activeMfaResolver = null;
 let activeMfaProvider = "password";
@@ -73,20 +79,20 @@ async function getLandingPageForUser(user) {
 onAuthStateChanged(auth, async (user) => {
   const pendingGoogle = readPendingGoogleRegistration();
 
-  if (!user) return;
-  if (isHandlingAuthFlow) return;
-
-  if (sessionStorage.getItem(switchAccountKey) === "1" && window.location.pathname.includes("auth.html")) {
-    sessionStorage.removeItem(switchAccountKey);
+  if (switchAccountModePending) {
+    switchAccountModePending = false;
     isHandlingAuthFlow = true;
-    clearSuperAdminMfaSession();
-    clearAdminMfaSession();
-    await signOut(auth);
+    await authPersistenceReady;
+    await signOutWithSessionCleanup(auth, { clearTransientAccountState: true });
+    window.history.replaceState({}, document.title, window.location.pathname);
     isHandlingAuthFlow = false;
     return;
   }
 
-  if (pendingGoogle && window.location.pathname.includes("auth.html")) {
+  if (!user) return;
+  if (isHandlingAuthFlow) return;
+
+  if (pendingGoogle) {
     showPendingGoogleRegistration(pendingGoogle);
     return;
   }
@@ -98,11 +104,11 @@ onAuthStateChanged(auth, async (user) => {
   const isPasswordUser = providerIds.includes("password");
   const isGoogleUser = providerIds.includes("google.com");
 
-  if (isPasswordUser && !user.emailVerified && window.location.pathname.includes("auth.html")) {
+  if (isPasswordUser && !user.emailVerified) {
     return;
   }
 
-  if ((docSnap.exists() || isGoogleUser) && window.location.pathname.includes("auth.html")) {
+  if (docSnap.exists() || isGoogleUser) {
     window.location.replace(await getLandingPageForUser(user));
   }
 });

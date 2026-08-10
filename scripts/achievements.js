@@ -21,6 +21,7 @@ import {
 } from "./sound.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
+import { signOutWithSessionCleanup } from "./auth-session.js";
 
 /* =========================
    FIREBASE CONFIG
@@ -933,9 +934,7 @@ window.logout = async function() {
     }
   }
 
-  if (auth.currentUser) {
-    await signOut(auth);
-  }
+  await signOutWithSessionCleanup(auth);
 
   window.location.href = "auth.html";
 };
