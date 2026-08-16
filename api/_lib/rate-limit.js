@@ -7,6 +7,10 @@ const RATE_LIMITS = {
   createQrLoginRequest: { limit: 12, windowMs: RATE_LIMIT_WINDOW_MS },
   approveQrLoginRequest: { limit: 20, windowMs: RATE_LIMIT_WINDOW_MS },
   exchangeQrLoginRequest: { limit: 30, windowMs: RATE_LIMIT_WINDOW_MS },
+  contextQrLoginRequest: { limit: 30, windowMs: RATE_LIMIT_WINDOW_MS },
+  matchQrLoginRequest: { limit: 5, windowMs: 10 * RATE_LIMIT_WINDOW_MS },
+  denyQrLoginRequest: { limit: 10, windowMs: RATE_LIMIT_WINDOW_MS },
+  cancelQrLoginRequest: { limit: 12, windowMs: RATE_LIMIT_WINDOW_MS },
   resetOwnMfaEnrollment: { limit: 5, windowMs: 10 * RATE_LIMIT_WINDOW_MS },
   recordGamificationEvent: { limit: 180, windowMs: RATE_LIMIT_WINDOW_MS },
   reportFrontendError: { limit: 12, windowMs: RATE_LIMIT_WINDOW_MS }

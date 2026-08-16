@@ -11,8 +11,8 @@ const GUEST_FLAG_XP_REWARD = 10;
 const MAX_GUEST_TRANSFER_XP = 80;
 const XP_RULES = {
   pretest: 1,
-  posttest: 4,
-  quiz: 6
+  posttest: 1,
+  quiz: 2
 };
 
 function getWeekKey(date = new Date()) {

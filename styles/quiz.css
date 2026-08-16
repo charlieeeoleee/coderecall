@@ -412,6 +412,10 @@ body{
   border: 1px solid rgba(255,255,255,0.08);
 }
 
+.confidence-panel[hidden]{
+  display: none !important;
+}
+
 .confidence-panel-head{
   margin-bottom: 14px;
 }

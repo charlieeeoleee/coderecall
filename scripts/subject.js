@@ -1,6 +1,10 @@
 import { app } from "./firebase-config.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { buildAssessmentUrl } from "./assessment-routing.mjs";
+import { buildModuleDifficultyUrl } from "./module-routing.mjs";
+import { resolveSubjectRoute } from "./subject-routing.mjs";
+import { hasAuthoritativeAssessmentCompletion } from "./assessment-completion.mjs";
 
 import {
   initSounds,
@@ -20,28 +24,21 @@ let currentUser = null;
 let latestProgress = {};
 let latestCompletion = { completed: false, completedAt: "" };
 const SELECTED_SUBJECT_KEY = "selectedSubject";
-const validSubjects = new Set(["hardware", "electrical"]);
 
 /* =========================
    SUBJECT PARAM
 ========================= */
-const params = new URLSearchParams(window.location.search);
-const subjectParam = (params.get("subject") || "").toLowerCase();
-const savedSubject = (sessionStorage.getItem(SELECTED_SUBJECT_KEY) || "").toLowerCase();
-const unlockMode = (params.get("unlock") || "").toLowerCase();
-const subject = validSubjects.has(subjectParam)
-  ? subjectParam
-  : validSubjects.has(savedSubject)
-    ? savedSubject
-    : "electrical";
-
-sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
-
-if (subjectParam !== subject) {
-  const nextUrl = new URL(window.location.href);
-  nextUrl.searchParams.set("subject", subject);
-  window.history.replaceState({}, "", nextUrl);
+let subjectRoute = null;
+let subjectRouteError = null;
+try {
+  subjectRoute = resolveSubjectRoute(window.location.search);
+} catch (error) {
+  subjectRouteError = error;
 }
+const subject = subjectRoute?.subject || "";
+const unlockMode = subjectRoute?.unlockMode || "";
+
+if (subjectRoute) sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
 
 /* SUBJECT META */
 const subjectMeta = {
@@ -55,13 +52,22 @@ const subjectMeta = {
   }
 };
 
-const meta = subjectMeta[subject] || {
-  title: subject.toUpperCase(),
-  desc: "Choose what you want to open."
-};
+const meta = subjectRouteError
+  ? {
+      title: "INVALID SUBJECT LINK",
+      desc: subjectRouteError.message
+    }
+  : subjectMeta[subject];
 
 document.getElementById("subjectTitle").textContent = meta.title;
 document.getElementById("subjectDesc").textContent = meta.desc;
+
+if (subjectRouteError) {
+  ["pretestBtn", "modulesBtn", "quizzesBtn", "posttestBtn"].forEach((buttonId) => {
+    const button = document.getElementById(buttonId);
+    if (button) button.disabled = true;
+  });
+}
 
 const QUIZ_LEVEL_COUNTS = { easy: 25, medium: 25, hard: 25 };
 const QUIZ_LEVEL_QUESTIONS = 3;
@@ -87,15 +93,17 @@ const subjectCardConfig = {
   }
 };
 
-function showSubjectNotice(message) {
+function showSubjectNotice(title, message) {
   const modal = document.getElementById("subjectNoticeModal");
+  const titleElement = document.getElementById("subjectNoticeTitle");
   const text = document.getElementById("subjectNoticeText");
   const button = document.getElementById("subjectNoticeBtn");
 
-  if (!modal || !text || !button) {
+  if (!modal || !titleElement || !text || !button) {
     return;
   }
 
+  titleElement.textContent = title;
   text.textContent = message;
   modal.classList.add("active");
   button.onclick = () => {
@@ -143,32 +151,32 @@ function getLockedMessage(step) {
    NAVIGATION
 ========================= */
 window.goBack = function () {
-  window.location.href = "dashboard.html";
+  window.location.href = subjectRouteError ? "/subjects" : "/dashboard";
 };
 
 function hasCompletedPretest() {
-  return hasLocalCompletion("pretest");
+  return getStepStatus().pretestDone;
 }
 
 window.openPretest = function () {
   if (hasCompletedPretest()) {
-    showSubjectNotice("You already took the pre-test.");
+    showSubjectNotice("Pre-Test Already Taken", "You already took the pre-test.");
     return;
   }
-  window.location.href = `quiz.html?subject=${subject}&level=easy&type=pretest`;
+  window.location.href = buildAssessmentUrl(subject, "pretest");
 };
 
 window.openModules = function () {
   if (document.getElementById("modulesBtn")?.classList.contains("locked")) {
-    showSubjectNotice(getLockedMessage("modules"));
+    showSubjectNotice("Modules Locked", "Complete the Pre-Test first to unlock Modules.");
     return;
   }
-  window.location.href = `module-difficulty.html?subject=${subject}`;
+  window.location.href = buildModuleDifficultyUrl(subject, unlockMode);
 };
 
 window.openQuiz = function () {
   if (document.getElementById("quizzesBtn")?.classList.contains("locked")) {
-    showSubjectNotice(getLockedMessage("quiz"));
+    showSubjectNotice("Quiz Track Locked", getLockedMessage("quiz"));
     return;
   }
   window.location.href = `quiz-difficulty.html?subject=${subject}`;
@@ -176,11 +184,17 @@ window.openQuiz = function () {
 
 window.openPosttest = function () {
   if (document.getElementById("posttestBtn")?.classList.contains("locked")) {
-    showSubjectNotice(getLockedMessage("posttest"));
+    showSubjectNotice("Post-Test Locked", getLockedMessage("posttest"));
     return;
   }
-  window.location.href = `quiz.html?subject=${subject}&level=easy&type=posttest`;
+  window.location.href = buildAssessmentUrl(subject, "posttest");
 };
+
+document.getElementById("subjectBackBtn")?.addEventListener("click", window.goBack);
+document.getElementById("pretestBtn")?.addEventListener("click", window.openPretest);
+document.getElementById("modulesBtn")?.addEventListener("click", window.openModules);
+document.getElementById("quizzesBtn")?.addEventListener("click", window.openQuiz);
+document.getElementById("posttestBtn")?.addEventListener("click", window.openPosttest);
 
 /* =========================
    HELPERS
@@ -460,32 +474,50 @@ function renderAssessmentCard(prefix, payload) {
 }
 
 async function renderAssessmentOverview() {
+  let remoteProgress = {};
   let remoteResults = {};
 
   if (currentUser) {
     const userRef = await ensureUserDoc(currentUser.uid);
     const snap = await getDoc(userRef);
     const data = snap.data() || {};
+    remoteProgress = data.progress || {};
     remoteResults = data.results || {};
   }
 
-  const mergedResults = {
-    ...readLocalQuizTrackResults(),
-    ...remoteResults
+  const displayedResults = currentUser ? remoteResults : readLocalQuizTrackResults();
+  const readAssessment = (stage) => {
+    const resultKey = `${subject}_${stage}`;
+    if (currentUser) {
+      const result = remoteResults[resultKey] || null;
+      if (result) return result;
+      return remoteProgress[resultKey] === true
+        ? { completedWithoutResult: true }
+        : null;
+    }
+    return readLocalAssessmentResult(stage);
   };
 
-  const pretest = remoteResults[`${subject}_pretest`] || readLocalAssessmentResult("pretest");
-  const posttest = remoteResults[`${subject}_posttest`] || readLocalAssessmentResult("posttest");
-  const quizTrack = summarizeQuizTrack(mergedResults);
+  const pretest = readAssessment("pretest");
+  const posttest = readAssessment("posttest");
+  const quizTrack = summarizeQuizTrack(displayedResults);
 
   renderAssessmentCard("subjectPretest", pretest
-    ? {
+    ? pretest.completedWithoutResult
+      ? {
+          state: "Completed",
+          scoreLabel: "Result unavailable",
+          xpLabel: "XP unavailable",
+          scorePercent: 0,
+          xpPercent: 0
+        }
+      : {
         state: `${pretest.percent || 0}%`,
         scoreLabel: `${pretest.score || 0} / ${pretest.total || 0}`,
         xpLabel: `${pretest.xpEarned || pretest.score || 0} XP`,
         scorePercent: pretest.percent || 0,
         xpPercent: pretest.total ? Math.round(((pretest.xpEarned || pretest.score || 0) / pretest.total) * 100) : 0
-      }
+        }
     : {
         state: "Not taken",
         scoreLabel: "0 / 0",
@@ -511,13 +543,21 @@ async function renderAssessmentOverview() {
       });
 
   renderAssessmentCard("subjectPosttest", posttest
-    ? {
+    ? posttest.completedWithoutResult
+      ? {
+          state: "Completed",
+          scoreLabel: "Result unavailable",
+          xpLabel: "XP unavailable",
+          scorePercent: 0,
+          xpPercent: 0
+        }
+      : {
         state: `${posttest.percent || 0}%`,
         scoreLabel: `${posttest.score || 0} / ${posttest.total || 0}`,
         xpLabel: `${posttest.xpEarned || posttest.score || 0} XP`,
         scorePercent: posttest.percent || 0,
         xpPercent: posttest.total ? Math.round(((posttest.xpEarned || posttest.score || 0) / posttest.total) * 100) : 0
-      }
+        }
     : {
         state: "Not taken",
         scoreLabel: "0 / 0",
@@ -553,27 +593,21 @@ async function getMergedProgress() {
 
   return {
     [getProgressKey("pretest")]:
-      localProgress[getProgressKey("pretest")] ||
-      firebaseProgress[getProgressKey("pretest")] === true ||
-      firebaseResults[getProgressKey("pretest")] != null,
+      hasAuthoritativeAssessmentCompletion(data, subject, "pretest"),
 
     [getProgressKey("modules")]:
-      localProgress[getProgressKey("modules")] ||
       firebaseProgress[getProgressKey("modules")] === true ||
       firebaseProgress[`${subject}_easy_modules_done`] === true ||
       firebaseProgress[`${subject}_medium_modules_done`] === true ||
       firebaseProgress[`${subject}_hard_modules_done`] === true,
 
     [getProgressKey("quiz")]:
-      localProgress[getProgressKey("quiz")] ||
       firebaseProgress[getProgressKey("quiz")] === true ||
       firebaseProgress[`${subject}_hard_quiz`] === true ||
       firebaseResults[getProgressKey("quiz")] != null,
 
     [getProgressKey("posttest")]:
-      localProgress[getProgressKey("posttest")] ||
-      firebaseProgress[getProgressKey("posttest")] === true ||
-      firebaseResults[getProgressKey("posttest")] != null
+      hasAuthoritativeAssessmentCompletion(data, subject, "posttest")
   };
 }
 
@@ -594,16 +628,20 @@ async function getCompletionDetails() {
   const progress = data.progress || {};
   const results = data.results || {};
   const resultKey = `${subject}_posttest`;
-  const remoteCompleted = progress[resultKey] === true || results[resultKey] != null;
+  const remoteCompleted = hasAuthoritativeAssessmentCompletion(data, subject, "posttest");
   const remoteCompletedAt = results[resultKey]?.completedAt || "";
 
   return {
-    completed: localPosttestDone || remoteCompleted,
-    completedAt: remoteCompletedAt || localCompletedAt
+    completed: remoteCompleted,
+    completedAt: remoteCompletedAt
   };
 }
 
 async function loadProgress() {
+  if (subjectRouteError) {
+    latestProgress = {};
+    return;
+  }
   lockButton("modulesBtn");
   lockButton("quizzesBtn");
   lockButton("posttestBtn");
@@ -708,20 +746,21 @@ window.toggleTheme = function () {
   restartThemeMusic();
 };
 
+document.getElementById("subjectThemeToggle")?.addEventListener("click", window.toggleTheme);
+
 /* =========================
    INIT
 ========================= */
 loadTheme();
-loadProgress().catch((error) => {
-  console.error("Initial subject progress load failed:", error);
-});
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
+  if (subjectRouteError) return;
   try {
     await loadProgress();
   } catch (error) {
     console.error("Authenticated subject progress load failed:", error);
+    showSubjectNotice("Progress Unavailable", "Your saved progress could not be refreshed. Check your connection and try again.");
   }
 });
 

@@ -1,4 +1,4 @@
-export const hardwarePretestQuestions = [
+const hardwarePretestSource = [
   {
     question: "It is a component vastly used to install add-on cards on the motherboard.",
     choices: ["Expansion Slots", "PCI Slots", "AGP Slots", "RAM Slots"],
@@ -46,8 +46,8 @@ export const hardwarePretestQuestions = [
   },
   {
     question: "What is the primary function of a motherboard's CMOS battery?",
-    choices: ["To provide power to the CPU fan", "To power the CMOS/RTC memory that retains the system date, time, and BIOS settings while the power is off", "To charge the laptop battery", "To increase the internet speed"],
-    answer: "To power the CMOS/RTC memory that retains the system date, time, and BIOS settings while the power is off"
+    choices: ["To provide power to the CPU fan", "To provide backup power to the RTC/CMOS circuitry while the computer is turned off", "To charge the laptop battery", "To increase the internet speed"],
+    answer: "To provide backup power to the RTC/CMOS circuitry while the computer is turned off"
   },
   {
     question: "Which component is known as the center of activity where all devices in a computer are connected?",
@@ -65,9 +65,9 @@ export const hardwarePretestQuestions = [
     answer: "PCI Express (PCIe)"
   },
   {
-    question: "What is the main function of the CMOS battery on the motherboard?",
-    choices: ["Providing power to monitor", "Powering the CMOS/RTC memory that retains BIOS/UEFI settings", "Cooling the CPU", "Running the operating system"],
-    answer: "Powering the CMOS/RTC memory that retains BIOS/UEFI settings"
+    question: "Which situation may occur when the CMOS battery becomes weak or depleted?",
+    choices: ["The monitor permanently stops receiving power", "The computer may lose its date and time settings after being powered off", "The CPU stops receiving cooling", "The operating system is automatically deleted"],
+    answer: "The computer may lose its date and time settings after being powered off"
   },
   {
     question: "Which of these is the first step when starting the disassembly of a personal computer?",
@@ -150,6 +150,11 @@ export const hardwarePretestQuestions = [
     answer: "AT Motherboard"
   }
 ];
+
+export const hardwarePretestQuestions = hardwarePretestSource.map((question, index) => ({
+  ...question,
+  pairId: `hardware-${String(index + 1).padStart(2, "0")}`
+}));
 
 export const hardwarePosttestQuestions = [
     {

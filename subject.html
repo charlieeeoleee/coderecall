@@ -19,7 +19,7 @@
   </a>
 
   <!-- THEME TOGGLE -->
-  <button class="theme-toggle subject-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+  <button class="theme-toggle subject-theme-toggle" id="subjectThemeToggle" type="button" aria-label="Toggle theme">
     <span id="themeIcon">&#127769;</span>
   </button>
 
@@ -27,7 +27,7 @@
     <section class="subject-header card">
       <div class="subject-header-glow"></div>
       <h1 class="subject-title" id="subjectTitle">
-        ELECTRICAL WIRING AND ELECTRONICS CIRCUIT COMPONENTS
+        Loading subject...
       </h1>
       <p class="subject-desc" id="subjectDesc">
         Take the pre-test, study the modules, answer quizzes, and finish the post-test.
@@ -35,7 +35,7 @@
     </section>
 
     <section class="subject-actions">
-      <button class="subject-card card pretest active-card" id="pretestBtn" onclick="openPretest()">
+      <button class="subject-card card pretest active-card" id="pretestBtn" type="button">
         <div class="subject-card-glow"></div>
         <img class="subject-card-image" src="assets/modules/hardware/easy/module1/image-01.png" alt="Computer hardware component preview">
         <div class="subject-card-inner">
@@ -45,7 +45,7 @@
         </div>
       </button>
 
-      <button class="subject-card card modules locked" id="modulesBtn" onclick="openModules()">
+      <button class="subject-card card modules locked" id="modulesBtn" type="button">
         <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
         <img class="subject-card-image" src="assets/modules/electrical/easy/module1/image-04.png" alt="Electrical lesson component preview">
@@ -56,7 +56,7 @@
         </div>
       </button>
 
-      <button class="subject-card card quizzes locked" id="quizzesBtn" onclick="openQuiz()">
+      <button class="subject-card card quizzes locked" id="quizzesBtn" type="button">
         <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
         <img class="subject-card-image" src="assets/modules/hardware/medium/module1/image-03.png" alt="Quiz visual reference preview">
@@ -67,7 +67,7 @@
         </div>
       </button>
 
-      <button class="subject-card card posttest locked" id="posttestBtn" onclick="openPosttest()">
+      <button class="subject-card card posttest locked" id="posttestBtn" type="button">
         <span class="lock-icon">&#128274;</span>
         <div class="subject-card-glow"></div>
         <img class="subject-card-image" src="assets/modules/electrical/easy/module2/image-01.jpg" alt="Post-test electrical wiring preview">
@@ -188,19 +188,21 @@
     </section>
   </main>
 
-  <button class="subject-back-btn" onclick="goBack()">Back</button>
+  <button class="subject-back-btn" id="subjectBackBtn" type="button">Back</button>
 
   <div class="subject-modal" id="subjectNoticeModal">
     <div class="subject-modal-box">
       <span class="subject-badge">NOTICE</span>
-      <h3 id="subjectNoticeTitle">Pre-Test Already Taken</h3>
-      <p id="subjectNoticeText">You already took the pre-test.</p>
+      <h3 id="subjectNoticeTitle">Notice</h3>
+      <p id="subjectNoticeText">Review this activity before continuing.</p>
       <button class="subject-modal-btn" id="subjectNoticeBtn" type="button">OK</button>
     </div>
   </div>
 
-  <script>
+  <script type="application/x-coderecall-legacy-disabled">
     (function () {
+      // The module script owns subject resolution, gating, and navigation.
+      return;
       const params = new URLSearchParams(window.location.search);
       const subjectParam = (params.get("subject") || "").toLowerCase();
       const unlockMode = (params.get("unlock") || "").toLowerCase();
@@ -316,7 +318,7 @@
           return;
         }
         sessionStorage.setItem("selectedSubject", subject);
-        window.location.href = buildUrl("quiz.html", { subject, level: "easy", type: "pretest" });
+        window.location.href = `/quiz?subject=${encodeURIComponent(subject)}&type=pretest`;
       };
 
       window.openModules = function () {
@@ -343,7 +345,7 @@
           return;
         }
         sessionStorage.setItem("selectedSubject", subject);
-        window.location.href = buildUrl("quiz.html", { subject, level: "easy", type: "posttest" });
+        window.location.href = `/quiz?subject=${encodeURIComponent(subject)}&type=posttest`;
       };
 
       window.goBack = function () {

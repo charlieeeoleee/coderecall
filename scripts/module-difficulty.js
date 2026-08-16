@@ -8,14 +8,25 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
+import {
+  buildModuleLevelsUrl,
+  resolveModuleDifficultyRoute
+} from "./module-routing.mjs";
+import { buildSubjectUrl } from "./subject-routing.mjs";
 
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const params = new URLSearchParams(window.location.search);
-const subject = params.get("subject") || "electrical";
-const unlockMode = (params.get("unlock") || "").toLowerCase();
+let route = null;
+let routeError = null;
+try {
+  route = resolveModuleDifficultyRoute(window.location.search);
+} catch (error) {
+  routeError = error;
+}
+const subject = route?.subject || "";
+const unlockMode = route?.unlockMode || "";
 
 let currentUser = null;
 
@@ -29,11 +40,13 @@ const subjectDescriptions = {
   hardware: "Choose the difficulty for the Computer Hardware modules before opening the lessons."
 };
 
-document.getElementById("difficultyTitle").textContent =
-  subjectTitles[subject] || "Choose Module Difficulty";
+document.getElementById("difficultyTitle").textContent = routeError
+  ? "Invalid Module Link"
+  : subjectTitles[subject];
 
-document.getElementById("difficultySubtitle").textContent =
-  subjectDescriptions[subject] || "Select a difficulty before opening the modules.";
+document.getElementById("difficultySubtitle").textContent = routeError
+  ? routeError.message
+  : subjectDescriptions[subject];
 
 function updateIcon() {
   const icon = document.getElementById("themeIcon");
@@ -58,23 +71,20 @@ window.toggleTheme = function () {
 };
 
 window.goBack = function () {
-  const nextUrl = new URL("subject.html", window.location.href);
-  nextUrl.searchParams.set("subject", subject);
-  if (unlockMode) {
-    nextUrl.searchParams.set("unlock", unlockMode);
+  if (routeError) {
+    window.location.href = "/subjects";
+    return;
   }
-  window.location.href = `${nextUrl.pathname.split("/").pop()}${nextUrl.search}`;
+  window.location.href = buildSubjectUrl(subject, unlockMode);
 };
 
 window.openDifficulty = function (difficulty) {
-  const nextUrl = new URL("module-levels.html", window.location.href);
-  nextUrl.searchParams.set("subject", subject);
-  nextUrl.searchParams.set("difficulty", difficulty);
-  if (unlockMode) {
-    nextUrl.searchParams.set("unlock", unlockMode);
-  }
-  window.location.href = `${nextUrl.pathname.split("/").pop()}${nextUrl.search}`;
+  if (routeError) return;
+  window.location.href = buildModuleLevelsUrl(subject, difficulty, unlockMode);
 };
+
+document.getElementById("difficultyBackBtn")?.addEventListener("click", window.goBack);
+document.getElementById("difficultyThemeToggle")?.addEventListener("click", window.toggleTheme);
 
 async function ensureUserDoc(uid) {
   const userRef = doc(db, "users", uid);
@@ -183,18 +193,15 @@ async function getMergedProgress() {
 
   return {
     easyDone:
-      localProgress.easyDone ||
       firebaseProgress[getDifficultySummaryKey("easy")] === true ||
       firebaseProgress[`${subject}_easy_modules_done`] === true ||
       firebaseProgress[`${subject}_modules`] === true ||
       hasAllFirebaseModules("easy"),
     mediumDone:
-      localProgress.mediumDone ||
       firebaseProgress[getDifficultySummaryKey("medium")] === true ||
       firebaseProgress[`${subject}_medium_modules_done`] === true ||
       hasAllFirebaseModules("medium"),
     hardDone:
-      localProgress.hardDone ||
       firebaseProgress[getDifficultySummaryKey("hard")] === true ||
       firebaseProgress[`${subject}_hard_modules_done`] === true ||
       hasAllFirebaseModules("hard")
@@ -215,6 +222,7 @@ function unlockDifficulty(buttonId, difficulty, description) {
 }
 
 async function applyDifficultyUnlocks() {
+  if (routeError) return;
   unlockDifficulty("easyBtn", "easy", "Basic concepts and simple lessons.");
 
   if (unlockMode === "all" || unlockMode === "modules") {
@@ -238,6 +246,7 @@ loadTheme();
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
+  if (routeError) return;
   await applyDifficultyUnlocks();
 });
 

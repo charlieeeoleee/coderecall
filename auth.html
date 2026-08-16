@@ -6,7 +6,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/auth.css?v=20260512b">
+  <link rel="stylesheet" href="styles/auth.css?v=20260811c">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
@@ -58,10 +58,14 @@
           </button>
         </div>
 
-        <button class="qr-login-btn" onclick="openQrLoginPopup()">Login with Phone QR</button>
-        <a class="auth-companion-link" href="auth-companion.html">Open Auth Companion</a>
+        <div class="device-auth-options">
+          <button id="qrLoginOpenBtn" class="qr-login-btn" type="button">Login with Phone QR</button>
+          <a class="auth-companion-link" href="auth-companion.html">Open Auth Companion</a>
+        </div>
 
-        <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
+        <div class="guest-auth-option">
+          <button class="guest-btn" onclick="playGuest()">Play as Guest</button>
+        </div>
 
         <p class="switch-text">
           Don't have an account?
@@ -173,20 +177,20 @@
 
       <div class="account-help-grid">
         <button type="button" class="account-help-card" onclick="openResetFromHelp()">
-          <strong>Password Reset</strong>
-          <span>Send a password reset link to your email.</span>
+          <span class="account-help-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12v10H6zM12 14v2"/></svg></span>
+          <span class="account-help-copy"><strong>Password Reset</strong><span>Send a password reset link to your email.</span></span>
         </button>
         <button type="button" class="account-help-card" onclick="openResendFromHelp()">
-          <strong>Email Verification</strong>
-          <span>Resend the verification email for password accounts.</span>
+          <span class="account-help-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 7l9 6 9-6M16 16l2 2 3-4"/></svg></span>
+          <span class="account-help-copy"><strong>Email Verification</strong><span>Resend the verification email for password accounts.</span></span>
         </button>
         <a class="account-help-card" href="contact.html">
-          <strong>Contact Support</strong>
-          <span>Send an account, role, or access concern to the team.</span>
+          <span class="account-help-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/></svg></span>
+          <span class="account-help-copy"><strong>Contact Support</strong><span>Send an account, role, or access concern to the team.</span></span>
         </a>
         <div class="account-help-card account-help-note">
-          <strong>Admin / 2FA Access</strong>
-          <span>Ask a super admin to verify role access or reset enrolled 2FA when needed.</span>
+          <span class="account-help-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6zM9 12l2 2 4-5"/></svg></span>
+          <span class="account-help-copy"><strong>Admin / 2FA Access</strong><span>Ask a super admin to verify role access or reset enrolled 2FA when needed.</span></span>
         </div>
       </div>
 
@@ -202,10 +206,15 @@
       <h3>Phone QR Login</h3>
       <p class="qr-login-intro">Scan this QR code on your phone, sign in there, and approve this browser.</p>
       <div id="qrLoginImage" class="qr-login-image">Preparing QR...</div>
+      <div id="qrMatchingCodePanel" class="qr-matching-code-panel" hidden>
+        <span>Matching code</span>
+        <strong id="qrMatchingCode">---</strong>
+        <small>Enter this code on your phone. It is not contained in the QR.</small>
+      </div>
       <div class="qr-login-steps">
         <span>1. Scan QR</span>
         <span>2. Sign in on Phone</span>
-        <span>3. Approve Desktop</span>
+        <span>3. Match and Approve</span>
       </div>
       <p id="qrLoginStatus" class="status-text">Generate a QR code to begin.</p>
       <div class="popup-actions">
@@ -256,7 +265,7 @@
   </div>
 
   <script src="scripts/firebase-config.runtime.js?v=20260609c"></script>
-  <script type="module" src="scripts/auth.js?v=20260609c"></script>
+  <script type="module" src="scripts/auth.js?v=20260811d"></script>
   <script src="scripts/loading.js?v=20260519f" defer></script>
 </body>
 </html>

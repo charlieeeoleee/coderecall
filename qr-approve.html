@@ -15,13 +15,29 @@
     <section class="approval-card">
       <div class="logo">CODE: RECALL!</div>
       <span class="eyebrow">QR-Assisted Login</span>
-      <h1>Approve Desktop Sign-In</h1>
+      <h1 id="approvalTitle">Approve Desktop Sign-In</h1>
       <p id="approvalCopy">Confirm that you are trying to sign in on another device.</p>
 
+      <div id="approvalTerminal" class="approval-terminal" role="status" aria-live="polite" hidden>
+        <span id="approvalTerminalIcon" class="approval-terminal-icon" aria-hidden="true"></span>
+        <div>
+          <h2 id="approvalTerminalTitle"></h2>
+          <p id="approvalTerminalMessage"></p>
+        </div>
+      </div>
+
       <div class="approval-panel">
+        <span id="approvalAccountLabel" class="approval-account-label">Current learner</span>
         <strong id="approvalAccount">Checking account...</strong>
+        <span id="approvalContext"></span>
         <span id="approvalStatus">Preparing secure approval request.</span>
       </div>
+
+      <form id="matchingCodeForm" class="phone-password-form" hidden>
+        <label for="matchingCode">Three-digit code shown on your computer</label>
+        <input id="matchingCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="3" pattern="[0-9]{3}" placeholder="000">
+        <button type="submit">Verify Matching Code</button>
+      </form>
 
       <form id="phonePasswordForm" class="phone-password-form" hidden>
         <label for="phoneEmail">Email</label>
@@ -33,17 +49,17 @@
 
       <div class="approval-actions">
         <button id="approveQrBtn" type="button">Approve Login</button>
-        <button id="cancelQrBtn" type="button" class="secondary">Cancel</button>
+        <button id="cancelQrBtn" type="button" class="secondary">Deny Login</button>
         <button id="phoneSwitchAccountBtn" type="button" class="secondary" hidden>Switch Account</button>
         <button id="phoneGoogleBtn" type="button" class="secondary">Sign In with Google</button>
         <button id="phonePasswordToggleBtn" type="button" class="secondary">Use Email Instead</button>
       </div>
 
-      <p class="approval-note">Only approve this when the QR code is visible on your own computer.</p>
+      <p id="approvalNote" class="approval-note">Only approve this when the QR code is visible on your own computer.</p>
     </section>
   </main>
 
   <script src="scripts/firebase-config.runtime.js?v=20260609c"></script>
-  <script type="module" src="scripts/qr-approve.js?v=20260810a"></script>
+  <script type="module" src="scripts/qr-approve.js?v=20260811b"></script>
 </body>
 </html>

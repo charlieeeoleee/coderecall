@@ -12,7 +12,12 @@ const routes = [
   "/api/gamification/event",
   "/api/errors/report",
   "/api/admin/mfa/reset-own",
+  "/api/auth/check",
   "/api/auth/qr/create",
+  "/api/auth/qr/context",
+  "/api/auth/qr/match",
+  "/api/auth/qr/deny",
+  "/api/auth/qr/cancel",
   "/api/auth/qr/approve",
   "/api/auth/qr/exchange"
 ];
@@ -21,7 +26,12 @@ const routeFiles = [
   "api/gamification/event.js",
   "api/errors/report.js",
   "api/admin/mfa/reset-own.js",
+  "api/auth/check.js",
   "api/auth/qr/create.js",
+  "api/auth/qr/context.js",
+  "api/auth/qr/match.js",
+  "api/auth/qr/deny.js",
+  "api/auth/qr/cancel.js",
   "api/auth/qr/approve.js",
   "api/auth/qr/exchange.js"
 ];
@@ -33,11 +43,22 @@ assert(adminSource.includes("FIREBASE_ADMIN_PROJECT_ID"), "Admin init must read 
 assert(adminSource.includes("FIREBASE_ADMIN_CLIENT_EMAIL"), "Admin init must read FIREBASE_ADMIN_CLIENT_EMAIL.");
 assert(adminSource.includes("FIREBASE_ADMIN_PRIVATE_KEY"), "Admin init must read FIREBASE_ADMIN_PRIVATE_KEY.");
 assert(adminSource.includes("replace(/\\\\n/g, \"\\n\")"), "Admin init must handle escaped private-key newlines.");
+assert(adminSource.includes("FIRESTORE_EMULATOR_HOST"), "Admin init must guard Firestore emulator configuration.");
+assert(adminSource.includes('environment === "production" && emulatorHost'), "Production Admin init must reject Firestore emulator use.");
+
+const runtimeGeneratorSource = read("scripts/write-runtime-config.mjs");
+assert(!runtimeGeneratorSource.includes("const defaults"), "Runtime Firebase generator must not contain fallback project config.");
+assert(runtimeGeneratorSource.includes("buildFirebaseRuntimeConfiguration"), "Runtime Firebase generator must enforce the environment contract.");
 
 const authSource = read("api/_lib/auth.js");
 assert(authSource.includes("verifyIdToken"), "Protected APIs must verify Firebase ID tokens.");
 assert(authSource.includes("parseBearerToken"), "Auth helper must parse bearer tokens.");
 assert(authSource.includes("requirePrivilegedRole"), "Privileged APIs must use server-side role authorization.");
+
+const authCheckSource = read("api/auth/check.js");
+assert(authCheckSource.includes("requireFirebaseUser"), "Development auth check must reuse authoritative Firebase token verification.");
+assert(authCheckSource.includes('!== "development"'), "Development auth check must fail closed outside Development.");
+assert(!/adminDb|Firestore|gamification|leaderboard|\.set\(|\.update\(|runTransaction/.test(authCheckSource), "Development auth check must remain read-only.");
 
 const gamificationSource = read("api/_lib/gamification.js");
 assert(gamificationSource.includes("runTransaction"), "Gamification migration must use Firestore transactions.");

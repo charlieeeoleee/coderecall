@@ -72,7 +72,7 @@
 
       <div class="choices-grid" id="choicesContainer"></div>
 
-      <section class="confidence-panel" aria-labelledby="confidenceHeading">
+      <section class="confidence-panel" aria-labelledby="confidenceHeading" hidden>
         <div class="confidence-panel-head">
           <h3 class="confidence-title" id="confidenceHeading">How sure are you?</h3>
           <p class="confidence-subtitle">Low-confidence correct answers can still return in memory review.</p>
@@ -156,7 +156,7 @@
       </section>
       <div class="result-actions">
         <button class="quiz-btn secondary-btn" type="button" data-item-feedback data-feedback-source-type="assessment">Report Issue / Feedback</button>
-        <button class="quiz-btn primary-btn" onclick="finishQuizFlow()">Return to Subject</button>
+        <button class="quiz-btn primary-btn" id="finishQuizFlowBtn" type="button" onclick="finishQuizFlow()">Return to Subject</button>
       </div>
     </div>
   </div>

@@ -36,6 +36,9 @@ import { traceXPEvent } from "./xp-debug.js";
 import { MODULE_STRUCTURE } from "../data/module-data.js";
 import { getCareerProgress } from "./career-path.js";
 import { signOutWithSessionCleanup } from "./auth-session.js";
+import { buildAssessmentUrl } from "./assessment-routing.mjs";
+import { buildSubjectUrl, normalizeSubjectUrl } from "./subject-routing.mjs";
+import { buildModuleDifficultyUrl } from "./module-routing.mjs";
 
 /* =========================
    FIREBASE CONFIG
@@ -62,7 +65,7 @@ const QUIZ_LEVELS_PER_DIFFICULTY = 25;
 const TOTAL_SYSTEM_XP = 1164;
 const XP_RULES = {
   pretest: 1,
-  posttest: 4
+  posttest: 1
 };
 const SUBJECT_LABELS = {
   hardware: "Computer Hardware",
@@ -244,7 +247,7 @@ function getSafeActivityUrl(url, fallbackUrl = "subjects.html") {
   if (!value) return fallbackUrl;
   if (/^(javascript|data|vbscript):/i.test(value)) return fallbackUrl;
   if (/^https?:\/\//i.test(value)) return fallbackUrl;
-  return value;
+  return normalizeSubjectUrl(value) || fallbackUrl;
 }
 
 function normalizeActivityItem(item = {}, fallbackUrl = "history.html") {
@@ -560,7 +563,7 @@ function getNextSubjectStep({ subject, pretestDone, modulesDone, quizTrackDone, 
     return {
       label: "Pre-Test",
       detail: "Take the baseline assessment",
-      url: `quiz.html?subject=${subject}&level=easy&type=pretest`
+      url: buildAssessmentUrl(subject, "pretest")
     };
   }
 
@@ -568,7 +571,7 @@ function getNextSubjectStep({ subject, pretestDone, modulesDone, quizTrackDone, 
     return {
       label: "Modules",
       detail: "Continue the lesson path",
-      url: `module-difficulty.html?subject=${subject}`
+      url: buildModuleDifficultyUrl(subject)
     };
   }
 
@@ -584,7 +587,7 @@ function getNextSubjectStep({ subject, pretestDone, modulesDone, quizTrackDone, 
     return {
       label: "Post-Test",
       detail: "Finish the final assessment",
-      url: `quiz.html?subject=${subject}&level=easy&type=posttest`
+      url: buildAssessmentUrl(subject, "posttest")
     };
   }
 
@@ -775,7 +778,7 @@ function renderSubjectProgressSection(subjects = []) {
           </span>
         `).join("")}
       </div>
-      <button class="subject-next-btn" type="button" onclick="window.location.href='${escapeHtml(item.nextStep?.url || `subject.html?subject=${item.subject}`)}'">
+      <button class="subject-next-btn" type="button" onclick="window.location.href='${escapeHtml(item.nextStep?.url || buildSubjectUrl(item.subject))}'">
         ${item.percent >= 100 ? "View Certificate" : `Next: ${escapeHtml(item.nextStep?.label || "Open Subject")}`}
       </button>
       <div class="subject-assessment-stack">
@@ -1622,7 +1625,7 @@ function launchConfetti() {
 ========================= */
 window.startGame = function(subject) {
   sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
-  window.location.href = `subject.html?subject=${subject}`;
+  window.location.href = buildSubjectUrl(subject);
 };
 
 /* =========================

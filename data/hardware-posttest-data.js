@@ -1,333 +1,37 @@
-﻿export const hardwarePosttestQuestions = [
-  {
-    n: 1,
-    question: "Art galleries want to display the first ever calculating device that is ever invented. Which of the following should they display?",
-    choices: [
-      "Calculator",
-      "Stenno",
-      "Abacus",
-      "Keypad"
-    ],
-    answer: "C"
-  },
-  {
-    n: 2,
-    question: "Which of the following is a problem when the computer is overheating?",
-    choices: [
-      "Improper air ventilation",
-      "Full storage",
-      "Broken System unit",
-      "Improper use of computer"
-    ],
-    answer: "A"
-  },
-  {
-    n: 3,
-    question: "Which of the following could be the cause when the CPU fan is not spinning?",
-    choices: [
-      "Dirty CPU",
-      "Incorrect BIOS Settings",
-      "Overheating",
-      "Improper cleaning"
-    ],
-    answer: "B"
-  },
-  {
-    n: 4,
-    question: "Which of the following might cause a static when assembling or disassembling a system unit?",
-    choices: [
-      "Broken computer components",
-      "Improper installation of computer components",
-      "Improper use of anti-static wrist trap",
-      "None of the above"
-    ],
-    answer: "C"
-  },
-  {
-    n: 5,
-    question: "What do you call the screw that we used to lift the motherboard from the casing to prevent the pins from being damaged?",
-    choices: [
-      "M3",
-      "Screws",
-      "Flat Screws",
-      "Philips Screw"
-    ],
-    answer: "A"
-  },
-  {
-    n: 6,
-    question: "What do you call the one that holds the HDD in place?",
-    choices: [
-      "Shelves",
-      "Organizer",
-      "Storage",
-      "Rack"
-    ],
-    answer: "D"
-  },
-  {
-    n: 7,
-    question: "Why was ENIAC used during World War II?",
-    choices: [
-      "It was used as a communication device",
-      "It was used to decrypt messages",
-      "It was used to calculate artillery firing tables",
-      "It was used to store soldiers’ personal records"
-    ],
-    answer: "C"
-  },
-  {
-    n: 8,
-    question: "What will happen if you forget to configure the BIOS during OS installation?",
-    choices: [
-      "The OS may fail to install or the system may not boot properly",
-      "The computer will still works properly",
-      "The computer will stock on booting phase",
-      "The computer will not work"
-    ],
-    answer: "A"
-  },
-  {
-    n: 9,
-    question: "Which of the following is a best practice to prevent overheating in a computer lab environment?",
-    choices: [
-      "Close all vents to prevent dust entry into the room",
-      "Provide proper ventilation",
-      "Place computers next to heaters",
-      "Stack computers on top of each other"
-    ],
-    answer: "B"
-  },
-  {
-    n: 10,
-    question: "Vacuum Tubes are in what generation of computers?",
-    choices: [
-      "Second Generation",
-      "First Generation",
-      "Third Generation",
-      "Fourth Generation"
-    ],
-    answer: "B"
-  },
-  {
-    n: 11,
-    question: "System maintenance is an \"umbrella term\" that primarily includes which two components?",
-    choices: [
-      "Hardware and Software maintenance",
-      "Preventive and Corrective maintenance",
-      "Internal and External maintenance",
-      "Digital and Analog maintenance"
-    ],
-    answer: "B"
-  },
-  {
-    n: 12,
-    question: "Which part of the motherboard communicates with the processor and controls the AGP activities?",
-    choices: [
-      "Southbridge",
-      "Northbridge",
-      "CMOS Battery",
-      "BIOS Chip"
-    ],
-    answer: "B"
-  },
-  {
-    n: 13,
-    question: "What is the specific name of the memory slots used in laptop boards?",
-    choices: [
-      "SIMM",
-      "DIMM",
-      "SO-DIMM",
-      "PCIe"
-    ],
-    answer: "C"
-  },
-  {
-    n: 14,
-    question: "Which procedure involves removing viruses, reformatting, or running a system restore?",
-    choices: [
-      "Preventive Maintenance",
-      "Corrective Maintenance",
-      "Hardware Cleaning",
-      "Network Administration"
-    ],
-    answer: "B"
-  },
-  {
-    n: 15,
-    question: "During PC assembly, where should you align the I/O connectors?",
-    choices: [
-      "To the front of the case",
-      "To the power supply unit",
-      "To the openings in the back of the case",
-      "To the hard drive bay"
-    ],
-    answer: "C"
-  },
-  {
-    n: 16,
-    question: "Which cable transmits data between the motherboard and storage devices like hard drives?",
-    choices: [
-      "Power Cables",
-      "Data Cables",
-      "Ethernet Cables",
-      "VGA Cables"
-    ],
-    answer: "B"
-  },
-  {
-    n: 17,
-    question: "What is the standard 32-bit slot used for various expansion cards like Sound or LAN cards?",
-    choices: [
-      "PCI Slot",
-      "AGP Slot",
-      "ISA Slot",
-      "DIMM Slot"
-    ],
-    answer: "A"
-  },
-  {
-    n: 18,
-    question: "Which type of maintenance is carried out after a fault is detected to restore the equipment to a functional state?",
-    choices: [
-      "Routine Maintenance",
-      "Preventive Maintenance",
-      "Corrective Maintenance",
-      "Scheduled Maintenance"
-    ],
-    answer: "C"
-  },
-  {
-    n: 19,
-    question: "What motherboard component keeps the real-time clock running even when the computer is unplugged?",
-    choices: [
-      "Northbridge",
-      "Power Supply",
-      "Microprocessor",
-      "CMOS Battery"
-    ],
-    answer: "D"
-  },
-  {
-    n: 20,
-    question: "Which connector is a 24-pin female power interface found on modern motherboards?",
-    choices: [
-      "SATA Connector",
-      "ATX Connector",
-      "IDE Connector",
-      "Floppy Connector"
-    ],
-    answer: "B"
-  },
-  {
-    n: 21,
-    question: "Which of the following is a key step in the disassembly process of a computer?",
-    choices: [
-      "Opening the side panel",
-      "Installing the Operating System",
-      "Plugging in the VGA cable",
-      "Applying thermal paste"
-    ],
-    answer: "A"
-  },
-  {
-    n: 22,
-    question: "What are the small plastic or metal pieces used to support the motherboard and keep it from shorting against the case?",
-    choices: [
-      "Screws",
-      "Washers",
-      "Standoffs",
-      "Zip ties"
-    ],
-    answer: "C"
-  },
-  {
-    n: 23,
-    question: "Which port was traditionally used for connecting printers before USB became the standard?",
-    choices: [
-      "Parallel Port",
-      "PS/2 Port",
-      "VGA Port",
-      "Ethernet Port"
-    ],
-    answer: "A"
-  },
-  {
-    n: 24,
-    question: "What is the primary purpose of conducting a Power-On Self-Test (POST)?",
-    choices: [
-      "To clean the hard drive",
-      "To check for hardware integrity during boot",
-      "To update the BIOS version",
-      "To speed up the internet connection"
-    ],
-    answer: "B"
-  },
-  {
-    n: 25,
-    question: "Which cable is used to connect the power supply to a standard SATA hard drive?",
-    choices: [
-      "4-pin Molex",
-      "15-pin SATA Power Cable",
-      "20-pin ATX Cable",
-      "8-pin PCIe Cable"
-    ],
-    answer: "B"
-  },
-  {
-    n: 26,
-    question: "Which chip on the motherboard manages the slower capabilities of the board, including the USB and hard drive controllers?",
-    choices: [
-      "Northbridge",
-      "Southbridge",
-      "CPU",
-      "RAM"
-    ],
-    answer: "B"
-  },
-  {
-    n: 27,
-    question: "What should be used to remove dust from internal computer components safely?",
-    choices: [
-      "Damp cloth",
-      "Compressed air",
-      "Industrial vacuum",
-      "Soap and water"
-    ],
-    answer: "B"
-  },
-  {
-    n: 28,
-    question: "What is the result of neglecting regular software maintenance like disk defragmentation?",
-    choices: [
-      "Increased CPU speed",
-      "Reduced system performance",
-      "Physical damage to the monitor",
-      "Automatic hardware upgrades"
-    ],
-    answer: "B"
-  },
-  {
-    n: 29,
-    question: "Which expansion slot was specifically designed for high-performance video and graphics cards before PCIe?",
-    choices: [
-      "AGP",
-      "ISA",
-      "AMR",
-      "CNR"
-    ],
-    answer: "A"
-  },
-  {
-    n: 30,
-    question: "When installing a CPU, what is the most important factor to ensure correct orientation?",
-    choices: [
-      "The color of the pins",
-      "The alignment of the triangle/notch indicators",
-      "The amount of pressure applied",
-      "The brand of the motherboard"
-    ],
-    answer: "B"
-  }
+const hardwarePosttestSource = [
+  { n: 1, question: "Which motherboard component is primarily used to connect additional expansion cards?", choices: ["Expansion Slots", "PCI Slots", "AGP Slots", "RAM Slots"], answer: "B" },
+  { n: 2, question: "Where is the CPU installed on the motherboard?", choices: ["RAM Slots", "AGP Slots", "CPU Socket", "Expansion Slots"], answer: "C" },
+  { n: 3, question: "Which type of processor interface is permanently soldered onto the motherboard?", choices: ["Land Grid Array", "Ball Grid Array", "Pin Grid Array", "Central Processing Unit"], answer: "B" },
+  { n: 4, question: "Which computer component converts and distributes power to all other internal hardware?", choices: ["PSU", "CPU", "RAM", "BIOS"], answer: "A" },
+  { n: 5, question: "Before opening a PC case for disassembly, which safety precaution must be performed first?", choices: ["Unplug all the cables", "Power off the computer", "Remove the side panel", "Remove all the screws"], answer: "B" },
+  { n: 6, question: "Which type of cable is specifically designed to transmit data between the motherboard and storage drives?", choices: ["SATA Cable", "Power Cables", "Ethernet cable", "USB Cables"], answer: "A" },
+  { n: 7, question: "Which of the following are the two primary categories of computer system maintenance?", choices: ["Preventive and corrective maintenance", "Hardware and information maintenance", "Software and Disk maintenance", "Disk and file maintenance"], answer: "A" },
+  { n: 8, question: "Which physical indicator confirms that a RAM module has been properly and securely installed into its slot?", choices: ["Wrap it with thermal paste", "Use a screwdriver to tighten it", "Press down firmly until the side tabs click into place", "Align it below the slot and leave it loose"], answer: "C" },
+  { n: 9, question: "What is the primary objective of implementing the 5S methodology in a computer laboratory?", choices: ["To make the computers run faster", "To maintain an organized, efficient, and safe work environment", "To increase the number of students in the room", "To reduce the cost of electricity"], answer: "B" },
+  { n: 10, question: "What does the CMOS battery primarily do when a computer is powered off?", choices: ["To provide power to the CPU fan", "To provide backup power to the RTC/CMOS circuitry while the computer is turned off", "To charge the laptop battery", "To increase the internet speed"], answer: "B" },
+  { n: 11, question: "Which computer component acts as the primary communication backbone, linking the CPU, memory, and peripheral devices together?", choices: ["Hard Disk Drive", "Power Supply", "Motherboard", "Monitor"], answer: "C" },
+  { n: 12, question: "Which maintenance strategy relies on scheduled inspections and routine upkeep to minimize the risk of unexpected hardware failure?", choices: ["Corrective Maintenance", "Preventive Maintenance", "Emergency Maintenance", "Reactive Maintenance"], answer: "B" },
+  { n: 13, question: "What is the primary expansion slot used today to connect a powerful video card to the motherboard?", choices: ["ISA Slot", "PCI Slot", "PCI Express (PCIe)", "DIMM Slot"], answer: "C" },
+  { n: 14, question: "What problem may indicate that a computer's CMOS battery needs replacement?", choices: ["The monitor permanently stops receiving power", "The computer may lose its date and time settings after being powered off", "The CPU stops receiving cooling", "The operating system is automatically deleted"], answer: "B" },
+  { n: 15, question: "What safety precautions must be taken before removing the outer panels or handling any internal hardware of a computer tower?", choices: ["Remove the system fan", "Unplug the power cables", "Power off the system", "Open the side panels"], answer: "C" },
+  { n: 16, question: "What type of maintenance strategy is triggered only when a component completely stops functioning or experiences a critical fault?", choices: ["Preventive Maintenance", "Corrective Maintenance", "Routine Maintenance", "Scheduled Maintenance"], answer: "B" },
+  { n: 17, question: "What serial interface replaced the wide, ribbon-cable IDE standard to provide faster data transfer rates for storage drives?", choices: ["SATA Connector", "ATX Connector", "PATA Connector", "ISA Connector"], answer: "A" },
+  { n: 18, question: "What anti-static equipment or tool is used on the assembly table to prevent electrostatic discharge?", choices: ["Plastic Sheet", "Anti-static Mat", "Metal Tray", "Rubber Gloves"], answer: "B" },
+  { n: 19, question: "What hardware component serves as the connection between the computer and the monitor?", choices: ["Sound Card", "Ethernet Card", "Video Adapter Card", "Northbridge Chip"], answer: "C" },
+  { n: 20, question: "What diagnostic routine does the BIOS execute during startup to verify internal hardware?", choices: ["Disk Defragmentation", "Virus Scan", "Power-On Self-Test (POST)", "System Restore"], answer: "C" },
+  { n: 21, question: "What motherboard chipset component is responsible for managing I/O functions like USB, audio, and the BIOS?", choices: ["Northbridge", "Southbridge", "Microprocessor", "ROM"], answer: "B" },
+  { n: 22, question: "What is the standard pin count for a typical SATA data and power connector?", choices: ["40 pins", "34 pins", "24 pins", "7 pins"], answer: "D" },
+  { n: 23, question: "Which of the listed options is classified as a software maintenance activity?", choices: ["Cleaning the system fan", "Moving the computer while off", "Updating anti-virus and spyware", "Placing the PC in a ventilated area"], answer: "C" },
+  { n: 24, question: "What type of storage hardware is usually installed in a 3.5-inch internal drive bay?", choices: ["Optical Drive", "Hard Disk Drive (HDD)", "Power Supply", "RAM Module"], answer: "B" },
+  { n: 25, question: "What fundamental objective does a checklist serve within a planned maintenance program?", choices: ["To speed up the repair process", "To determine if the program is implemented according to plan", "To list the prices of computer parts", "To install new operating systems"], answer: "B" },
+  { n: 26, question: "Which legacy expansion slot is historically recognized as the oldest standard and typically distinguished by its black color?", choices: ["AGP", "PCI", "ISA", "PCIe"], answer: "C" },
+  { n: 27, question: "How often should routine anti-virus and anti-malware system scans be executed?", choices: ["Once a month", "At least once a week", "Once a year", "Every hour"], answer: "B" },
+  { n: 28, question: "What specific motherboard slot or interface is designated for mounting the central processing unit?", choices: ["DIMM Slot", "CPU Socket", "CMOS Slot", "IDE Connector"], answer: "B" },
+  { n: 29, question: "What critical precautions must be verified when replacing and securing the side panels of a computer chassis?", choices: ["The power is already turned on", "It is secured at all screw locations", "The internal cables are hanging outside", "The fan is removed"], answer: "B" },
+  { n: 30, question: "Which older motherboard type is powered by two 6-pin connectors?", choices: ["ATX Motherboard", "BTX Motherboard", "AT Motherboard", "ITX Motherboard"], answer: "C" }
 ];
 
+export const hardwarePosttestQuestions = hardwarePosttestSource.map((question) => ({
+  ...question,
+  pairId: `hardware-${String(question.n).padStart(2, "0")}`
+}));

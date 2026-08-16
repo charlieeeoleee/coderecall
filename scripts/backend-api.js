@@ -1,4 +1,4 @@
-import { app } from "./firebase-config.js";
+import { app, firebaseEnvironment } from "./firebase-config.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const DEFAULT_TIMEOUT_MS = 12000;
@@ -30,25 +30,48 @@ export async function apiRequest(path, options = {}) {
     ...(options.headers || {})
   };
 
+  const user = options.auth === false ? null : getAuth(app).currentUser;
   if (options.auth !== false) {
-    const user = getAuth(app).currentUser;
     if (!user) {
+      logDevelopmentAuthDiagnostic("no_current_user", path);
+      window.clearTimeout(timeout);
       throw new BackendApiError("unauthenticated", "Sign in before continuing.", 401);
     }
-    headers.Authorization = `Bearer ${await user.getIdToken()}`;
+    try {
+      headers.Authorization = `Bearer ${await user.getIdToken()}`;
+    } catch (error) {
+      logDevelopmentAuthDiagnostic("id_token_acquisition_failed", path, error?.code);
+      window.clearTimeout(timeout);
+      throw new BackendApiError("unauthenticated", "Sign in again before continuing.", 401);
+    }
   }
 
   try {
-    const response = await fetch(path, {
-      method: options.method || "POST",
-      headers,
-      body: JSON.stringify(options.body || {}),
-      credentials: "same-origin",
-      signal: controller.signal
-    });
-    const payload = await readSafeJson(response);
+    const send = async () => {
+      const response = await fetch(path, {
+        method: options.method || "POST",
+        headers,
+        body: JSON.stringify(options.body || {}),
+        credentials: "same-origin",
+        signal: controller.signal
+      });
+      return { response, payload: await readSafeJson(response) };
+    };
+
+    let { response, payload } = await send();
+    if (user && options.auth !== false && options.retryAuth !== false && response.status === 401 && payload?.code === "unauthenticated") {
+      logDevelopmentAuthDiagnostic("server_rejected_token_refreshing_once", path);
+      try {
+        headers.Authorization = `Bearer ${await user.getIdToken(true)}`;
+      } catch (error) {
+        logDevelopmentAuthDiagnostic("forced_id_token_refresh_failed", path, error?.code);
+        throw new BackendApiError("unauthenticated", "Sign in again before continuing.", 401);
+      }
+      ({ response, payload } = await send());
+    }
 
     if (!response.ok || payload?.ok === false) {
+      if (response.status === 401) logDevelopmentAuthDiagnostic("server_rejected_refreshed_token", path, payload?.code);
       throw new BackendApiError(
         payload?.code || `http_${response.status}`,
         payload?.message || "The server could not complete the request.",
@@ -67,6 +90,15 @@ export async function apiRequest(path, options = {}) {
   } finally {
     window.clearTimeout(timeout);
   }
+}
+
+function logDevelopmentAuthDiagnostic(result, path, code = "") {
+  if (firebaseEnvironment !== "development") return;
+  console.warn("CodeRecall Development API auth diagnostic", {
+    result,
+    path,
+    code: String(code || "").slice(0, 80)
+  });
 }
 
 export function describeBackendError(error, fallback = "The request could not be completed right now.") {

@@ -59,7 +59,7 @@ body{
 .container{
   width:900px;
   max-width:100%;
-  min-height:520px;
+  min-height:min(620px, calc(100vh - 40px));
   background: var(--container-bg);
   border-radius:20px;
   box-shadow: var(--card-shadow);
@@ -318,8 +318,24 @@ input:-webkit-autofill{
   display:block;
 }
 
+.device-auth-options,
+.guest-auth-option{
+  display:grid;
+  width:100%;
+}
+
+.device-auth-options{
+  gap:10px;
+}
+
+.guest-auth-option{
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.12);
+}
+
 .guest-btn{
-  margin-top:4px;
+  width:100%;
+  min-height:44px;
   background:none;
   border:2px solid var(--accent);
   color: var(--accent);
@@ -334,7 +350,8 @@ input:-webkit-autofill{
 }
 
 .qr-login-btn{
-  margin-top:2px;
+  width:100%;
+  min-height:44px;
   background:rgba(255,255,255,.08);
   border:1px solid rgba(0,229,255,.42);
   color:var(--accent);
@@ -354,7 +371,7 @@ input:-webkit-autofill{
   align-items:center;
   justify-content:center;
   width:100%;
-  margin-top:8px;
+  min-height:44px;
   padding:11px;
   border-radius:10px;
   background:rgba(255,138,42,0.1);
@@ -362,6 +379,7 @@ input:-webkit-autofill{
   color:#ffb36b;
   font-weight:800;
   text-decoration:none;
+  box-sizing:border-box;
 }
 
 .auth-companion-link:hover{
@@ -449,15 +467,21 @@ input:-webkit-autofill{
 .account-help-box{
   width:520px;
   text-align:left;
-  padding:24px 28px 28px;
-  background:
-    linear-gradient(145deg, rgba(35, 23, 80, .94), rgba(17, 14, 48, .96));
+  padding:26px 28px 28px;
+  background:linear-gradient(145deg, rgba(35, 23, 80, .94), rgba(17, 14, 48, .96));
   border:1px solid rgba(255,255,255,.12);
   box-shadow:0 24px 70px rgba(0,0,0,.48), 0 0 34px rgba(0,229,255,.12);
 }
 
+.account-help-box > h3{
+  margin:0;
+  font-size:23px;
+  line-height:1.2;
+  letter-spacing:-.02em;
+}
+
 .account-help-intro{
-  margin:4px 0 16px;
+  margin:8px 0 0;
   color:rgba(255,255,255,.74);
   font-size:13px;
   line-height:1.55;
@@ -466,19 +490,18 @@ input:-webkit-autofill{
 .account-help-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px 14px;
-  margin-top:14px;
+  gap:12px;
+  margin-top:18px;
 }
 
 .account-help-card{
   display:grid;
-  grid-template-rows:auto 1fr;
-  align-content:stretch;
-  gap:10px;
-  height:124px;
-  min-height:124px;
+  grid-template-columns:38px minmax(0,1fr);
+  align-items:start;
+  gap:12px;
+  min-height:96px;
   box-sizing:border-box;
-  padding:18px 18px 20px;
+  padding:15px 16px;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.1);
   background:rgba(255,255,255,.065);
@@ -488,6 +511,7 @@ input:-webkit-autofill{
   font:inherit;
   cursor:pointer;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+  transition:transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
 
 .account-help-card:hover{
@@ -497,25 +521,61 @@ input:-webkit-autofill{
   box-shadow:0 14px 30px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.1);
 }
 
-.account-help-card strong{
-  color:var(--accent);
-  font-size:13px;
-  line-height:1.3;
-  min-height:20px;
-  display:flex;
-  align-items:flex-start;
+.account-help-card:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
 }
 
-.account-help-card span{
+.account-help-icon{
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  color:var(--accent);
+  background:rgba(0,229,255,.1);
+  border:1px solid rgba(0,229,255,.2);
+}
+
+.account-help-icon svg{
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.account-help-copy{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:0;
+}
+
+.account-help-card .account-help-copy strong{
+  color:var(--accent);
+  font-size:13.5px;
+  line-height:1.3;
+}
+
+.account-help-card .account-help-copy > span{
   color:rgba(255,255,255,.72);
   font-size:12px;
-  line-height:1.5;
-  align-self:start;
+  line-height:1.45;
 }
 
 .account-help-card:nth-child(1),
 .account-help-card:nth-child(2){
   background:linear-gradient(145deg, rgba(255,46,151,.16), rgba(255,255,255,.06));
+  border-color:rgba(255,46,151,.22);
+}
+
+.account-help-card:nth-child(1) .account-help-icon,
+.account-help-card:nth-child(2) .account-help-icon{
+  color:#ff7dbc;
+  background:rgba(255,46,151,.12);
   border-color:rgba(255,46,151,.22);
 }
 
@@ -525,14 +585,16 @@ input:-webkit-autofill{
   border-color:rgba(255,46,151,.34);
 }
 
-.account-help-note{
-  cursor:default;
-}
+.account-help-note{cursor:default;}
 
 .account-help-note:hover{
   transform:none;
   border-color:rgba(255,255,255,.12);
   background:rgba(255,255,255,.08);
+}
+
+.account-help-card:active:not(.account-help-note){
+  transform:translateY(0) scale(.985);
 }
 
 .account-help-box .popup-actions{
@@ -548,13 +610,16 @@ input:-webkit-autofill{
 
 .qr-login-box{
   width:420px;
+  max-height:calc(100vh - 32px);
+  overflow-y:auto;
+  box-sizing:border-box;
   background:linear-gradient(145deg, rgba(35, 23, 80, .95), rgba(17, 14, 48, .97));
   border:1px solid rgba(255,255,255,.12);
   box-shadow:0 24px 70px rgba(0,0,0,.48), 0 0 34px rgba(0,229,255,.12);
 }
 
 .qr-login-intro{
-  margin:4px 0 16px;
+  margin:4px 0 12px;
   color:rgba(255,255,255,.74);
   font-size:13px;
   line-height:1.55;
@@ -565,7 +630,7 @@ input:-webkit-autofill{
   place-items:center;
   width:238px;
   min-height:238px;
-  margin:0 auto 14px;
+  margin:0 auto 10px;
   padding:9px;
   border-radius:18px;
   background:white;
@@ -579,20 +644,43 @@ input:-webkit-autofill{
   height:220px;
 }
 
+.qr-matching-code-panel{
+  display:grid;
+  gap:4px;
+  margin:0 0 10px;
+  padding:10px 12px;
+  text-align:center;
+  border:1px solid rgba(0,229,255,.35);
+  border-radius:14px;
+  background:rgba(10,16,42,.28);
+}
+.qr-matching-code-panel[hidden]{ display:none; }
+.qr-matching-code-panel span,
+.qr-matching-code-panel small{ color:rgba(255,255,255,.74); }
+.qr-matching-code-panel strong{
+  color:#00e5ff;
+  font-size:30px;
+  letter-spacing:.16em;
+}
+
 .qr-login-steps{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
-  margin:0 0 12px;
+  margin:0 0 8px;
 }
 
 .qr-login-steps span{
+  display:grid;
+  place-items:center;
   padding:8px;
   border-radius:999px;
   background:rgba(255,255,255,.08);
   color:rgba(255,255,255,.78);
   font-size:11px;
   font-weight:800;
+  line-height:1.25;
+  text-align:center;
 }
 
 .status-text.error{
@@ -670,8 +758,13 @@ input:-webkit-autofill{
   box-shadow:0 12px 28px rgba(60,40,120,.08), inset 0 1px 0 rgba(255,255,255,.8);
 }
 
-.light-mode .account-help-card span{
+.light-mode .account-help-card .account-help-copy > span{
   color:rgba(26,17,64,.72);
+}
+
+.light-mode .account-help-icon{
+  background:rgba(0,119,255,.08);
+  border-color:rgba(0,119,255,.18);
 }
 
 .light-mode .account-help-card:nth-child(1),
@@ -694,6 +787,10 @@ input:-webkit-autofill{
 .light-mode .qr-login-btn{
   background:rgba(108,76,255,.08);
   border-color:rgba(0,119,255,.24);
+}
+
+.light-mode .guest-auth-option{
+  border-top-color:rgba(108,76,255,.16);
 }
 
 .light-mode .qr-login-box{
@@ -1066,14 +1163,13 @@ input:-webkit-autofill{
   }
 
   .account-help-card{
-    height:auto;
-    min-height:auto;
-    padding:16px;
-    gap:10px;
+    min-height:88px;
+    padding:14px;
+    gap:12px;
   }
 
-  .account-help-card strong{
-    min-height:auto;
+  .account-help-box > h3{
+    font-size:21px;
   }
 
   .qr-login-box{
@@ -1094,6 +1190,8 @@ input:-webkit-autofill{
   }
 
   .guest-btn,
+  .qr-login-btn,
+  .auth-companion-link,
   .primary-btn,
   .google-btn{
     min-height:48px;

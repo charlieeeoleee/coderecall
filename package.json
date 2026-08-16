@@ -1,11 +1,11 @@
 {
   "scripts": {
-    "firebase": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase",
     "firebase:version": "set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase --version",
-    "firebase:deploy:rules": "node scripts/verify-release-safety.mjs && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only firestore:rules",
-    "firebase:deploy:hosting": "node scripts/verify-release-safety.mjs && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only hosting",
+    "firebase:rules:preview": "node scripts/guard-firebase-deploy.mjs --environment=preview --project=coderecall-preview && node scripts/verify-release-safety.mjs && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only firestore:rules --project preview",
+    "firebase:rules:production": "node scripts/guard-firebase-deploy.mjs --environment=production --project=gamifiedlearningsystem && node scripts/verify-release-safety.mjs && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only firestore:rules --project production",
+    "firebase:deploy:hosting": "echo Firebase Hosting deployment is disabled; CodeRecall hosting is deployed through Vercel && exit /b 1",
     "firebase:deploy:functions": "echo Firebase Functions are disabled for Spark mode",
-    "firebase:deploy:app": "node scripts/verify-release-safety.mjs && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --only hosting,firestore:rules",
+    "firebase:deploy:app": "echo Generic Firebase app deployment is disabled; use the explicit Firebase Rules command for the intended environment && exit /b 1",
     "deploy:verify": "node scripts/verify-deploy-config.mjs",
     "auth:enable-totp": "node scripts/enable-firebase-totp-mfa.mjs --project=gamifiedlearningsystem",
     "auth:reset-mfa": "node scripts/reset-firebase-mfa.mjs --project=gamifiedlearningsystem",
@@ -22,10 +22,14 @@
     "release:predeploy-check": "node scripts/predeploy-check.mjs",
     "release:safety-gate": "node scripts/verify-release-safety.mjs",
     "rules:build-claims-only": "node scripts/build-claims-only-rules.mjs",
-    "rules:dry-run-claims-only": "npm run rules:build-claims-only && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --config firebase.claims-only.json --only firestore:rules --project %FIREBASE_PROJECT_ID% --dry-run --non-interactive",
+    "rules:dry-run-claims-only:preview": "node scripts/guard-firebase-deploy.mjs --environment=preview --project=coderecall-preview && npm run rules:build-claims-only && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --config firebase.claims-only.json --only firestore:rules --project preview --dry-run --non-interactive",
+    "rules:dry-run-claims-only:production": "node scripts/guard-firebase-deploy.mjs --environment=production --project=gamifiedlearningsystem && npm run rules:build-claims-only && set XDG_CONFIG_HOME=.firebase-cli-config&& set NO_UPDATE_NOTIFIER=1&& firebase deploy --config firebase.claims-only.json --only firestore:rules --project production --dry-run --non-interactive",
     "test:rules": "powershell -ExecutionPolicy Bypass -File scripts/run-firestore-rules-tests.ps1",
     "test:function-contract": "node scripts/verify-vercel-api-contract.mjs",
-    "test:api-contract": "node scripts/verify-vercel-api-contract.mjs && node scripts/run-api-unit-tests.mjs",
+    "test:api-contract": "node scripts/verify-vercel-api-contract.mjs && node scripts/run-api-unit-tests.mjs && node scripts/run-firebase-environment-tests.mjs",
+    "test:firebase-environments": "node scripts/run-firebase-environment-tests.mjs",
+    "test:assessment-contract": "node scripts/run-assessment-contract-tests.mjs",
+    "stability:gate": "node scripts/run-stability-gate.mjs",
     "test:rules:claims-only": "npm run rules:build-claims-only && powershell -ExecutionPolicy Bypass -File scripts/run-firestore-rules-tests.ps1 firestore.claims-only.rules firebase.claims-only.json"
   },
   "devDependencies": {

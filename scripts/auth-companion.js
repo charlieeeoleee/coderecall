@@ -202,7 +202,18 @@ document.getElementById("resetCompanionBtn")?.addEventListener("click", () => {
   setStatus("setupStatus", "This phone was reset. Add a setup key again.");
 });
 
-if ("serviceWorker" in navigator) {
+const companionHostname = window.location.hostname.toLowerCase();
+const isLocalCompanionDevelopment = window.location.protocol === "http:"
+  && window.location.port === "3000"
+  && (
+    companionHostname === "localhost"
+    || companionHostname === "127.0.0.1"
+    || /^10\./.test(companionHostname)
+    || /^192\.168\./.test(companionHostname)
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(companionHostname)
+  );
+
+if ("serviceWorker" in navigator && !isLocalCompanionDevelopment) {
   navigator.serviceWorker.register("./service-worker.js").catch(() => {});
 }
 

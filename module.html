@@ -11,6 +11,7 @@
 
   <link rel="stylesheet" href="styles/styles.css?v=20260519a">
   <link rel="stylesheet" href="styles/module.css?v=20260523a">
+  <link rel="stylesheet" href="styles/error.css?v=20260816a">
   <link rel="icon" type="image/png" href="assets/favicon.png">
 </head>
 <body>
@@ -23,7 +24,22 @@
     <span id="themeIcon">&#127769;</span>
   </button>
 
-  <main class="module-page">
+  <section class="error-page module-failure-state" id="moduleFailureState" role="alert" aria-live="assertive" hidden>
+    <div class="error-card">
+      <p class="error-brand" aria-label="Code Recall">
+        <span class="error-brand-code">CODE:</span><span class="error-brand-recall">RECALL!</span>
+      </p>
+      <h1 id="moduleFailureTitle" tabindex="-1">Unable to load this module</h1>
+      <p class="error-message" id="moduleFailureMessage">The lesson could not be prepared.</p>
+      <div class="error-actions">
+        <button class="error-action primary" id="moduleFailureRetry" type="button">Try Again</button>
+        <a class="error-action" id="moduleFailureBackLink" href="/subjects">Back to Modules</a>
+        <a class="error-action" href="/dashboard">Dashboard</a>
+      </div>
+    </div>
+  </section>
+
+  <main class="module-page" id="moduleAppShell">
     <section class="module-header card">
       <div class="module-header-glow"></div>
       <span class="module-tag" id="moduleTag">MODULE LESSON</span>
@@ -39,7 +55,7 @@
     <section class="module-meta-grid">
       <article class="module-meta-card card">
         <span class="module-meta-label">Subject</span>
-        <span class="module-meta-value" id="moduleSubject">Electrical</span>
+        <span class="module-meta-value" id="moduleSubject">Loading...</span>
       </article>
       <article class="module-meta-card card">
         <span class="module-meta-label">Difficulty</span>
@@ -274,11 +290,43 @@
     </div>
   </main>
 
+  <script>
+    (() => {
+      const route = new URLSearchParams(window.location.search);
+      const subjectLabels = { hardware: "Computer Hardware", electrical: "Electrical" };
+      const difficultyLabels = { easy: "Easy", medium: "Medium", hard: "Hard" };
+      const requestedSubject = (route.get("subject") || "").toLowerCase();
+      const requestedDifficulty = (route.get("difficulty") || "").toLowerCase();
+      const requestedModule = (route.get("module") || "").toLowerCase();
+      const subjectValue = document.getElementById("moduleSubject");
+      const difficultyValue = document.getElementById("moduleDifficulty");
+      const moduleValue = document.getElementById("moduleNumber");
+
+      if (Object.hasOwn(subjectLabels, requestedSubject) && subjectValue) {
+        subjectValue.textContent = subjectLabels[requestedSubject];
+      }
+      if (Object.hasOwn(difficultyLabels, requestedDifficulty) && difficultyValue) {
+        difficultyValue.textContent = difficultyLabels[requestedDifficulty];
+      }
+      if (/^module[1-9]\d*$/.test(requestedModule) && moduleValue) {
+        moduleValue.textContent = `Module ${Number(requestedModule.slice(6))}`;
+      }
+    })();
+  </script>
+
   <div class="module-image-modal" id="moduleImageModal" aria-hidden="true">
     <div class="module-image-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="moduleImageModalTitle">
       <div class="module-image-modal-layout">
         <figure class="module-image-modal-media">
-          <img id="moduleImageModalImg" src="" alt="">
+          <div class="module-image-modal-viewport" id="moduleImageModalViewport">
+            <img id="moduleImageModalImg" src="" alt="">
+          </div>
+          <div class="module-image-modal-zoom" id="moduleImageModalZoom" hidden aria-label="Figure zoom controls">
+            <button type="button" id="moduleImageModalZoomOut" aria-label="Zoom out">&minus;</button>
+            <span id="moduleImageModalZoomStatus" role="status" aria-live="polite">Fit</span>
+            <button type="button" id="moduleImageModalZoomIn" aria-label="Zoom in">+</button>
+            <button type="button" id="moduleImageModalZoomReset" aria-label="Reset image to fit">Fit</button>
+          </div>
           <figcaption class="module-image-modal-caption" id="moduleImageModalCaption"></figcaption>
         </figure>
         <div class="module-image-modal-copy">
@@ -291,25 +339,22 @@
           </div>
           <p class="module-image-modal-description" id="moduleImageModalDescription"></p>
           <div class="module-image-modal-details" id="moduleImageModalDetails" hidden></div>
+          <a class="module-image-modal-video" id="moduleImageModalVideo" href="#" target="_blank" rel="noopener noreferrer" hidden>Watch Related Video</a>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module">
+  <script type="application/x-coderecall-legacy-disabled">
     import { MODULE_CATALOG, MODULE_STRUCTURE } from "./data/module-data.js";
     import { MODULE_IMAGES } from "./data/module-images.js";
     import { MODULE_SUPPLEMENTAL_IMAGES } from "./data/module-supplemental-images.js";
+    import { resolveModuleLessonRoute } from "./scripts/module-routing.mjs";
 
-    const params = new URLSearchParams(window.location.search);
-    const subjectParam = (params.get("subject") || "").toLowerCase();
-    const difficultyParam = (params.get("difficulty") || "").toLowerCase();
-    const moduleKey = (params.get("module") || "module1").toLowerCase();
-    const validSubjects = new Set(["hardware", "electrical"]);
-    const validDifficulties = new Set(["easy", "medium", "hard"]);
-
-    const subject = validSubjects.has(subjectParam) ? subjectParam : "electrical";
-    const difficulty = validDifficulties.has(difficultyParam) ? difficultyParam : "easy";
+    const moduleRoute = resolveModuleLessonRoute(window.location.search);
+    const subject = moduleRoute.subject;
+    const difficulty = moduleRoute.difficulty;
+    const moduleKey = moduleRoute.moduleKey;
     const moduleNumber = Number(moduleKey.replace("module", "")) || 1;
     const staticModuleCount = MODULE_STRUCTURE?.[subject]?.[difficulty] || 0;
     const data = MODULE_CATALOG?.[subject]?.[difficulty]?.[`module${moduleNumber}`] || null;
@@ -1877,8 +1922,9 @@
       ]);
     }
   </script>
-  <script src="scripts/firebase-config.runtime.js"></script>
-  <script type="module" src="scripts/module.js?v=20260510e"></script>
+  <script src="scripts/module-bootstrap.js?v=20260816a"></script>
+  <script id="firebaseRuntimeConfig" src="scripts/firebase-config.runtime.js"></script>
+  <script id="moduleRuntimeScript" type="module" src="scripts/module.js?v=20260816b"></script>
   <script type="module" src="scripts/item-feedback-loader.js?v=20260519a"></script>
   <script src="scripts/loading.js?v=20260519b" defer></script>
 </body>

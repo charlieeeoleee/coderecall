@@ -952,7 +952,36 @@
     }, delay);
   }
 
-  function registerOfflineCache() {
+  function isDevelopmentRuntime() {
+    return String(self.CODE_RECALL_FIREBASE_ENVIRONMENT || "").trim().toLowerCase() === "development";
+  }
+
+  async function clearDevelopmentOfflineCache() {
+    if (!isDevelopmentRuntime()) return;
+
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((registration) => registration.unregister()));
+    }
+
+    if ("caches" in self) {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((key) => key.startsWith("code-recall-"))
+          .map((key) => caches.delete(key))
+      );
+    }
+  }
+
+  function configureOfflineCache() {
+    if (isDevelopmentRuntime()) {
+      clearDevelopmentOfflineCache().catch((error) => {
+        console.warn("Development offline cache cleanup failed:", error);
+      });
+      return;
+    }
+
     if (!("serviceWorker" in navigator)) return;
     if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") return;
 
@@ -1082,6 +1111,6 @@
   window.toggleCodeRecallNarrationPause = toggleCodeRecallNarrationPause;
 
   initPerformanceLogger();
-  registerOfflineCache();
+  configureOfflineCache();
   initSelectiveContentProtection();
 })();

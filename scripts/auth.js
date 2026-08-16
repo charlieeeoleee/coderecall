@@ -734,6 +734,21 @@ function setQrLoginStatus(message, isError = false) {
   status.classList.toggle("error", Boolean(isError));
 }
 
+function validateQrCreateResult(result) {
+  const valid = result
+    && Number(result.protocolVersion) === 2
+    && /^[a-f0-9-]{20,80}$/i.test(String(result.requestId || ""))
+    && String(result.secret || "").length >= 24
+    && /^\d{3}$/.test(String(result.matchingCode || ""))
+    && String(result.cancelCapability || "").length >= 24
+    && Number.isFinite(Number(result.expiresAtMs))
+    && Number(result.expiresAtMs) > Date.now();
+  if (!valid) {
+    throw new Error("The server returned an incomplete QR login response. Generate a new QR code and try again.");
+  }
+  return result;
+}
+
 function stopQrLoginPolling() {
   if (qrLoginPollTimer) {
     window.clearInterval(qrLoginPollTimer);
@@ -749,26 +764,46 @@ async function pollQrLoginExchange() {
     const result = await apiRequest("/api/auth/qr/exchange", {
       method: "POST",
       auth: false,
-      body: qrLoginActiveRequest,
+      body: {
+        requestId: qrLoginActiveRequest.requestId,
+        secret: qrLoginActiveRequest.secret
+      },
       timeoutMs: 8000
     });
 
+    if (result.approved && result.status === "exchanged" && result.customToken) {
+      stopQrLoginPolling();
+      setQrLoginStatus("Approved. Signing you in...");
+      await signInWithCustomToken(auth, result.customToken);
+      document.getElementById("qrLoginPopup")?.classList.remove("active");
+      return;
+    }
+
+    if (result.terminal) {
+      stopQrLoginPolling();
+      const messages = {
+        denied: result.terminalReason === "matching_failed"
+          ? "This QR login was denied because the matching code was incorrect. Generate a new code to try again."
+          : "This QR login was denied on the phone. Generate a new code to try again.",
+        cancelled: "This QR login was cancelled.",
+        expired: "This QR code expired. Generate a new one to continue.",
+        exchange_failed: "QR login could not be completed. Generate a new code and try again."
+      };
+      setQrLoginStatus(messages[result.status] || "This QR login request can no longer be used.", true);
+      return;
+    }
     if (!result.approved) {
       setQrLoginStatus("Waiting for approval on your phone...");
       return;
     }
 
-    stopQrLoginPolling();
-    setQrLoginStatus("Approved. Signing you in...");
-    await signInWithCustomToken(auth, result.customToken);
-    document.getElementById("qrLoginPopup")?.classList.remove("active");
   } catch (error) {
     stopQrLoginPolling();
     setQrLoginStatus(describeBackendError(error, "QR login could not be completed. Generate a new code and try again."), true);
   }
 }
 
-window.openQrLoginPopup = async function(){
+async function openQrLoginPopup(){
   const popup = document.getElementById("qrLoginPopup");
   const image = document.getElementById("qrLoginImage");
   if (!popup || !image) return;
@@ -779,20 +814,27 @@ window.openQrLoginPopup = async function(){
   setQrLoginStatus("Preparing a secure QR login request...");
 
   try {
-    const result = await apiRequest("/api/auth/qr/create", {
+    const result = validateQrCreateResult(await apiRequest("/api/auth/qr/create", {
       method: "POST",
       auth: false,
-      body: {},
+      body: { protocolVersion: 2 },
       timeoutMs: 8000
-    });
+    }));
     qrLoginActiveRequest = {
       requestId: result.requestId,
-      secret: result.secret
+      secret: result.secret,
+      cancelCapability: result.cancelCapability
     };
-    const approvalUrl = new URL("qr-approve.html", window.location.href);
+    const approvalUrl = new URL("/qr-approve", window.location.origin);
     approvalUrl.searchParams.set("requestId", result.requestId);
     approvalUrl.searchParams.set("secret", result.secret);
     image.innerHTML = renderQrSvgMarkup(approvalUrl.toString(), 220);
+    const matchingPanel = document.getElementById("qrMatchingCodePanel");
+    const matchingCode = document.getElementById("qrMatchingCode");
+    if (matchingPanel && matchingCode && result.protocolVersion >= 2) {
+      matchingCode.textContent = result.matchingCode;
+      matchingPanel.hidden = false;
+    }
     setQrLoginStatus("Scan this QR code with your phone, then approve the sign-in.");
     qrLoginPollTimer = window.setInterval(pollQrLoginExchange, 2500);
     window.setTimeout(() => {
@@ -808,9 +850,20 @@ window.openQrLoginPopup = async function(){
 };
 
 window.closeQrLoginPopup = function(){
+  const active = qrLoginActiveRequest;
+  if (active?.requestId && active?.cancelCapability) {
+    apiRequest("/api/auth/qr/cancel", {
+      method: "POST",
+      auth: false,
+      body: { requestId: active.requestId, cancelCapability: active.cancelCapability }
+    }).catch(() => {});
+  }
   stopQrLoginPolling();
+  document.getElementById("qrMatchingCodePanel")?.setAttribute("hidden", "");
   document.getElementById("qrLoginPopup")?.classList.remove("active");
-};
+}
+
+document.getElementById("qrLoginOpenBtn")?.addEventListener("click", openQrLoginPopup);
 
 /* ACCOUNT HELP POPUP */
 window.openAccountHelpPopup = function(){

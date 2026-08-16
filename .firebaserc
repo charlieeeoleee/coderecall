@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "gamifiedlearningsystem"
+    "production": "gamifiedlearningsystem",
+    "preview": "coderecall-preview"
   }
 }

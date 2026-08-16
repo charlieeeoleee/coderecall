@@ -7,9 +7,14 @@ module.exports = async function handler(req, res) {
   const endpoint = "/api/auth/qr/create";
   try {
     methodAllowed(req, ["POST"]);
-    await readJsonBody(req, { maxBytes: 1024 });
+    const payload = await readJsonBody(req, { maxBytes: 1024 });
     await assertRateLimit("createQrLoginRequest", getClientIp(req));
-    const data = await createQrLoginRequest({ requestId: id, endpoint });
+    const data = await createQrLoginRequest({
+      requestId: id,
+      endpoint,
+      userAgent: req.headers["user-agent"],
+      protocolVersion: payload.protocolVersion
+    });
     sendJson(res, 201, { ok: true, data });
   } catch (error) {
     const safe = safeErrorPayload(error);

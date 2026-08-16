@@ -1,4 +1,5 @@
 import { app } from "./firebase-config.js";
+import { buildSubjectUrl } from "./subject-routing.mjs";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -663,7 +664,7 @@ window.goBackToSubject = function() {
     window.location.href = "certificates.html";
     return;
   }
-  window.location.href = `subject.html?subject=${encodeURIComponent(subject)}`;
+  window.location.href = buildSubjectUrl(subject);
 };
 
 document.getElementById("downloadCertificateBtn")?.addEventListener("click", () => {

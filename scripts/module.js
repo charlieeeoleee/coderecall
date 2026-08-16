@@ -11,6 +11,42 @@ import { saveStudyHistory } from "./study-history-store.js";
 import { traceXPEvent } from "./xp-debug.js";
 import { submitGamificationEvent } from "./gamification-api.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
+import {
+  HARDWARE_EASY_MODULE1_CATEGORIES,
+  HARDWARE_EASY_MODULE1_CONTENT
+} from "../data/hardware-easy-module1-content.js";
+import {
+  HARDWARE_EASY_MODULE2_CATEGORIES,
+  HARDWARE_EASY_MODULE2_CONTENT
+} from "../data/hardware-easy-module2-content.js";
+import {
+  HARDWARE_EASY_MODULE3_CONTENT,
+  HARDWARE_EASY_MODULE3_LESSON
+} from "../data/hardware-easy-module3-content.js";
+import {
+  HARDWARE_MEDIUM_MODULE1_CATEGORIES,
+  HARDWARE_MEDIUM_MODULE1_CONTENT,
+  HARDWARE_MEDIUM_MODULE1_LESSON
+} from "../data/hardware-medium-module1-content.js";
+import {
+  HARDWARE_MEDIUM_MODULE2_CONTENT,
+  HARDWARE_MEDIUM_MODULE2_HERO_IDS,
+  HARDWARE_MEDIUM_MODULE2_LESSON
+} from "../data/hardware-medium-module2-content.js";
+import {
+  buildModuleLessonUrl,
+  buildModuleLevelsUrl,
+  resolveModuleLessonRoute
+} from "./module-routing.mjs";
+import {
+  createFreshMatchingSolvedSet,
+  getRailTargetActivationOffset,
+  readScopedLocalProgress,
+  resolveModuleRailLayout,
+  selectActiveRailKey,
+  shouldPersistMatchingCompletion,
+  writeScopedLocalProgress
+} from "./module-state.mjs";
 
 /* =========================
    FIREBASE CONFIG
@@ -149,10 +185,10 @@ onAuthStateChanged(auth, (user) => {
 /* =========================
    PARAMETERS
 ========================= */
-const params = new URLSearchParams(window.location.search);
-const subject = params.get("subject") || "electrical";
-const difficulty = params.get("difficulty") || "easy";
-const moduleKey = params.get("module") || "module1";
+const moduleRoute = resolveModuleLessonRoute(window.location.search);
+const subject = moduleRoute.subject;
+const difficulty = moduleRoute.difficulty;
+const moduleKey = moduleRoute.moduleKey;
 const moduleNumber = Number(moduleKey.replace("module", "")) || 1;
 const STATIC_MODULE_COUNT = MODULE_STRUCTURE?.[subject]?.[difficulty] || 0;
 let publishedModules = [];
@@ -168,6 +204,91 @@ const difficultyNames = {
   medium: "Medium",
   hard: "Difficult"
 };
+
+const HARDWARE_EASY_MODULE1_HERO_IDS = [
+  "main-system-unit",
+  "input-keyboard",
+  "output-monitor"
+];
+
+const HARDWARE_EASY_MODULE2_HERO_IDS = [
+  "ppe-safety-goggles",
+  "esd-anti-static-wrist-trap",
+  "cleaning-compressed-air"
+];
+
+const HARDWARE_EASY_MODULE3_HERO_IDS = [
+  "ohs-laboratory-safety-rules",
+  "ohs-complete-ppe",
+  "ohs-hazardous-signs"
+];
+
+const HARDWARE_MEDIUM_MODULE1_HERO_IDS = [
+  "motherboard-overview",
+  "cpu-socket",
+  "chipset-northbridge-southbridge"
+];
+
+function applySemanticHero(hero, records, semanticIds) {
+  const heroImages = [...hero.querySelectorAll("img")];
+  semanticIds.forEach((semanticId, index) => {
+    const image = records.find((item) => item.semanticId === semanticId);
+    const target = heroImages[index];
+    if (!image || !target) return;
+
+    target.src = image.image;
+    target.alt = image.alt;
+  });
+}
+
+function configureModuleHero() {
+  const hero = document.querySelector(".module-hero-media");
+  if (!hero) return;
+
+  const isHardwareEasyModuleOne =
+    subject === "hardware" && difficulty === "easy" && moduleKey === "module1";
+
+  hero.classList.toggle("module-hero-media-contain", isHardwareEasyModuleOne);
+  if (isHardwareEasyModuleOne) {
+    applySemanticHero(hero, HARDWARE_EASY_MODULE1_CONTENT, HARDWARE_EASY_MODULE1_HERO_IDS);
+    return;
+  }
+
+  const isHardwareEasyModuleTwo =
+    subject === "hardware" && difficulty === "easy" && moduleKey === "module2";
+
+  hero.classList.toggle("module-hero-media-contain", isHardwareEasyModuleTwo);
+  if (isHardwareEasyModuleTwo) {
+    applySemanticHero(hero, HARDWARE_EASY_MODULE2_CONTENT, HARDWARE_EASY_MODULE2_HERO_IDS);
+    return;
+  }
+
+  const isHardwareEasyModuleThree =
+    subject === "hardware" && difficulty === "easy" && moduleKey === "module3";
+
+  hero.classList.toggle("module-hero-media-contain", isHardwareEasyModuleThree);
+  if (isHardwareEasyModuleThree) {
+    applySemanticHero(hero, HARDWARE_EASY_MODULE3_CONTENT, HARDWARE_EASY_MODULE3_HERO_IDS);
+    return;
+  }
+
+  const isHardwareMediumModuleOne =
+    subject === "hardware" && difficulty === "medium" && moduleKey === "module1";
+
+  hero.classList.toggle("module-hero-media-contain", isHardwareMediumModuleOne);
+  if (isHardwareMediumModuleOne) {
+    applySemanticHero(hero, HARDWARE_MEDIUM_MODULE1_CONTENT, HARDWARE_MEDIUM_MODULE1_HERO_IDS);
+    return;
+  }
+
+  const isHardwareMediumModuleTwo =
+    subject === "hardware" && difficulty === "medium" && moduleKey === "module2";
+
+  hero.classList.toggle("module-hero-media-contain", isHardwareMediumModuleTwo);
+  if (!isHardwareMediumModuleTwo) return;
+
+  applySemanticHero(hero, HARDWARE_MEDIUM_MODULE2_CONTENT, HARDWARE_MEDIUM_MODULE2_HERO_IDS);
+}
 
 function getWeekKey(date = new Date()) {
   const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -1359,6 +1480,71 @@ async function getModuleData() {
   const base = MODULE_CATALOG[subject]?.[difficulty]?.[moduleKey] || null;
   if (!base) return null;
 
+  if (subject === "hardware" && difficulty === "easy" && moduleKey === "module1") {
+    return {
+      ...base,
+      images: HARDWARE_EASY_MODULE1_CONTENT.map((item) => ({
+        ...item,
+        src: item.image,
+        caption: item.title,
+        info: item.description
+      }))
+    };
+  }
+
+  if (subject === "hardware" && difficulty === "easy" && moduleKey === "module2") {
+    return {
+      ...base,
+      images: HARDWARE_EASY_MODULE2_CONTENT.map((item) => ({
+        ...item,
+        src: item.image,
+        caption: item.title,
+        info: item.description
+      }))
+    };
+  }
+
+  if (subject === "hardware" && difficulty === "easy" && moduleKey === "module3") {
+    return {
+      ...base,
+      authoritativeLesson: HARDWARE_EASY_MODULE3_LESSON,
+      images: HARDWARE_EASY_MODULE3_CONTENT.map((item) => ({
+        ...item,
+        src: item.image,
+        caption: item.title,
+        info: item.description
+      }))
+    };
+  }
+
+  if (subject === "hardware" && difficulty === "medium" && moduleKey === "module1") {
+    return {
+      ...base,
+      content: HARDWARE_MEDIUM_MODULE1_LESSON.introduction,
+      authoritativeLesson: HARDWARE_MEDIUM_MODULE1_LESSON,
+      images: HARDWARE_MEDIUM_MODULE1_CONTENT.map((item) => ({
+        ...item,
+        src: item.image,
+        caption: item.title,
+        info: item.description
+      }))
+    };
+  }
+
+  if (subject === "hardware" && difficulty === "medium" && moduleKey === "module2") {
+    return {
+      ...base,
+      content: HARDWARE_MEDIUM_MODULE2_LESSON.introduction,
+      authoritativeLesson: HARDWARE_MEDIUM_MODULE2_LESSON,
+      images: HARDWARE_MEDIUM_MODULE2_CONTENT.map((item) => ({
+        ...item,
+        src: item.image,
+        caption: item.title,
+        info: item.description
+      }))
+    };
+  }
+
   const { moduleImages, supplementalImages } = await loadModuleImageBanks();
   const embeddedImages = moduleImages?.[subject]?.[difficulty]?.[moduleKey] || [];
   const supplementalImageSet = supplementalImages?.[subject]?.[difficulty]?.[moduleKey] || [];
@@ -1407,6 +1593,19 @@ function getQuickCheckBestScoreKey() {
 
 function getModuleResumeStateKey() {
   return `resume_module_state_${subject}_${difficulty}_${moduleKey}`;
+}
+
+function readLocalProgress(baseKey) {
+  return readScopedLocalProgress(
+    localStorage,
+    baseKey,
+    currentUser?.uid || null,
+    { migrateLegacyGuest: !currentUser }
+  );
+}
+
+function writeLocalProgress(baseKey, value) {
+  writeScopedLocalProgress(localStorage, baseKey, value, currentUser?.uid || null);
 }
 
 function getModuleBaseUrl() {
@@ -1536,7 +1735,7 @@ async function ensureUserDoc(uid) {
 }
 
 async function isModuleCompleted() {
-  const localDone = localStorage.getItem(getModuleDoneKey()) === "true";
+  const localDone = readLocalProgress(getModuleDoneKey()) === "true";
   if (localDone) return true;
   if (!currentUser) return localDone;
 
@@ -1545,7 +1744,7 @@ async function isModuleCompleted() {
 }
 
 async function hasReachedModuleBottom() {
-  const localRead = localStorage.getItem(getModuleReadKey()) === "true";
+  const localRead = readLocalProgress(getModuleReadKey()) === "true";
   if (localRead) return true;
   if (!currentUser) return localRead;
 
@@ -1554,7 +1753,7 @@ async function hasReachedModuleBottom() {
 }
 
 async function hasQuickCheckAttempted() {
-  const localAttempted = localStorage.getItem(getQuickCheckAttemptKey()) === "true";
+  const localAttempted = readLocalProgress(getQuickCheckAttemptKey()) === "true";
   if (localAttempted) return true;
   if (!currentUser) return localAttempted;
 
@@ -1563,7 +1762,7 @@ async function hasQuickCheckAttempted() {
 }
 
 async function hasMatchingActivityCompleted() {
-  const localCompleted = localStorage.getItem(getMatchingActivityDoneKey()) === "true";
+  const localCompleted = readLocalProgress(getMatchingActivityDoneKey()) === "true";
   if (localCompleted) return true;
   if (!currentUser) return localCompleted;
 
@@ -1572,7 +1771,7 @@ async function hasMatchingActivityCompleted() {
 }
 
 async function hasDragDropActivityCompleted() {
-  const localCompleted = localStorage.getItem(getDragDropActivityDoneKey()) === "true";
+  const localCompleted = readLocalProgress(getDragDropActivityDoneKey()) === "true";
   if (localCompleted) return true;
   if (!currentUser) return localCompleted;
 
@@ -1582,7 +1781,7 @@ async function hasDragDropActivityCompleted() {
 
 async function markModuleReadBottom() {
   await authReadyPromise;
-  localStorage.setItem(getModuleReadKey(), "true");
+  writeLocalProgress(getModuleReadKey(), "true");
 
   if (!currentUser) return;
 
@@ -1596,7 +1795,7 @@ async function markModuleReadBottom() {
 
 async function markQuickCheckAttempted() {
   await authReadyPromise;
-  localStorage.setItem(getQuickCheckAttemptKey(), "true");
+  writeLocalProgress(getQuickCheckAttemptKey(), "true");
 
   if (!currentUser) return;
 
@@ -1610,7 +1809,7 @@ async function markQuickCheckAttempted() {
 
 async function markMatchingActivityCompleted() {
   await authReadyPromise;
-  localStorage.setItem(getMatchingActivityDoneKey(), "true");
+  writeLocalProgress(getMatchingActivityDoneKey(), "true");
 
   if (!currentUser) return;
 
@@ -1624,7 +1823,7 @@ async function markMatchingActivityCompleted() {
 
 async function markDragDropActivityCompleted() {
   await authReadyPromise;
-  localStorage.setItem(getDragDropActivityDoneKey(), "true");
+  writeLocalProgress(getDragDropActivityDoneKey(), "true");
 
   if (!currentUser) return;
 
@@ -1659,7 +1858,7 @@ async function getModuleGateState() {
 async function markModuleCompleted() {
   await authReadyPromise;
   const moduleData = await getModuleData();
-  localStorage.setItem(getModuleDoneKey(), "true");
+  writeLocalProgress(getModuleDoneKey(), "true");
   localStorage.setItem(RECENT_MODULE_COMPLETION_KEY, JSON.stringify({
     subject,
     difficulty,
@@ -1682,7 +1881,7 @@ async function markModuleCompleted() {
 
 async function hasModuleXPAwarded() {
   await authReadyPromise;
-  const localAwarded = localStorage.getItem(getModuleXPKey()) === "true";
+  const localAwarded = readLocalProgress(getModuleXPKey()) === "true";
   if (localAwarded) return true;
   if (!currentUser) return false;
 
@@ -1706,7 +1905,7 @@ async function awardModuleXPOnce() {
     return 0;
   }
 
-  localStorage.setItem(getModuleXPKey(), "true");
+  writeLocalProgress(getModuleXPKey(), "true");
 
   if (currentUser) {
     await ensureUserDoc(currentUser.uid);
@@ -1750,7 +1949,7 @@ async function awardModuleXPOnce() {
 
 async function getQuickCheckBestScore() {
   await authReadyPromise;
-  const localBest = parseInt(localStorage.getItem(getQuickCheckBestScoreKey()) || "0", 10);
+  const localBest = parseInt(readLocalProgress(getQuickCheckBestScoreKey()) || "0", 10);
   if (!currentUser) {
     return localBest;
   }
@@ -1781,7 +1980,7 @@ async function awardQuickCheckXP(score) {
     return 0;
   }
 
-  localStorage.setItem(getQuickCheckBestScoreKey(), String(earnedScore));
+  writeLocalProgress(getQuickCheckBestScoreKey(), String(earnedScore));
 
   if (currentUser) {
     await ensureUserDoc(currentUser.uid);
@@ -1890,7 +2089,7 @@ function getCheckpointButtonText(completed, gateState = currentModuleGateState) 
 function getVisibleRailSteps() {
   return Array.from(document.querySelectorAll(".module-rail-step")).filter((button) => {
     const target = document.getElementById(button.dataset.moduleRailTarget);
-    return target && !target.hidden;
+    return !button.hidden && target && !target.hidden;
   });
 }
 
@@ -1899,22 +2098,35 @@ function updateModuleProgressRail(gateState = currentModuleGateState) {
   if (!railSteps.length) return;
 
   const visibleSteps = getVisibleRailSteps();
-  let activeStep = visibleSteps[0] || null;
   const anchorY = window.scrollY + Math.round(window.innerHeight * 0.32);
-
-  visibleSteps.forEach((button) => {
+  const activeKey = selectActiveRailKey(visibleSteps.map((button) => {
     const target = document.getElementById(button.dataset.moduleRailTarget);
-    if (target && target.offsetTop <= anchorY) {
-      activeStep = button;
-    }
-  });
+    return {
+      key: button.dataset.moduleRailKey,
+      documentTop: target.getBoundingClientRect().top + window.scrollY,
+      activationOffset: getRailTargetActivationOffset({
+        key: button.dataset.moduleRailKey,
+        target: button.dataset.moduleRailTarget,
+        viewportHeight: window.innerHeight
+      })
+    };
+  }), anchorY);
+  const activeStep = visibleSteps.find((button) => button.dataset.moduleRailKey === activeKey) || null;
 
   railSteps.forEach((button) => {
+    if (button.hidden) {
+      button.disabled = false;
+      button.classList.remove("locked", "active", "done");
+      button.setAttribute("aria-current", "false");
+      return;
+    }
+
     const target = document.getElementById(button.dataset.moduleRailTarget);
     const key = button.dataset.moduleRailKey;
     const isVisible = target && !target.hidden;
     const isActive = button === activeStep;
-    const isPast = isVisible && target.offsetTop + Math.min(target.offsetHeight, window.innerHeight * 0.55) < anchorY;
+    const targetTop = isVisible ? target.getBoundingClientRect().top + window.scrollY : 0;
+    const isPast = isVisible && targetTop + Math.min(target.offsetHeight, window.innerHeight * 0.55) < anchorY;
     const isCheckpointDone =
       key === "challenge" && (gateState.readBottom || gateState.quickCheckAttempted || gateState.completed);
     const isContinueDone = key === "continue" && gateState.completed;
@@ -1927,11 +2139,20 @@ function updateModuleProgressRail(gateState = currentModuleGateState) {
   });
 }
 
+function setModuleRailActiveStep(activeButton) {
+  document.querySelectorAll(".module-rail-step").forEach((button) => {
+    const isActive = !button.hidden && button === activeButton;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-current", isActive ? "step" : "false");
+  });
+}
+
 function bindModuleProgressRail() {
   document.querySelectorAll(".module-rail-step").forEach((button) => {
     button.addEventListener("click", () => {
       const target = document.getElementById(button.dataset.moduleRailTarget);
       if (!target || target.hidden) return;
+      setModuleRailActiveStep(button);
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
@@ -2757,6 +2978,15 @@ function escapeHtml(value) {
 }
 
 function getDocumentLayout(data, lessonDetails) {
+  if (data?.authoritativeLesson?.sections) {
+    return {
+      structured: true,
+      authoritativeRules: true,
+      sections: data.authoritativeLesson.sections,
+      tables: []
+    };
+  }
+
   const preset = DOCUMENT_LAYOUTS[data?.title] || {};
   const overview = String(data?.content || "")
     .split(/\n\s*\n/)[0]
@@ -2813,7 +3043,14 @@ function renderDocumentLayout(data, lessonDetails) {
     const paragraphs = (item.paragraphs || [])
       .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
       .join("");
-    card.innerHTML = `<h3>${escapeHtml(item.heading)}</h3>${paragraphs}`;
+    const rules = (item.rules || [])
+      .map((rule) => `<li>${escapeHtml(rule)}</li>`)
+      .join("");
+    card.classList.toggle("module-doc-rules-card", Boolean(item.rules));
+    card.innerHTML = `
+      <h3>${escapeHtml(item.heading)}</h3>
+      ${rules ? `<ol class="module-doc-rules">${rules}</ol>` : paragraphs}
+    `;
     container.appendChild(card);
   });
 
@@ -2853,10 +3090,10 @@ function renderDocumentLayout(data, lessonDetails) {
 
 function getNextModuleUrl() {
   if (moduleNumber >= totalModulesForDifficulty) {
-    return `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
+    return buildModuleLevelsUrl(subject, difficulty);
   }
 
-  return `module.html?subject=${subject}&difficulty=${difficulty}&module=module${moduleNumber + 1}`;
+  return buildModuleLessonUrl(subject, difficulty, `module${moduleNumber + 1}`);
 }
 
 function queueStudyHistorySave(payload) {
@@ -2949,37 +3186,7 @@ async function renderModulePage() {
   updateCheckpointUi(false, null);
 
   if (!data) {
-    document.getElementById("title").textContent = "Module content coming soon";
-    document.getElementById("moduleSubtitle").textContent =
-      `${subjectName} ${difficultyName} module ${moduleNumber} is not filled in yet.`;
-    document.getElementById("content").textContent =
-      "This lesson slot is already part of the structure, but the full teaching content has not been added yet.";
-    document.getElementById("studyTip").textContent =
-      "Use this page as a template while we build the full lesson set for every difficulty.";
-    document.getElementById("moduleStatusChip").textContent = "Needs content";
-    document.getElementById("moduleActionBtn").textContent = "Back to Modules";
-    document.getElementById("moduleActionBtn").onclick = goBackToLevels;
-    renderPills(objectives, [
-      "Wait for the final lesson content",
-      "Use this slot to organize the module structure",
-      "Prepare images and review notes for this lesson"
-    ]);
-    renderSections(sections, [
-      {
-        heading: "Module Setup",
-        body: "This module slot already exists in the flow. The next step is to attach the full lesson text, concept explanations, visuals, and review prompts based on the original source material."
-      }
-    ]);
-    renderChallenge(challengeTitle, challengePrompt, challengePoints, {
-      title: "Challenge",
-      prompt: "What key skill, concept, or safety idea should this module teach once it is fully built?",
-      points: [
-        "Identify the main lesson focus",
-        "List the visuals that should appear here",
-        "Prepare the quiz topic that should follow this module"
-      ]
-    });
-      renderModuleImages([], gallery, galleryChip, galleryNote, null);
+    window.dispatchEvent(new CustomEvent("coderecall:module-invalid"));
     return;
   }
 
@@ -2995,6 +3202,10 @@ async function renderModulePage() {
   document.getElementById("moduleActionBtn").onclick = startQuiz;
   renderPills(objectives, lessonDetails?.objectives || []);
   const useLessonPathForTroubleshooting = data.title === "Troubleshooting";
+  configureModuleProgressRail({
+    structured: Boolean(documentLayout?.structured),
+    troubleshooting: useLessonPathForTroubleshooting
+  });
   renderSections(
     sections,
     useLessonPathForTroubleshooting
@@ -3048,6 +3259,7 @@ async function renderModulePage() {
   };
 
   try {
+    await authReadyPromise;
     gateState = await getModuleGateState();
     gateState = {
       ...gateState,
@@ -3223,10 +3435,7 @@ function renderMatchingActivity(data, lessonDetails = {}) {
   const pairs = activity.pairs.map((pair, index) => ({ ...pair, id: `match-${index}` }));
   const shuffledMatches = [...pairs].sort(() => Math.random() - 0.5);
   let selectedTermId = "";
-  const solved = new Set();
-  if (currentModuleGateState.matchingCompleted) {
-    pairs.forEach((pair) => solved.add(pair.id));
-  }
+  const solved = createFreshMatchingSolvedSet();
 
   section.hidden = false;
   titleEl.textContent = activity.title || "Matching Practice";
@@ -3238,7 +3447,7 @@ function renderMatchingActivity(data, lessonDetails = {}) {
     if (solved.size === pairs.length) {
       statusEl.textContent = "Nice work. All matching pairs are complete.";
       section.classList.add("is-complete");
-      if (!currentModuleGateState.matchingCompleted) {
+      if (shouldPersistMatchingCompletion(currentModuleGateState.matchingCompleted)) {
         currentModuleGateState = {
           ...currentModuleGateState,
           matchingRequired: true,
@@ -3933,6 +4142,24 @@ function buildProfileRows(details = {}) {
   ].filter((item) => item.value);
 }
 
+let moduleImageModalReturnFocus = null;
+let moduleImageModalZoomLevel = 1;
+
+function setModuleImageModalZoom(nextZoom) {
+  const modal = document.getElementById("moduleImageModal");
+  const modalImg = document.getElementById("moduleImageModalImg");
+  const viewport = document.getElementById("moduleImageModalViewport");
+  const status = document.getElementById("moduleImageModalZoomStatus");
+  if (!modal?.classList.contains("readable-figure") || !modalImg || !viewport) return;
+
+  moduleImageModalZoomLevel = Math.min(3, Math.max(1, nextZoom));
+  const isFit = moduleImageModalZoomLevel === 1;
+  modalImg.classList.toggle("is-zoomed", !isFit);
+  modalImg.style.width = isFit ? "" : `${moduleImageModalZoomLevel * 100}%`;
+  if (status) status.textContent = isFit ? "Fit" : `${Math.round(moduleImageModalZoomLevel * 100)}%`;
+  if (isFit) viewport.scrollTo({ top: 0, left: 0 });
+}
+
 function openModuleImageModal(profile) {
   const modal = document.getElementById("moduleImageModal");
   const modalImg = document.getElementById("moduleImageModalImg");
@@ -3941,6 +4168,8 @@ function openModuleImageModal(profile) {
   const modalTitle = document.getElementById("moduleImageModalTitle");
   const modalDescription = document.getElementById("moduleImageModalDescription");
   const modalDetails = document.getElementById("moduleImageModalDetails");
+  const modalVideo = document.getElementById("moduleImageModalVideo");
+  const modalZoom = document.getElementById("moduleImageModalZoom");
 
   if (!modal || !modalImg || !modalCaption || !modalKicker || !modalTitle || !modalDescription || !modalDetails || !profile) {
     return;
@@ -3957,9 +4186,19 @@ function openModuleImageModal(profile) {
   modalImg.src = profile.portrait || profile.src || "";
   modalImg.alt = profile.alt || title;
   modalCaption.textContent = profile.caption || title;
-  modalKicker.textContent = isHistoryProfile ? "History Profile" : "Image Detail";
+  modalKicker.textContent = isHistoryProfile
+    ? "History Profile"
+    : (profile.categoryLabel || "Image Detail");
   modalTitle.textContent = title;
   modalDescription.textContent = description;
+  const usesReadableFigureMode = profile.detailMode === "readable-figure";
+  modal.classList.toggle("readable-figure", usesReadableFigureMode);
+  if (modalZoom) modalZoom.hidden = !usesReadableFigureMode;
+  moduleImageModalZoomLevel = 1;
+  modalImg.classList.remove("is-zoomed");
+  modalImg.style.width = "";
+  const zoomStatus = document.getElementById("moduleImageModalZoomStatus");
+  if (zoomStatus) zoomStatus.textContent = "Fit";
   modalDetails.hidden = detailRows.length === 0;
   modalDetails.innerHTML = detailRows.map((item) => `
     <div class="module-image-detail">
@@ -3968,9 +4207,21 @@ function openModuleImageModal(profile) {
     </div>
   `).join("");
 
+  if (modalVideo) {
+    const safeVideoUrl = typeof profile.videoUrl === "string" && /^https:\/\//i.test(profile.videoUrl)
+      ? profile.videoUrl
+      : "";
+    modalVideo.hidden = !safeVideoUrl;
+    modalVideo.href = safeVideoUrl || "#";
+  }
+
+  moduleImageModalReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
   modal.classList.add("active");
   modal.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
+  document.getElementById("moduleImageModalClose")?.focus();
 }
 
 function closeModuleImageModal() {
@@ -3978,16 +4229,27 @@ function closeModuleImageModal() {
   if (!modal) return;
 
   modal.classList.remove("active");
+  modal.classList.remove("readable-figure");
   modal.setAttribute("aria-hidden", "true");
   document.body.style.overflow = "";
+  if (moduleImageModalReturnFocus?.isConnected) {
+    moduleImageModalReturnFocus.focus();
+  }
+  moduleImageModalReturnFocus = null;
 }
 
 function initializeModuleImageModal() {
   const modal = document.getElementById("moduleImageModal");
   const dialog = modal?.querySelector(".module-image-modal-dialog");
   const closeBtn = document.getElementById("moduleImageModalClose");
+  const zoomInBtn = document.getElementById("moduleImageModalZoomIn");
+  const zoomOutBtn = document.getElementById("moduleImageModalZoomOut");
+  const zoomResetBtn = document.getElementById("moduleImageModalZoomReset");
 
   closeBtn?.addEventListener("click", closeModuleImageModal);
+  zoomInBtn?.addEventListener("click", () => setModuleImageModalZoom(moduleImageModalZoomLevel + 0.25));
+  zoomOutBtn?.addEventListener("click", () => setModuleImageModalZoom(moduleImageModalZoomLevel - 0.25));
+  zoomResetBtn?.addEventListener("click", () => setModuleImageModalZoom(1));
   modal?.addEventListener("click", (event) => {
     if (event.target === modal) {
       closeModuleImageModal();
@@ -4433,44 +4695,52 @@ function renderActiveCircuits(moduleData) {
 function getMotherboardFormFactorCards() {
   return [
     {
+      semanticId: "form-factor-atx",
       title: "ATX",
       kicker: "Standard Desktop Board",
       subtitle: "The lesson lists ATX as one of the common motherboard form factors.",
       boardSrc: "assets/modules/hardware/medium/module1/atx-motherboard.jpg",
       boardAlt: "ATX motherboard photo",
-      boardLabel: "Actual motherboard photo",
+      boardLabel: "Supplemental motherboard photo (RAM slots highlighted)",
       boardText: "ATX is the standard motherboard size commonly used in desktop computer systems.",
-      description: "Use this container to remember the standard ATX layout before comparing it with the larger and smaller board formats."
+      description: "Use this container to remember the standard ATX layout before comparing it with the larger and smaller board formats.",
+      detailMode: "standard"
     },
     {
+      semanticId: "form-factor-eatx",
       title: "E-ATX",
       kicker: "Larger Expansion Layout",
       subtitle: "The lesson also names E-ATX as a larger board layout.",
       boardSrc: "assets/modules/hardware/medium/module1/eatx-motherboard.jpg",
       boardAlt: "E-ATX motherboard photo",
-      boardLabel: "Actual motherboard photo",
+      boardLabel: "Supplemental motherboard photo",
       boardText: "E-ATX is larger than ATX and is commonly used for high-end systems with more expansion space.",
-      description: "Use this container to connect the idea of additional board space with the E-ATX form factor."
+      description: "Use this container to connect the idea of additional board space with the E-ATX form factor.",
+      detailMode: "standard"
     },
     {
+      semanticId: "form-factor-micro-atx",
       title: "Micro-ATX",
       kicker: "Smaller Square Layout",
       subtitle: "The lesson includes Micro-ATX as a more compact motherboard size.",
       boardSrc: "assets/modules/hardware/medium/module1/micro-atx-motherboard.png",
       boardAlt: "Micro-ATX motherboard photo",
-      boardLabel: "Actual motherboard photo",
+      boardLabel: "Supplemental motherboard photo",
       boardText: "Micro-ATX is a smaller square motherboard format used in more compact desktop systems.",
-      description: "Use this container to remember that Micro-ATX keeps the motherboard's main functions in a smaller layout."
+      description: "Use this container to remember that Micro-ATX keeps the motherboard's main functions in a smaller layout.",
+      detailMode: "standard"
     },
     {
+      semanticId: "form-factor-mini-itx",
       title: "Mini-ITX",
       kicker: "Compact System Layout",
       subtitle: "The lesson names Mini-ITX as the compact form factor for space-saving builds.",
       boardSrc: "assets/modules/hardware/medium/module1/mini-itx-motherboard.png",
       boardAlt: "Mini-ITX motherboard photo",
-      boardLabel: "Actual motherboard photo",
+      boardLabel: "Supplemental motherboard photo",
       boardText: "Mini-ITX is a compact motherboard form factor designed for space-saving builds.",
-      description: "Use this container to connect compact computer cases with the Mini-ITX motherboard format."
+      description: "Use this container to connect compact computer cases with the Mini-ITX motherboard format.",
+      detailMode: "standard"
     }
   ];
 }
@@ -4496,10 +4766,12 @@ function renderMotherboardFormFactors(moduleData) {
   }
 
   const cards = getMotherboardFormFactorCards();
+  const heading = section.querySelector(".module-content-head h2");
   section.hidden = false;
+  if (heading) heading.textContent = "Motherboard Form Factors";
   chip.textContent = `${cards.length} form factors`;
   note.textContent =
-    "Each form factor is placed in its own container so the board type is easier to compare one by one.";
+    "Compare the common motherboard sizes and how their layouts support different system sizes and expansion needs.";
 
   grid.innerHTML = cards.map((card) => `
     <article class="module-form-factor-card">
@@ -4512,19 +4784,41 @@ function renderMotherboardFormFactors(moduleData) {
         <span class="module-form-factor-pill">Form Factor</span>
       </div>
       <div class="module-form-factor-media">
-        <div class="module-form-factor-panel">
+        <button type="button" class="module-form-factor-panel module-form-factor-enlarge" data-form-factor-id="${card.semanticId}" aria-label="Enlarge ${card.title} motherboard image">
           <img src="${card.boardSrc}" alt="${card.boardAlt}" loading="lazy" decoding="async">
+          <span class="module-form-factor-zoom" aria-hidden="true">Enlarge</span>
           <div class="module-form-factor-panel-copy">
             <p class="module-form-factor-label">${card.boardLabel}</p>
             <p class="module-form-factor-text">${card.boardText}</p>
           </div>
-        </div>
+        </button>
       </div>
       <div class="module-form-factor-footer">
         <p>${card.description}</p>
       </div>
     </article>
   `).join("");
+
+  grid.querySelectorAll("[data-form-factor-id]").forEach((control) => {
+    const card = cards.find((item) => item.semanticId === control.dataset.formFactorId);
+    if (!card) return;
+    control.addEventListener("click", () => openModuleImageModal(getMotherboardFormFactorModalProfile(card)));
+  });
+}
+
+function configureModuleProgressRail({ structured = false, troubleshooting = false } = {}) {
+  const layout = resolveModuleRailLayout({ structured, troubleshooting });
+  const notesButton = document.querySelector('[data-module-rail-key="notes"]');
+  const pathButton = document.querySelector('[data-module-rail-key="path"]');
+
+  if (notesButton) {
+    notesButton.hidden = !layout.notes.visible;
+    notesButton.dataset.moduleRailTarget = layout.notes.target;
+  }
+  if (pathButton) {
+    pathButton.hidden = !layout.path.visible;
+    pathButton.dataset.moduleRailTarget = layout.path.target;
+  }
 }
 
 function getTroubleshootingSteps() {
@@ -4578,10 +4872,166 @@ function renderTroubleshootingSteps(images, gallery, galleryChip, galleryNote) {
   }).join("");
 }
 
+function getMotherboardFormFactorModalProfile(card) {
+  return {
+    semanticId: card.semanticId,
+    caption: card.title,
+    src: card.boardSrc,
+    alt: card.boardAlt,
+    info: `${card.boardText} ${card.description}`,
+    detailMode: card.detailMode,
+    provenanceNote: "Supplemental repository image supporting the PDF's form-factor lesson; not an extracted PDF figure."
+  };
+}
+
+function renderAuthoritativeHardwareGallery(images, categories, headingText, gallery, galleryChip, galleryNote) {
+  const galleryHeading = document.querySelector("#moduleGallerySection .module-content-head h2");
+  if (galleryHeading) {
+    galleryHeading.textContent = headingText;
+  }
+  gallery.classList.add("module-gallery-categories");
+  galleryChip.textContent = `${images.length} instructional entries`;
+  galleryNote.textContent =
+    "Select any component to review its source-supported function in the enlarged detail view.";
+
+  categories.forEach((category) => {
+    const categoryImages = images.filter((image) => image.categoryId === category.categoryId);
+    const section = document.createElement("section");
+    section.className = "module-gallery-category";
+    section.setAttribute("aria-labelledby", `gallery-category-${category.categoryId}`);
+
+    const heading = document.createElement("div");
+    heading.className = "module-gallery-category-head";
+    heading.innerHTML = `
+      <div>
+        <h3 id="gallery-category-${category.categoryId}">${escapeHtml(category.categoryLabel)}</h3>
+        ${category.subtitle ? `<p>${escapeHtml(category.subtitle)}</p>` : ""}
+      </div>
+      <span class="module-gallery-category-count">${categoryImages.length} ${categoryImages.length === 1 ? "entry" : "entries"}</span>
+    `;
+
+    const grid = document.createElement("div");
+    grid.className = "module-gallery-category-grid";
+
+    categoryImages.forEach((image) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "module-figure compact-image-card authoritative-image-card";
+      card.setAttribute("aria-label", `Open ${image.title} details from ${image.categoryLabel}`);
+      card.innerHTML = `
+        <span class="module-figure-media">
+          <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || image.title)}" loading="lazy" decoding="async">
+          <span class="module-figure-zoom" aria-hidden="true">Enlarge</span>
+        </span>
+        <span class="module-figure-caption">
+          <span class="module-figure-category">${escapeHtml(image.categoryLabel)}</span>
+          <span class="module-figure-title">${escapeHtml(image.title)}</span>
+        </span>
+      `;
+      card.addEventListener("click", () => openModuleImageModal(image));
+      grid.appendChild(card);
+    });
+
+    section.append(heading, grid);
+    gallery.appendChild(section);
+  });
+}
+
+function renderAuthoritativeHardwareModuleOneGallery(images, gallery, galleryChip, galleryNote) {
+  renderAuthoritativeHardwareGallery(
+    images,
+    HARDWARE_EASY_MODULE1_CATEGORIES,
+    "Computer Parts Visual Guide",
+    gallery,
+    galleryChip,
+    galleryNote
+  );
+}
+
+function renderAuthoritativeHardwareModuleTwoGallery(images, gallery, galleryChip, galleryNote) {
+  renderAuthoritativeHardwareGallery(
+    images,
+    HARDWARE_EASY_MODULE2_CATEGORIES,
+    "Safety Tools Visual Guide",
+    gallery,
+    galleryChip,
+    galleryNote
+  );
+}
+
+function renderAuthoritativeHardwareMediumModuleOneGallery(images, gallery, galleryChip, galleryNote) {
+  renderAuthoritativeHardwareGallery(
+    images,
+    HARDWARE_MEDIUM_MODULE1_CATEGORIES,
+    "Motherboard Instructional Figures",
+    gallery,
+    galleryChip,
+    galleryNote
+  );
+}
+
+function renderAuthoritativeHardwareMediumModuleTwoGallery(images, gallery, galleryChip, galleryNote) {
+  const galleryHeading = document.querySelector("#moduleGallerySection .module-content-head h2");
+  if (galleryHeading) {
+    galleryHeading.textContent = "Configuration Instructional Figures";
+  }
+  gallery.classList.add("module-gallery-figures");
+  galleryChip.textContent = `${images.length} instructional figures`;
+  galleryNote.textContent =
+    "Select any figure to review the preparation, assembly, and testing sequence in an enlarged view.";
+
+  images.forEach((image) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "module-figure compact-image-card authoritative-image-card";
+    card.setAttribute("aria-label", `Open ${image.title} details`);
+    card.innerHTML = `
+      <span class="module-figure-media">
+        <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || image.title)}" loading="lazy" decoding="async">
+        <span class="module-figure-zoom" aria-hidden="true">Enlarge</span>
+      </span>
+      <span class="module-figure-caption">
+        <span class="module-figure-title">${escapeHtml(image.title)}</span>
+      </span>
+    `;
+    card.addEventListener("click", () => openModuleImageModal(image));
+    gallery.appendChild(card);
+  });
+}
+
+function renderAuthoritativeHardwareModuleThreeGallery(images, gallery, galleryChip, galleryNote) {
+  const galleryHeading = document.querySelector("#moduleGallerySection .module-content-head h2");
+  if (galleryHeading) {
+    galleryHeading.textContent = "OHS Instructional Figures";
+  }
+  gallery.classList.add("module-gallery-figures");
+  galleryChip.textContent = `${images.length} instructional figures`;
+  galleryNote.textContent =
+    "Select any figure to review its source context in the enlarged detail view.";
+
+  images.forEach((image) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "module-figure compact-image-card authoritative-image-card";
+    card.setAttribute("aria-label", `Open ${image.title} details`);
+    card.innerHTML = `
+      <span class="module-figure-media">
+        <img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt || image.title)}" loading="lazy" decoding="async">
+        <span class="module-figure-zoom" aria-hidden="true">Enlarge</span>
+      </span>
+      <span class="module-figure-caption">
+        <span class="module-figure-title">${escapeHtml(image.title)}</span>
+      </span>
+    `;
+    card.addEventListener("click", () => openModuleImageModal(image));
+    gallery.appendChild(card);
+  });
+}
+
 function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleData = null) {
   const gallerySection = document.getElementById("moduleGallerySection");
   gallery.innerHTML = "";
-  gallery.classList.remove("module-gallery-grid-single");
+  gallery.classList.remove("module-gallery-grid-single", "module-gallery-categories", "module-gallery-figures");
 
   if (
     moduleData?.title === "History" ||
@@ -4647,6 +5097,31 @@ function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleDat
   galleryNote.textContent =
     "These visuals are shown as part of the lesson to match the original module material.";
 
+  if (subject === "hardware" && difficulty === "easy" && moduleKey === "module1") {
+    renderAuthoritativeHardwareModuleOneGallery(galleryImages, gallery, galleryChip, galleryNote);
+    return;
+  }
+
+  if (subject === "hardware" && difficulty === "easy" && moduleKey === "module2") {
+    renderAuthoritativeHardwareModuleTwoGallery(galleryImages, gallery, galleryChip, galleryNote);
+    return;
+  }
+
+  if (subject === "hardware" && difficulty === "easy" && moduleKey === "module3") {
+    renderAuthoritativeHardwareModuleThreeGallery(galleryImages, gallery, galleryChip, galleryNote);
+    return;
+  }
+
+  if (subject === "hardware" && difficulty === "medium" && moduleKey === "module1") {
+    renderAuthoritativeHardwareMediumModuleOneGallery(galleryImages, gallery, galleryChip, galleryNote);
+    return;
+  }
+
+  if (subject === "hardware" && difficulty === "medium" && moduleKey === "module2") {
+    renderAuthoritativeHardwareMediumModuleTwoGallery(galleryImages, gallery, galleryChip, galleryNote);
+    return;
+  }
+
   if (moduleKey === "module1" && subject === "hardware" && difficulty === "hard") {
     renderTroubleshootingSteps(galleryImages, gallery, galleryChip, galleryNote);
     return;
@@ -4683,7 +5158,7 @@ function renderModuleImages(images, gallery, galleryChip, galleryNote, moduleDat
    NAVIGATION
 ========================= */
 window.goBackToLevels = function () {
-  window.location.href = `module-levels.html?subject=${subject}&difficulty=${difficulty}`;
+  window.location.href = buildModuleLevelsUrl(subject, difficulty);
 };
 
 window.startQuiz = async function () {
@@ -4750,9 +5225,15 @@ function updateIcon() {
 
 /* RUN */
 loadTheme();
+configureModuleHero();
 initializeModuleImageModal();
 bindModuleProgressRail();
-renderModulePage();
+renderModulePage()
+  .then(() => window.dispatchEvent(new CustomEvent("coderecall:module-ready")))
+  .catch((error) => {
+    console.error("Unable to initialize module page:", error);
+    window.dispatchEvent(new CustomEvent("coderecall:module-failed"));
+  });
 
 initSounds();
 initGlobalClickSound();

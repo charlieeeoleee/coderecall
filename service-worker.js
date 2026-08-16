@@ -1,4 +1,4 @@
-const CACHE_VERSION = "code-recall-v20260809-vercel-api";
+const CACHE_VERSION = "code-recall-v20260814-subject-entry-routing";
 const APP_SHELL = [
   "./",
   "./offline.html",

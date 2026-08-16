@@ -6,6 +6,7 @@ const ERROR_STATUS = {
   permission_denied: 403,
   not_found: 404,
   conflict: 409,
+  matching_failed: 409,
   rate_limited: 429,
   temporary_unavailable: 503,
   internal: 500
@@ -38,6 +39,23 @@ function methodAllowed(req, allowed) {
 
 async function readJsonBody(req, options = {}) {
   const maxBytes = options.maxBytes || 16 * 1024;
+  if (req.body !== undefined && req.body !== null) {
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : req.body;
+    const serialized = typeof rawBody === "string" ? rawBody : JSON.stringify(rawBody);
+    if (Buffer.byteLength(serialized, "utf8") > maxBytes) {
+      throw new ApiError("invalid_request", "Request body is too large.", 413);
+    }
+    try {
+      const parsed = typeof rawBody === "string" ? JSON.parse(rawBody) : rawBody;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("JSON body must be an object.");
+      }
+      return parsed;
+    } catch {
+      throw new ApiError("invalid_request", "Request body must be valid JSON.");
+    }
+  }
+
   let size = 0;
   let raw = "";
 

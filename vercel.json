@@ -2,6 +2,12 @@
   "buildCommand": "node scripts/write-runtime-config.mjs",
   "outputDirectory": ".",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/404"
+    }
+  ],
   "headers": [
     {
       "source": "/auth.html",

@@ -19,7 +19,7 @@
     <span class="difficulty-logo-recall">RECALL!</span>
   </a>
 
-  <button class="theme-toggle difficulty-theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+  <button class="theme-toggle difficulty-theme-toggle" id="difficultyThemeToggle" type="button" aria-label="Toggle theme">
     <span id="themeIcon">&#127769;</span>
   </button>
 
@@ -34,7 +34,7 @@
     </section>
 
     <section class="difficulty-grid">
-      <button class="difficulty-card difficulty-easy card" onclick="openDifficulty('easy')">
+      <button class="difficulty-card difficulty-easy card" id="easyBtn" type="button">
         <div class="difficulty-card-glow"></div>
         <div class="difficulty-card-inner">
           <span class="difficulty-badge">BEGINNER</span>
@@ -63,9 +63,9 @@
     </section>
   </main>
 
-    <button class="difficulty-back-btn" onclick="goBack()">Back</button>
+    <button class="difficulty-back-btn" id="difficultyBackBtn" type="button">Back</button>
 
-  <script type="module">
+  <script type="application/x-coderecall-legacy-disabled">
     import {
       initSounds,
       initGlobalClickSound,
@@ -74,6 +74,8 @@
     } from "./scripts/sound.js";
 
     (function () {
+      // The external module owns strict route parsing and difficulty navigation.
+      return;
       const params = new URLSearchParams(window.location.search);
       const subjectParam = (params.get("subject") || "").toLowerCase();
       const unlockMode = (params.get("unlock") || "").toLowerCase();

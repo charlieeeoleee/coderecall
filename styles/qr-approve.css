@@ -71,12 +71,97 @@ p {
   border: 1px solid var(--line);
 }
 
+.approval-account-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .approval-panel strong {
-  overflow-wrap: anywhere;
+  max-width: 100%;
+  font-size: clamp(13px, 3.8vw, 16px);
+  line-height: 1.45;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: pretty;
 }
 
 #approvalStatus.error {
   color: #ff9ca0;
+}
+
+.approval-terminal {
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr);
+  align-items:center;
+  gap:14px;
+  padding:16px;
+  border:1px solid rgba(68,230,170,.28);
+  border-radius:18px;
+  background:linear-gradient(145deg, rgba(31,192,136,.15), rgba(0,229,255,.07));
+}
+
+.approval-terminal[hidden],
+.approval-actions[hidden] {
+  display:none;
+}
+
+.approval-terminal-icon {
+  display:grid;
+  place-items:center;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  color:#071b19;
+  background:#44e6aa;
+  font-size:28px;
+  font-weight:800;
+  box-shadow:0 0 22px rgba(68,230,170,.22);
+}
+
+.approval-terminal h2 {
+  margin:0 0 4px;
+  font-size:clamp(20px, 6vw, 26px);
+  line-height:1.15;
+}
+
+.approval-terminal p {
+  font-size:13px;
+}
+
+.approval-card[data-terminal-tone="warning"] .approval-terminal {
+  border-color:rgba(255,190,92,.3);
+  background:rgba(255,190,92,.09);
+}
+
+.approval-card[data-terminal-tone="warning"] .approval-terminal-icon {
+  color:#251500;
+  background:#ffbe5c;
+  box-shadow:0 0 22px rgba(255,190,92,.2);
+}
+
+.approval-card[data-terminal-tone="danger"] .approval-terminal {
+  border-color:rgba(255,100,124,.3);
+  background:rgba(255,100,124,.09);
+}
+
+.approval-card[data-terminal-tone="danger"] .approval-terminal-icon {
+  color:white;
+  background:#e84d6d;
+  box-shadow:0 0 22px rgba(232,77,109,.2);
+}
+
+.approval-card[data-terminal-tone="neutral"] .approval-terminal {
+  border-color:rgba(0,229,255,.22);
+  background:rgba(0,229,255,.06);
+}
+
+.approval-card[data-terminal-tone="neutral"] .approval-terminal-icon {
+  color:#07182b;
+  background:var(--accent);
+  box-shadow:0 0 22px rgba(0,229,255,.18);
 }
 
 .approval-actions {
@@ -141,4 +226,40 @@ button:disabled {
 
 .approval-note {
   font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  body { padding: 14px; }
+
+  .approval-card {
+    gap: 14px;
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+
+  .approval-terminal {
+    grid-template-columns:44px minmax(0,1fr);
+    gap:12px;
+    padding:14px;
+  }
+
+  .approval-terminal-icon {
+    width:44px;
+    height:44px;
+    font-size:24px;
+  }
+}
+
+@media (max-height: 640px) {
+  body { align-items:start; }
+  .approval-card { padding-block:20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior:auto !important;
+    transition-duration:.01ms !important;
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+  }
 }

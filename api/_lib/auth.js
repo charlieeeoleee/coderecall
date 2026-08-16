@@ -102,10 +102,41 @@ async function requirePrivilegedRole(uid, decodedToken, allowedRoles, context = 
   return role;
 }
 
+async function requireQrEligibleUser(req, context = {}) {
+  const user = await requireFirebaseUser(req, context);
+  const role = await resolvePrivilegedRole(user.uid, user.token);
+  const rejectionEvent = {
+    "/api/auth/qr/context": "qr_login_context_rejected",
+    "/api/auth/qr/match": "qr_login_match_rejected",
+    "/api/auth/qr/deny": "qr_login_deny_rejected",
+    "/api/auth/qr/approve": "qr_login_approval_permission_denied"
+  }[context.endpoint] || "qr_login_eligibility_rejected";
+  if (role === "admin" || role === "super_admin") {
+    logEvent("warn", rejectionEvent, {
+      requestId: context.requestId,
+      endpoint: context.endpoint,
+      userId: hashValue(user.uid),
+      result: "privileged_account"
+    });
+    throw new ApiError("permission_denied", "Privileged accounts must use the standard sign-in and MFA flow.", 403);
+  }
+  if (!user.token.email || user.token.email_verified !== true) {
+    logEvent("warn", rejectionEvent, {
+      requestId: context.requestId,
+      endpoint: context.endpoint,
+      userId: hashValue(user.uid),
+      result: "email_not_verified"
+    });
+    throw new ApiError("permission_denied", "Use a verified learner email account for QR login.", 403);
+  }
+  return { ...user, role };
+}
+
 module.exports = {
   PRIVILEGED_ROLES,
   parseBearerToken,
   requireFirebaseUser,
+  requireQrEligibleUser,
   requirePrivilegedRole,
   resolvePrivilegedRole
 };

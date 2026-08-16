@@ -8,14 +8,26 @@ import {
   restartThemeMusic
 } from "./sound.js";
 import { MODULE_CATALOG, MODULE_STRUCTURE } from "../data/module-data.js";
+import {
+  buildModuleDifficultyUrl,
+  buildModuleLessonUrl,
+  buildModuleLevelsUrl,
+  resolveModuleLevelsRoute
+} from "./module-routing.mjs";
 
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const params = new URLSearchParams(window.location.search);
-const subject = params.get("subject") || "electrical";
-const difficulty = params.get("difficulty") || "easy";
+let route = null;
+let routeError = null;
+try {
+  route = resolveModuleLevelsRoute(window.location.search);
+} catch (error) {
+  routeError = error;
+}
+const subject = route?.subject || "";
+const difficulty = route?.difficulty || "";
 
 let currentUser = null;
 let publishedModules = [];
@@ -31,8 +43,8 @@ const MODULE_XP_REWARD = 5;
 const RECENT_MODULE_COMPLETION_KEY = "recent_module_completion";
 const DIFFICULTY_ORDER = ["easy", "medium", "hard"];
 
-document.getElementById("levelsTitle").textContent = subjectLabels[subject] || "Module Levels";
-document.getElementById("difficultyText").textContent = formatDifficultyLabel(difficulty);
+document.getElementById("levelsTitle").textContent = routeError ? "Invalid Module Link" : subjectLabels[subject];
+document.getElementById("difficultyText").textContent = routeError ? routeError.message : formatDifficultyLabel(difficulty);
 
 function formatDifficultyLabel(level) {
   return level === "hard" ? "Difficult" : level.charAt(0).toUpperCase() + level.slice(1);
@@ -98,13 +110,13 @@ window.toggleTheme = function() {
 };
 
 window.goBackToDifficulty = function() {
-  window.location.href = `module-difficulty.html?subject=${subject}`;
+  window.location.href = routeError ? "/subjects" : buildModuleDifficultyUrl(subject);
 };
 
 window.goToNextDifficulty = function() {
   const nextDifficulty = getNextDifficulty(difficulty);
   if (!nextDifficulty) return;
-  window.location.href = `module-levels.html?subject=${subject}&difficulty=${nextDifficulty}`;
+  window.location.href = buildModuleLevelsUrl(subject, nextDifficulty);
 };
 
 async function loadPublishedModuleEntries() {
@@ -139,13 +151,13 @@ async function ensureUserDoc(uid) {
 async function getUserProgress() {
   const progress = {};
 
-  for (let i = 1; i <= totalLevels; i++) {
-    progress[getLevelKey(i)] = localStorage.getItem(getLevelKey(i)) === "true";
+  if (!currentUser) {
+    for (let i = 1; i <= totalLevels; i++) {
+      progress[getLevelKey(i)] = localStorage.getItem(getLevelKey(i)) === "true";
+    }
+    progress[getOverallModulesKey()] = localStorage.getItem(getOverallModulesKey()) === "true";
+    return progress;
   }
-
-  progress[getOverallModulesKey()] = localStorage.getItem(getOverallModulesKey()) === "true";
-
-  if (!currentUser) return progress;
 
   const userRef = await ensureUserDoc(currentUser.uid);
   const snap = await getDoc(userRef);
@@ -170,6 +182,8 @@ async function syncOverallModulesCompletion(progress) {
     .every((level) => progress[getLevelKey(level)] === true);
 
   if (!allDone || !totalLevels) return;
+
+  if (currentUser) return;
 
   localStorage.setItem(getOverallModulesKey(), "true");
 
@@ -309,7 +323,7 @@ async function renderLevels() {
 
     if (unlocked) {
       card.addEventListener("click", () => {
-        window.location.href = `module.html?subject=${subject}&difficulty=${difficulty}&module=module${level}`;
+        window.location.href = buildModuleLessonUrl(subject, difficulty, `module${level}`);
       });
     }
 
@@ -327,6 +341,7 @@ async function renderLevels() {
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
+  if (routeError) return;
   await renderLevels();
 });
 

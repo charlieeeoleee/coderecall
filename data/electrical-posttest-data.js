@@ -1,333 +1,37 @@
-export const electricalPosttestQuestions = [
-  {
-    n: 1,
-    question: "A 24V source is connected to a circuit with total resistance of 12 ohms. What is the current?",
-    choices: [
-      "1 A",
-      "2 A",
-      "3 A",
-      "0.5 A"
-    ],
-    answer: "B"
-  },
-  {
-    n: 2,
-    question: "Three resistors (6 ohms each) are connected in parallel. What is the equivalent resistance?",
-    choices: [
-      "2 ohms",
-      "18 ohms",
-      "3 ohms",
-      "6 ohms"
-    ],
-    answer: "A"
-  },
-  {
-    n: 3,
-    question: "What is the function of a circuit breaker compared to a fuse?",
-    choices: [
-      "It stores energy",
-      "It converts AC to DC",
-      "It increases resistance",
-      "It can be reused after tripping"
-    ],
-    answer: "D"
-  },
-  {
-    n: 4,
-    question: "Which component opposes sudden changes in current due to its magnetic field?",
-    choices: [
-      "Capacitor",
-      "Inductor",
-      "Diode",
-      "Resistor"
-    ],
-    answer: "B"
-  },
-  {
-    n: 5,
-    question: "A 100W light bulb is connected to a 200V supply. What is its resistance?",
-    choices: [
-      "100 ohms",
-      "200 ohms",
-      "400 ohms",
-      "50 ohms"
-    ],
-    answer: "C"
-  },
-  {
-    n: 6,
-    question: "In electrical wiring, what is the purpose of the neutral wire?",
-    choices: [
-      "Carry live current",
-      "Provide return path for current",
-      "Protect from shock",
-      "Increase voltage"
-    ],
-    answer: "B"
-  },
-  {
-    n: 7,
-    question: "What happens when resistors are added in series?",
-    choices: [
-      "Total resistance decreases",
-      "Total resistance increases",
-      "Voltage decreases to zero",
-      "Current increases"
-    ],
-    answer: "B"
-  },
-  {
-    n: 8,
-    question: "Which of the following best describes a closed circuit?",
-    choices: [
-      "No current flows",
-      "Current flows normally",
-      "Path is incomplete",
-      "Infinite resistance"
-    ],
-    answer: "B"
-  },
-  {
-    n: 9,
-    question: "A diode in reverse bias ideally has what kind of resistance?",
-    choices: [
-      "Very high",
-      "Low",
-      "Zero",
-      "Medium"
-    ],
-    answer: "A"
-  },
-  {
-    n: 10,
-    question: "What is the total power in a circuit with 10V and 2A?",
-    choices: [
-      "5W",
-      "2W",
-      "10W",
-      "20W"
-    ],
-    answer: "D"
-  },
-  {
-    n: 11,
-    question: "Electricity is best defined as the movement of which subatomic particles?",
-    choices: [
-      "Protons",
-      "Neutrons",
-      "Electrons",
-      "Photons"
-    ],
-    answer: "C"
-  },
-  {
-    n: 12,
-    question: "Which form of electricity results from an imbalance of charges on a material's surface?",
-    choices: [
-      "Current Electricity",
-      "Static Electricity",
-      "Alternating Current",
-      "Direct Current"
-    ],
-    answer: "B"
-  },
-  {
-    n: 13,
-    question: "If a 12V battery is connected to a 6-ohm resistor, what is the current flowing through it?",
-    choices: [
-      "0.5 Amps",
-      "72 Amps",
-      "2 Amps",
-      "18 Amps"
-    ],
-    answer: "C"
-  },
-  {
-    n: 14,
-    question: "What quantity is measured in Watts (W)?",
-    choices: [
-      "Resistance",
-      "Voltage",
-      "Current",
-      "Power"
-    ],
-    answer: "D"
-  },
-  {
-    n: 15,
-    question: "Why is Alternating Current (AC) used for home electricity supply?",
-    choices: [
-      "It is safer than DC for small electronics",
-      "It is produced only by solar panels",
-      "It only flows in one direction",
-      "It can be easily transformed and transmitted over long distances"
-    ],
-    answer: "D"
-  },
-  {
-    n: 16,
-    question: "Arc flash incidents can release temperatures up to:",
-    choices: [
-      "1,000 C",
-      "5,000 C",
-      "19,000 C",
-      "100,000 C"
-    ],
-    answer: "C"
-  },
-  {
-    n: 17,
-    question: "Which PPE is essential for protecting the eyes from sparks and arc flashes?",
-    choices: [
-      "Safety goggles or face shield",
-      "Earplugs",
-      "Hard hat",
-      "Rubber boots"
-    ],
-    answer: "A"
-  },
-  {
-    n: 18,
-    question: "What safety practice should be performed after turning off the power but before touching a wire?",
-    choices: [
-      "Put on a hard hat",
-      "Test for voltage using a multimeter or tester",
-      "Clean the work area",
-      "Apply electrical tape"
-    ],
-    answer: "B"
-  },
-  {
-    n: 19,
-    question: "Which wire insulation type is common for general home wiring and is moisture-resistant?",
-    choices: [
-      "Teflon",
-      "Rubber",
-      "PVC (Polyvinyl Chloride)",
-      "XLPE"
-    ],
-    answer: "C"
-  },
-  {
-    n: 20,
-    question: "A \"Pigtail Splice\" is most commonly used for:",
-    choices: [
-      "Connecting wires inside junction boxes",
-      "Repairing high-voltage power lines",
-      "Underwater installations",
-      "Long-distance telecommunications"
-    ],
-    answer: "A"
-  },
-  {
-    n: 21,
-    question: "Which wiring method involves enclosing wires in a rigid or flexible tube for protection?",
-    choices: [
-      "Direct Burial",
-      "Cable Tray",
-      "Conduit Wiring",
-      "Raceway"
-    ],
-    answer: "C"
-  },
-  {
-    n: 22,
-    question: "In a household, why are lights and outlets connected in parallel?",
-    choices: [
-      "To ensure they all share the same current",
-      "To allow each device to operate independently",
-      "To reduce the amount of wire needed",
-      "To make the bulbs glow dimmer"
-    ],
-    answer: "B"
-  },
-  {
-    n: 23,
-    question: "What happens in a series circuit if one bulb burns out?",
-    choices: [
-      "The entire circuit is broken and all lights go out",
-      "The other bulbs get brighter",
-      "Only the burnt-out bulb stays dark",
-      "The voltage increases across the remaining bulbs"
-    ],
-    answer: "A"
-  },
-  {
-    n: 24,
-    question: "Which passive component stores energy in a magnetic field?",
-    choices: [
-      "Resistor",
-      "Capacitor",
-      "Inductor",
-      "Transistor"
-    ],
-    answer: "C"
-  },
-  {
-    n: 25,
-    question: "Calculate the value of a resistor with Yellow, Violet, and Orange bands.",
-    choices: [
-      "4.7k ohms",
-      "470 ohms",
-      "470k ohms",
-      "47k ohms"
-    ],
-    answer: "D"
-  },
-  {
-    n: 26,
-    question: "What is the multiplier for the color \"Red\" in the resistor color code?",
-    choices: [
-      "x10",
-      "x100",
-      "x1,000",
-      "X10,000"
-    ],
-    answer: "B"
-  },
-  {
-    n: 27,
-    question: "Polarized capacitors, such as electrolytic ones, must be:",
-    choices: [
-      "Connected in any direction",
-      "Used to limit current only",
-      "Used only in AC circuits",
-      "Connected according to positive and negative polarity"
-    ],
-    answer: "D"
-  },
-  {
-    n: 28,
-    question: "Which type of resistor allows for manually adjustable resistance, such as a volume knob?",
-    choices: [
-      "Carbon Film",
-      "SMD Resistor",
-      "Potentiometer (Variable Resistor)",
-      "Wire-Wound"
-    ],
-    answer: "C"
-  },
-  {
-    n: 29,
-    question: "A circuit has 24V and 3A of current. What is the resistance?",
-    choices: [
-      "8 ohms",
-      "21 ohms",
-      "72 ohms",
-      "0.125 ohms"
-    ],
-    answer: "A"
-  },
-  {
-    n: 30,
-    question: "Which AWG size would be most appropriate for an air conditioner or electric stove?",
-    choices: [
-      "14 AWG",
-      "8 AWG",
-      "2 AWG",
-      "12 AWG"
-    ],
-    answer: "B"
-  }
+const electricalPosttestSource = [
+  { n: 1, question: "Which unit is used to measure the baseline flow of electric current?", choices: ["Volt", "Ohm", "Ampere", "Watt"], answer: "C" },
+  { n: 2, question: "What electrical component is specifically designed to provide resistance to current flow in a circuit?", choices: ["Capacitor", "Resistor", "Inductor", "Diode"], answer: "B" },
+  { n: 3, question: "How are voltage, current, and resistance related to each other according to Ohm's Law?\"", choices: ["Power is equal to voltage times current (P=VI).", "Voltage is equal to current times resistance (V=IR).", "Current is equal to voltage divided by resistance (I=V/R).", "Both b and c are correct."], answer: "D" },
+  { n: 4, question: "Which electrical component is designed to accumulate and store energy within an electrostatic field?", choices: ["Resistor", "Transistor", "Capacitor", "Battery"], answer: "C" },
+  { n: 5, question: "How does a diode control the direction of current in a circuit?", choices: ["To amplify signals", "To store energy", "To allow current to flow in only one direction", "To convert AC to DC"], answer: "C" },
+  { n: 6, question: "Which of these materials serves as the primary base for manufacturing modern microchips and transistors?", choices: ["Copper", "Gold", "Silicon", "Aluminum"], answer: "C" },
+  { n: 7, question: "What standard unit is used to measure the opposition to the flow of electric current?", choices: ["Ampere", "Volt", "Farad", "Ohm"], answer: "D" },
+  { n: 8, question: "What is the full meaning of the abbreviation 'AC' when discussing electrical power and circuitry?", choices: ["Alternating Current", "Amplified Current", "Advanced Circuit", "Automatic Control"], answer: "A" },
+  { n: 9, question: "Which active electronic component functions primarily to control current flow by acting as an electronic gate or amplifier?", choices: ["Transistor", "Resistor", "Capacitor", "Inductor"], answer: "A" },
+  { n: 10, question: "Which unit quantifies the rate at which electrical energy is consumed or generated in a circuit?", choices: ["Volt", "Ampere", "Watt", "Joule"], answer: "C" },
+  { n: 11, question: "What subatomic particles make up the core and surrounding cloud of a basic atom?", choices: ["Protons, Electrons, and Ions", "Protons, Neutrons, and Electrons", "Neutrons, Nucleus, and Quarks", "Electrons, Photons, and Protons"], answer: "B" },
+  { n: 12, question: "Which metal is the industry standard for commercial and residential electrical wiring due to its low resistance?", choices: ["Rubber", "Glass", "Plastic", "Copper"], answer: "D" },
+  { n: 13, question: "What standard unit is used to quantify the opposition to current flow in a circuit?", choices: ["Volt (V)", "Ampere (A)", "Ohm (Ω)", "Watt (W)"], answer: "C" },
+  { n: 14, question: "What mathematical equation is used to calculate the electrical potential difference when current and resistance are known?", choices: ["V = I × R", "V = R / I", "V = I / R", "V = P / I"], answer: "A" },
+  { n: 15, question: "What form of electrical current do chemical cells, such as standard household batteries, deliver to a circuit?", choices: ["Alternating Current (AC)", "Static Current", "Direct Current (DC)", "Magnetic Current"], answer: "C" },
+  { n: 16, question: "Which piece of electrical personal protective equipment utilizes high-dielectric thick rubber to insulate the hands from shock hazards?", choices: ["Safety goggles", "Insulated gloves", "Hard hat", "FR clothing"], answer: "B" },
+  { n: 17, question: "What is the main objective of implementing LOTO procedures during the maintenance and servicing of industrial machinery?", choices: ["To measure voltage in a circuit", "To ensure electrical circuits stay OFF during maintenance", "To organize tools in a workshop", "To increase the speed of electrical flow"], answer: "B" },
+  { n: 18, question: "To minimize the risk of a fatal electric shock through the chest, where should you keep your free hand when handling live electrical components?", choices: ["On the metal frame of machine", "Holding a secondary tool", "Behind your back or in your pocket", "Resting on the workbench"], answer: "C" },
+  { n: 19, question: "How do a wire and a cable differ in terms of their physical construction and composition?", choices: ["A wire is a single conductor; a cable is two or more wires in a sheath", "Wires are for AC, and cables are for DC", "Wires are made of plastic; cables are made of metal", "There is no difference between them"], answer: "A" },
+  { n: 20, question: "How does the gauge number in the AWG system relate to the physical thickness and current capacity of an electrical conductor?", choices: ["14 AWG", "24 AWG", "20 AWG", "10 AWG"], answer: "D" },
+  { n: 21, question: "Which type of non-metallic sheathed cable is specifically engineered to withstand direct contact with soil and moisture in underground applications", choices: ["Romex (NM)", "THHN", "UF (Underground Feeder)", "Coaxial"], answer: "C" },
+  { n: 22, question: "What kind of circuit topology ensures that a break or failure in one component immediately stops the flow of current through all other components?", choices: ["Parallel Connection", "Series Connection", "Splice Connection", "Ground Connection"], answer: "B" },
+  { n: 23, question: "What type of manual conductor joint involves wrapping two bare wire ends tightly around one another to maximize both mechanical strength and signal integrity?", choices: ["Western Union Splice", "Pigtail Splice", "T-Tap Splice", "Butt Splice"], answer: "A" },
+  { n: 24, question: "How do we classify circuit elements, such as resistors and capacitors, that function without needing a secondary power bias?", choices: ["Active components", "Digital components", "Passive components", "Integrated circuits"], answer: "C" },
+  { n: 25, question: "What electronic component is specifically designed to oppose the flow of electric current and drop voltage within a circuit?", choices: ["To store electrical energy", "To limit or divide current", "To amplify signals", "To generate magnetic fields"], answer: "B" },
+  { n: 26, question: "According to the electronic color code, a resistor stamped with Red, Violet, and Brown bands indicates a total resistance value of _", choices: ["27 ohms", "270 ohms", "2,700 ohms", "2.7 ohms"], answer: "B" },
+  { n: 27, question: "Which component acts like a temporary, fast-charging battery in a circuit, often used to smooth out voltage fluctuations?", choices: ["Inductor", "Transistor", "Capacitor", "Diode"], answer: "C" },
+  { n: 28, question: "While resistance is measured in ohms, capacitance is officially measured in _", choices: ["Henry (H)", "Farad (F)", "Ohm (Ω)", "Ampere (A)"], answer: "B" },
+  { n: 29, question: "What versatile diagnostic instrument combines the functions of a voltmeter, ammeter, and ohmmeter into a single handheld device?", choices: ["Multimeter", "Voltmeter", "Ammeter", "Wattmeter"], answer: "A" },
+  { n: 30, question: "If a resistor is marked with a Gold tolerance band, by what maximum percentage can its actual measured resistance deviate from its color-coded value?", choices: ["10% Tolerance", "1% Tolerance", "20% Tolerance", "5% Tolerance"], answer: "D" }
 ];
 
+export const electricalPosttestQuestions = electricalPosttestSource.map((question) => ({
+  ...question,
+  pairId: `electrical-${String(question.n).padStart(2, "0")}`
+}));

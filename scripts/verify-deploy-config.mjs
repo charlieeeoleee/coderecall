@@ -44,6 +44,7 @@ function checkRuntimeConfig(warnings) {
 
 function main() {
   const firebaseConfig = readJson("firebase.json");
+  const firebaseRc = readJson(".firebaserc");
   const packageConfig = readJson("package.json");
   const gitignore = readFileSync(".gitignore", "utf8");
   const serviceWorker = existsSync("service-worker.js") ? readFileSync("service-worker.js", "utf8") : "";
@@ -52,6 +53,20 @@ function main() {
   const headers = firebaseConfig.hosting?.headers || [];
   const errors = [];
   const warnings = [];
+
+  const firebaseProjects = firebaseRc.projects || {};
+  if (Object.hasOwn(firebaseProjects, "default")) {
+    errors.push(".firebaserc must not contain a default Firebase project alias.");
+  }
+  if (firebaseProjects.production !== "gamifiedlearningsystem") {
+    errors.push("Firebase Production alias does not match the approved project.");
+  }
+  if (firebaseProjects.preview !== "coderecall-preview") {
+    errors.push("Firebase Preview alias does not match the approved project.");
+  }
+  if (firebaseProjects.production === firebaseProjects.preview) {
+    errors.push("Firebase Preview and Production aliases collide.");
+  }
 
   if (firebaseConfig.hosting?.site !== "gamifiedlearningsystem") {
     warnings.push(`Firebase Hosting site is ${firebaseConfig.hosting?.site || "missing"}; expected gamifiedlearningsystem for the current Firebase project.`);
@@ -96,8 +111,28 @@ function main() {
     });
   }
 
-  if (!packageConfig.scripts?.["firebase:deploy:app"]) {
-    errors.push("Missing npm script firebase:deploy:app.");
+  if (!packageConfig.scripts?.["firebase:rules:preview"] || !packageConfig.scripts?.["firebase:rules:production"]) {
+    errors.push("Missing explicit Preview or Production Firebase Rules deployment script.");
+  }
+
+  if (firebaseConfig.emulators?.firestore?.host !== "0.0.0.0") {
+    errors.push("Firestore Emulator must explicitly bind to the LAN-capable local development interface.");
+  }
+  if (firebaseConfig.emulators?.firestore?.port !== 18080) {
+    errors.push("Firestore Emulator must use the approved local port 18080.");
+  }
+
+  Object.entries(packageConfig.scripts || {}).forEach(([name, command]) => {
+    if (/firebase\s+deploy\b/i.test(command) && !/--project\s+(preview|production)\b/i.test(command)) {
+      errors.push(`Package script ${name} contains an untargeted Firebase deployment command.`);
+    }
+    if (/firebase\s+deploy\b[^\r\n]*--only\s+[^\r\n]*hosting/i.test(command)) {
+      errors.push(`Package script ${name} contains an unsafe Firebase Hosting deployment command.`);
+    }
+  });
+
+  if (!/disabled/i.test(packageConfig.scripts?.["firebase:deploy:hosting"] || "")) {
+    errors.push("Firebase Hosting workflow must remain explicitly disabled.");
   }
 
   if (!packageConfig.scripts?.["firestore:backup:postgres:dry-run"]) {

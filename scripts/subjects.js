@@ -19,6 +19,7 @@ import {
 import { applyRoleNavigation, resolveUserRole } from "./role-utils.js";
 import { syncPublicLeaderboardEntry } from "./leaderboard-public.js";
 import { signOutWithSessionCleanup } from "./auth-session.js";
+import { buildSubjectUrl } from "./subject-routing.mjs";
 
 
 const auth = getAuth(app);
@@ -191,7 +192,7 @@ function animateNumber(element, targetValue) {
 
 window.openSubject = function(subject) {
   sessionStorage.setItem(SELECTED_SUBJECT_KEY, subject);
-  window.location.href = `subject.html?subject=${subject}`;
+  window.location.href = buildSubjectUrl(subject);
 };
 
 function hasGuestProgress() {

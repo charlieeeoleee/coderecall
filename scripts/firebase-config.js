@@ -1,14 +1,37 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
+  connectFirestoreEmulator,
+  getFirestore
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
   initializeAppCheck,
   ReCaptchaV3Provider
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+import { resolveBrowserFirestoreEmulator } from "./firestore-emulator-routing.mjs";
 
 export const firebaseConfig = {
   ...readRuntimeFirebaseConfig()
 };
 
+export const firebaseEnvironment = readRuntimeFirebaseEnvironment();
 export const app = initializeApp(firebaseConfig);
+export const db = initializeCodeRecallFirestore();
+
+function initializeCodeRecallFirestore() {
+  const firestore = getFirestore(app);
+  const routing = resolveBrowserFirestoreEmulator({
+    environment: firebaseEnvironment,
+    protocol: window.location.protocol,
+    hostname: window.location.hostname,
+    port: window.location.port
+  });
+
+  if (routing.enabled) {
+    connectFirestoreEmulator(firestore, routing.host, routing.port);
+  }
+
+  return firestore;
+}
 
 export const firebaseAppCheckConfig = {
   recaptchaV3SiteKey: readRuntimeAppCheckSiteKey()
@@ -42,6 +65,14 @@ function readRuntimeFirebaseConfig() {
   }, {});
 
   return sanitizedConfig;
+}
+
+function readRuntimeFirebaseEnvironment() {
+  const environment = String(self.CODE_RECALL_FIREBASE_ENVIRONMENT || "").trim();
+  if (!["development", "preview", "production"].includes(environment)) {
+    throw new Error("Missing or invalid Firebase runtime environment metadata.");
+  }
+  return environment;
 }
 
 function readRuntimeAppCheckSiteKey() {
